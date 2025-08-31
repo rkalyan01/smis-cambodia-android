@@ -2,13 +2,6 @@ package com.innovative.smis.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * NOTE: This file is a temporary solution to fix build errors.
- * These are hardcoded colors and will NOT adapt to dark mode.
- * You should gradually replace these with theme-aware colors from your MaterialTheme,
- * for example, replace `colorPrimary` with `MaterialTheme.colorScheme.primary`.
- */
-
 val colorPrimary = Color(0xFF0062A1)
 val colorPrimaryTints = Color(0xFFD0E4FF)
 val backGroundColor = Color(0xFFFDFCFF)
@@ -20,7 +13,6 @@ val errorColor = Color(0xFFBA1A1A)
 val green = Color(0xFF198754)
 val labelColor = Color(0xFF535F70)
 
-// Other custom colors found in the error logs
 val whiteWatchList = Color(0xFFDFE2EB)
 val accentColor = Color(0xFF6B5778)
 val placeHolderColor = Color(0xFFC3C7CF)
@@ -29,8 +21,8 @@ val transparentBlack = Color(0x80000000)
 val transparentBlack2 = Color(0xB3000000)
 val transparentBlack3 = Color(0x4D000000)
 val white_70 = Color(0xB3FFFFFF)
-val zozozo = Color(0xFF202020) // Assuming this is a dark grey
-val ozozoz = Color(0xFF000000) // Assuming this is black
+val zozozo = Color(0xFF202020)
+val ozozoz = Color(0xFF000000)
 val menuBoxColor = Color(0xFFF0F0F0)
 val accentBlue = Color(0xFF0062A1)
 val colorPrimary_10 = Color(0x1A0062A1)

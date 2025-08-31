@@ -4,7 +4,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.JsonObject
+import com.innovative.smis.data.model.request.LoginRequest
 import com.innovative.smis.data.model.response.LoginResponse
 import com.innovative.smis.data.repository.AuthRepository
 import com.innovative.smis.util.common.Resource
@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Modern LoginViewModel with mock authentication for role-based navigation testing
+ */
 class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
     private val _loginState = MutableStateFlow<Resource<LoginResponse>>(Resource.Idle())
@@ -26,33 +29,40 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
     private val _passwordVisible = mutableStateOf(false)
     val passwordVisible: State<Boolean> = _passwordVisible
 
+    // Real API authentication - no more mock service
+
     fun onLoginClicked(email: String, password: String) {
         _emailError.value = null
         _passwordError.value = null
 
+        // Enhanced validation
+        var hasError = false
+
         if (email.isBlank()) {
-            _emailError.value = "Email cannot be empty"
-            return
-        }
-        if (password.isBlank()) {
-            _passwordError.value = "Password cannot be empty"
-            return
+            _emailError.value = "Email is required"
+            hasError = true
+        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _emailError.value = "Please enter a valid email address"
+            hasError = true
         }
 
-        val loginRequest = JsonObject().apply {
-            addProperty("email", email)
-            addProperty("password", password)
+        if (password.isBlank()) {
+            _passwordError.value = "Password is required"
+            hasError = true
+        } else if (password.length < 3) {
+            _passwordError.value = "Password must be at least 3 characters"
+            hasError = true
         }
+
+        if (hasError) return
 
         viewModelScope.launch {
-            // 1. Set state to Loading immediately.
             _loginState.value = Resource.Loading()
 
-            // 2. Collect the result from the repository's flow.
-            authRepository.login(loginRequest)
-                .collect { result ->
-                    _loginState.value = result
-                }
+            // Use real API for authentication
+            authRepository.login(LoginRequest(email, password)).collect { result ->
+                _loginState.value = result
+            }
         }
     }
 
