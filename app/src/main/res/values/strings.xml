@@ -1,3 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App Name -->
     <string name="app_name">SMIS</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_tasks">Tasks</string>
+    <string name="nav_survey">Survey</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_total_tasks">Total Tasks</string>
+    <string name="dashboard_pending">Pending</string>
+    <string name="dashboard_in_progress">In Progress</string>
+    <string name="dashboard_completed">Completed</string>
+
+    <!-- Tasks -->
+    <string name="task_status_pending">Pending</string>
+    <string name="task_status_in_progress">In Progress</string>
+    <string name="task_status_completed">Completed</string>
+    <string name="task_status_cancelled">Cancelled</string>
+    <string name="task_priority_low">Low</string>
+    <string name="task_priority_medium">Medium</string>
+    <string name="task_priority_high">High</string>
+    <string name="task_priority_urgent">Urgent</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_app_section">App Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_offline_section">Offline Settings</string>
+    <string name="settings_offline_mode">Offline Mode</string>
+    <string name="settings_auto_sync">Auto Sync</string>
+    <string name="settings_storage">Storage Settings</string>
+    <string name="settings_data_section">Data</string>
+    <string name="settings_sync_now">Sync Now</string>
+    <string name="settings_clear_cache">Clear Cache</string>
+    <string name="settings_about_section">About</string>
+    <string name="settings_version">Version</string>
+
+    <!-- Theme Options -->
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_auto">Auto</string>
+
+    <!-- Common Actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_back">Back</string>
+    <string name="action_done">Done</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_sync">Sync</string>
+
+    <!-- Messages -->
+    <string name="message_loading">Loading...</string>
+    <string name="message_error">Error occurred</string>
+    <string name="message_no_internet">No internet connection</string>
+    <string name="message_sync_success">Sync completed successfully</string>
+    <string name="message_sync_failed">Sync failed</string>
+
+    <!-- Offline -->
+    <string name="offline_mode">Offline Mode</string>
+    <string name="offline_cached_maps">Using Cached Maps</string>
+    <string name="offline_sync_pending">%d items pending sync</string>
+
+    <!-- Map -->
+    <string name="map_download_area">Download Area</string>
+    <string name="map_cache_stats">Cache Statistics</string>
+    <string name="map_offline_available">Offline maps available</string>
+
+    <!-- Form Labels - Emptying Workflow -->
+    <string name="form_task_details">Task Details</string>
+    <string name="form_location">Location</string>
+    <string name="form_address">Address</string>
+    <string name="form_coordinates">Coordinates</string>
+    <string name="form_latitude">Latitude</string>
+    <string name="form_longitude">Longitude</string>
+    <string name="form_date">Date</string>
+    <string name="form_time">Time</string>
+    <string name="form_start_time">Start Time</string>
+    <string name="form_end_time">End Time</string>
+    <string name="form_duration">Duration</string>
+    <string name="form_worker_name">Worker Name</string>
+    <string name="form_supervisor">Supervisor</string>
+    <string name="form_team_size">Team Size</string>
+    <string name="form_equipment">Equipment</string>
+    <string name="form_vehicle_number">Vehicle Number</string>
+    <string name="form_truck_capacity">Truck Capacity (Liters)</string>
+
+    <!-- Emptying Process Form -->
+    <string name="form_emptying_type">Emptying Type</string>
+    <string name="form_tank_type">Tank Type</string>
+    <string name="form_tank_capacity">Tank Capacity (Liters)</string>
+    <string name="form_sludge_level">Sludge Level (%)</string>
+    <string name="form_water_level">Water Level (%)</string>
+    <string name="form_volume_emptied">Volume Emptied (Liters)</string>
+    <string name="form_sludge_quality">Sludge Quality</string>
+    <string name="form_access_difficulty">Access Difficulty</string>
+    <string name="form_safety_equipment">Safety Equipment Used</string>
+    <string name="form_environmental_conditions">Environmental Conditions</string>
+    <string name="form_weather">Weather</string>
+    <string name="form_temperature">Temperature (°C)</string>
+    <string name="form_notes">Notes</string>
+    <string name="form_additional_comments">Additional Comments</string>
+    <string name="form_photos">Photos</string>
+    <string name="form_before_photos">Before Photos</string>
+    <string name="form_after_photos">After Photos</string>
+
+    <!-- Building Survey Form -->
+    <string name="form_building_details">Building Details</string>
+    <string name="form_building_name">Building Name</string>
+    <string name="form_building_type">Building Type</string>
+    <string name="form_number_of_floors">Number of Floors</string>
+    <string name="form_total_units">Total Units</string>
+    <string name="form_occupied_units">Occupied Units</string>
+    <string name="form_construction_year">Construction Year</string>
+    <string name="form_building_area">Building Area (m²)</string>
+    <string name="form_compound_area">Compound Area (m²)</string>
+
+    <!-- Sanitation System -->
+    <string name="form_sanitation_system">Sanitation System</string>
+    <string name="form_toilet_type">Toilet Type</string>
+    <string name="form_septic_tank">Septic Tank</string>
+    <string name="form_tank_location">Tank Location</string>
+    <string name="form_tank_material">Tank Material</string>
+    <string name="form_tank_condition">Tank Condition</string>
+    <string name="form_last_emptied">Last Emptied</string>
+    <string name="form_emptying_frequency">Emptying Frequency</string>
+    <string name="form_access_road">Access Road</string>
+    <string name="form_road_width">Road Width (m)</string>
+    <string name="form_distance_to_tank">Distance to Tank (m)</string>
+
+    <!-- Contact Information -->
+    <string name="form_contact_info">Contact Information</string>
+    <string name="form_owner_name">Owner Name</string>
+    <string name="form_phone_number">Phone Number</string>
+    <string name="form_email">Email</string>
+    <string name="form_contact_person">Contact Person</string>
+    <string name="form_alternate_phone">Alternate Phone</string>
+
+    <!-- Validation Messages -->
+    <string name="validation_required">This field is required</string>
+    <string name="validation_invalid_phone">Invalid phone number</string>
+    <string name="validation_invalid_email">Invalid email address</string>
+    <string name="validation_invalid_number">Please enter a valid number</string>
+    <string name="validation_invalid_date">Invalid date format</string>
+    <string name="validation_min_length">Minimum %d characters required</string>
+    <string name="validation_max_length">Maximum %d characters allowed</string>
+
+    <!-- Form Actions -->
+    <string name="form_submit">Submit</string>
+    <string name="form_save_draft">Save Draft</string>
+    <string name="form_clear">Clear</string>
+    <string name="form_reset">Reset</string>
+    <string name="form_next">Next</string>
+    <string name="form_previous">Previous</string>
+    <string name="form_finish">Finish</string>
+
+    <!-- Dropdown Options -->
+    <string name="dropdown_select">Select...</string>
+    <string name="dropdown_please_select">Please select an option</string>
+    <string name="dropdown_other">Other</string>
+
+    <!-- Building Types -->
+    <string name="building_residential">Residential</string>
+    <string name="building_commercial">Commercial</string>
+    <string name="building_institutional">Institutional</string>
+    <string name="building_mixed_use">Mixed Use</string>
+
+    <!-- Tank Types -->
+    <string name="tank_septic">Septic Tank</string>
+    <string name="tank_holding">Holding Tank</string>
+    <string name="tank_pit_latrine">Pit Latrine</string>
+    <string name="tank_other">Other</string>
+
+    <!-- Quality Levels -->
+    <string name="quality_good">Good</string>
+    <string name="quality_fair">Fair</string>
+    <string name="quality_poor">Poor</string>
+    <string name="quality_very_poor">Very Poor</string>
 </resources>

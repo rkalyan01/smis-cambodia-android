@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark theme using AppCompat for compatibility -->
+    <style name="Theme.Smis" parent="Theme.AppCompat.NoActionBar">
+        <!-- Primary colors -->
+        <item name="colorPrimary">@color/md_theme_dark_primary</item>
+        <item name="colorPrimaryDark">@color/md_theme_dark_primary</item>
+        <item name="colorAccent">@color/md_theme_dark_secondary</item>
+
+        <!-- Background -->
+        <item name="android:colorBackground">@color/md_theme_dark_background</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/md_theme_dark_primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
