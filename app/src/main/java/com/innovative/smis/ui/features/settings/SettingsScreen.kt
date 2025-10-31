@@ -27,7 +27,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     val viewModel: SettingsViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -35,6 +35,7 @@ fun SettingsScreen(navController: NavController) {
 
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showDateFormatDialog by remember { mutableStateOf(false) }
 
 
     Scaffold(
@@ -43,7 +44,7 @@ fun SettingsScreen(navController: NavController) {
                 title = { Text(text = StringResources.getString(StringResources.SETTINGS, languageCode)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = StringResources.getString(StringResources.BACK, languageCode))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -71,7 +72,7 @@ fun SettingsScreen(navController: NavController) {
                 SettingsItem(
                     icon = Icons.Default.Language,
                     title = StringResources.getString(StringResources.LANGUAGE, languageCode),
-                    subtitle = Languages.getLanguageByCode(uiState.selectedLanguage)?.nativeName ?: "English",
+                    subtitle = Languages.getLanguageByCode(uiState.selectedLanguage)?.nativeName ?: StringResources.getString(StringResources.ENGLISH, languageCode),
                     onClick = { showLanguageDialog = true }
                 )
             }
@@ -86,6 +87,15 @@ fun SettingsScreen(navController: NavController) {
                         PreferenceHelper.ThemeMode.AUTO -> StringResources.getString(StringResources.AUTO, languageCode)
                     },
                     onClick = { showThemeDialog = true }
+                )
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.CalendarMonth,
+                    title = "Date Format",
+                    subtitle = uiState.dateFormat.displayName,
+                    onClick = { showDateFormatDialog = true }
                 )
             }
 
@@ -118,13 +128,13 @@ fun SettingsScreen(navController: NavController) {
             item {
                 SettingsItem(
                     icon = Icons.Default.SyncProblem,
-                    title = if (languageCode == Languages.KHMER) "សាកល្បងសមកាលកម្ម" else "Test Sync",
+                    title = StringResources.getString(StringResources.TEST_SYNC, languageCode),
                     subtitle = if (uiState.isSyncing) {
-                        if (languageCode == Languages.KHMER) "កំពុងសមកាលកម្ម..." else "Syncing..."
+                        StringResources.getString(StringResources.SYNCING, languageCode)
                     } else if (!uiState.syncResult.isNullOrEmpty()) {
                         uiState.syncResult!!
                     } else {
-                        if (languageCode == Languages.KHMER) "ចុចដើម្បីសាកល្បងសមកាលកម្មដោយដៃ" else "Tap to test manual sync"
+                        StringResources.getString(StringResources.TAP_TO_TEST_MANUAL_SYNC, languageCode)
                     },
                     onClick = { 
                         if (!uiState.isSyncing) {
@@ -136,18 +146,18 @@ fun SettingsScreen(navController: NavController) {
 
             item {
                 SettingsSectionHeader(
-                    title = if (languageCode == Languages.KHMER) "ការគ្រប់គ្រងទិន្នន័យ" else "Data Management"
+                    title = StringResources.getString(StringResources.DATA_MANAGEMENT, languageCode)
                 )
             }
 
             item {
                 SettingsItem(
                     icon = Icons.Default.Storage,
-                    title = if (languageCode == Languages.KHMER) "ទំហំមូលដ្ឋានទិន្នន័យ" else "Database Size",
+                    title = StringResources.getString(StringResources.DATABASE_SIZE, languageCode),
                     subtitle = if (uiState.databaseSizeMB > 0) {
-                        "${String.format("%.2f", uiState.databaseSizeMB)} MB"
+                        "${String.format("%.2f", uiState.databaseSizeMB)} ${StringResources.getString(StringResources.MEGABYTES, languageCode)}"
                     } else {
-                        if (languageCode == Languages.KHMER) "កំពុងគណនា..." else "Calculating..."
+                        StringResources.getString(StringResources.CALCULATING, languageCode)
                     },
                     onClick = { /* Read-only item */ }
                 )
@@ -156,13 +166,13 @@ fun SettingsScreen(navController: NavController) {
             item {
                 SettingsItem(
                     icon = Icons.Default.DeleteSweep,
-                    title = if (languageCode == Languages.KHMER) "លុបទិន្នន័យបណ្តោះអាសន្ន" else "Clear Cache",
+                    title = StringResources.getString(StringResources.CLEAR_CACHE, languageCode),
                     subtitle = if (uiState.isClearingCache) {
-                        if (languageCode == Languages.KHMER) "កំពុងលុប..." else "Clearing..."
+                        StringResources.getString(StringResources.CLEARING, languageCode)
                     } else if (uiState.cacheCleared) {
-                        if (languageCode == Languages.KHMER) "លុបរួចរាល់" else "Cache cleared"
+                        StringResources.getString(StringResources.CACHE_CLEARED, languageCode)
                     } else {
-                        if (languageCode == Languages.KHMER) "លុបទិន្នន័យបណ្តោះអាសន្ន និងទទួលបាននូវទិន្នន័យថ្មី" else "Clear cached data and refresh with new data"
+                        StringResources.getString(StringResources.CLEAR_CACHED_DATA_DESCRIPTION, languageCode)
                     },
                     onClick = { 
                         if (!uiState.isClearingCache) {
@@ -186,6 +196,32 @@ fun SettingsScreen(navController: NavController) {
                     onClick = { }
                 )
             }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Logout,
+                    title = StringResources.getString(StringResources.LOGOUT, languageCode),
+                    subtitle = if (languageCode == "km") "ចាកចេញពីគណនី" else "Sign out of your account",
+                    onClick = { viewModel.logout() },
+                    textColor = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+
+    // Handle logout navigation
+    LaunchedEffect(uiState.shouldLogout) {
+        if (uiState.shouldLogout) {
+            // Navigate to login screen and clear back stack
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+            // Reset flag to prevent re-navigation on configuration changes
+            viewModel.resetLogoutFlag()
         }
     }
 
@@ -213,6 +249,17 @@ fun SettingsScreen(navController: NavController) {
         )
     }
 
+    if (showDateFormatDialog) {
+        DateFormatSelectionDialog(
+            currentDateFormat = uiState.dateFormat,
+            languageCode = languageCode,
+            onDateFormatSelected = { format: PreferenceHelper.DateFormat ->
+                viewModel.setDateFormat(format)
+                showDateFormatDialog = false
+            },
+            onDismiss = { showDateFormatDialog = false }
+        )
+    }
 
 }
 
@@ -288,8 +335,8 @@ fun LanguageSelectionDialog(
         title = { Text(StringResources.getString(StringResources.SELECT_LANGUAGE, languageCode)) },
         text = {
             Column {
-                LanguageOption("English", Languages.ENGLISH, currentLanguage, onLanguageSelected)
-                LanguageOption("ខ្មែរ", Languages.KHMER, currentLanguage, onLanguageSelected)
+                LanguageOption(StringResources.getString(StringResources.ENGLISH, languageCode), Languages.ENGLISH, currentLanguage, onLanguageSelected)
+                LanguageOption(StringResources.getString(StringResources.KHMER, languageCode), Languages.KHMER, currentLanguage, onLanguageSelected)
             }
         },
         confirmButton = {
@@ -391,6 +438,69 @@ fun ThemeOption(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = label)
+    }
+}
+
+@Composable
+fun DateFormatSelectionDialog(
+    currentDateFormat: PreferenceHelper.DateFormat,
+    languageCode: String,
+    onDateFormatSelected: (PreferenceHelper.DateFormat) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Date Format") },
+        text = {
+            Column {
+                DateFormatOption(
+                    PreferenceHelper.DateFormat.DD_MM_YYYY,
+                    currentDateFormat,
+                    onDateFormatSelected
+                )
+                DateFormatOption(
+                    PreferenceHelper.DateFormat.MM_DD_YYYY,
+                    currentDateFormat,
+                    onDateFormatSelected
+                )
+                DateFormatOption(
+                    PreferenceHelper.DateFormat.YYYY_MM_DD,
+                    currentDateFormat,
+                    onDateFormatSelected
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(StringResources.getString(StringResources.CLOSE, languageCode))
+            }
+        }
+    )
+}
+
+@Composable
+fun DateFormatOption(
+    format: PreferenceHelper.DateFormat,
+    currentDateFormat: PreferenceHelper.DateFormat,
+    onDateFormatSelected: (PreferenceHelper.DateFormat) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = currentDateFormat == format,
+                onClick = { onDateFormatSelected(format) },
+                role = Role.RadioButton
+            )
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = currentDateFormat == format,
+            onClick = { onDateFormatSelected(format) }
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = format.displayName)
     }
 }
 

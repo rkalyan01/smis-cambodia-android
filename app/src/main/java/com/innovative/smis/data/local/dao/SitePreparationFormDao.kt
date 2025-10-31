@@ -13,9 +13,6 @@ interface SitePreparationFormDao {
     @Query("SELECT * FROM site_preparation_forms WHERE applicationId = :applicationId LIMIT 1")
     suspend fun getFormByApplicationId(applicationId: Int): SitePreparationFormEntity?
 
-    @Query("SELECT * FROM site_preparation_forms WHERE id = :formId LIMIT 1")
-    suspend fun getFormById(formId: String): SitePreparationFormEntity?
-
     @Query("SELECT * FROM site_preparation_forms WHERE applicationId = :applicationId")
     fun getFormByApplicationIdFlow(applicationId: Int): Flow<SitePreparationFormEntity?>
 
@@ -25,11 +22,11 @@ interface SitePreparationFormDao {
     @Query("SELECT * FROM site_preparation_forms WHERE syncStatus IN ('PENDING', 'FAILED')")
     suspend fun getUnsyncedForms(): List<SitePreparationFormEntity>
 
-    @Query("UPDATE site_preparation_forms SET syncStatus = 'SYNCED', updatedAt = :timestamp WHERE id = :formId")
-    suspend fun markAsSynced(formId: String, timestamp: Long = System.currentTimeMillis())
+    @Query("UPDATE site_preparation_forms SET syncStatus = 'SYNCED', updatedAt = :timestamp WHERE applicationId = :applicationId")
+    suspend fun markAsSynced(applicationId: Int, timestamp: Long = System.currentTimeMillis())
 
-    @Query("UPDATE site_preparation_forms SET syncStatus = 'PENDING', updatedAt = :timestamp WHERE id = :formId")
-    suspend fun markAsPending(formId: String, timestamp: Long = System.currentTimeMillis())
+    @Query("UPDATE site_preparation_forms SET syncStatus = 'PENDING', updatedAt = :timestamp WHERE applicationId = :applicationId")
+    suspend fun markAsPending(applicationId: Int, timestamp: Long = System.currentTimeMillis())
 
     @Query("""
         UPDATE site_preparation_forms 
@@ -38,10 +35,10 @@ interface SitePreparationFormDao {
             lastSyncAttempt = :lastAttempt,
             errorMessage = :error,
             updatedAt = :updatedAt
-        WHERE id = :formId
+        WHERE applicationId = :applicationId
     """)
     suspend fun updateSyncStatus(
-        formId: String, 
+        applicationId: Int, 
         status: String, 
         attempts: Int,
         lastAttempt: Long,

@@ -50,6 +50,8 @@ interface TodoListApiService {
     @GET("applications/filter")
     suspend fun getFilteredApplications(
         @Query("application_status") status: String? = null,
-        @Query("eto_id") etoId: String? = null
+        @Query("eto_id") etoId: String? = null,
+        @Query("proposed_emptying_date_from") dateFrom: String? = null,
+        @Query("proposed_emptying_date_to") dateTo: String? = null
     ): Response<TodoListResponse>
 }

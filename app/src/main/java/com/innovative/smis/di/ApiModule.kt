@@ -20,6 +20,10 @@ val apiModule = module {
     single<DesludgingVehicleApiService> {
         get<retrofit2.Retrofit>().create(DesludgingVehicleApiService::class.java)
     }
+    
+    single<com.innovative.smis.data.api.PostponeApiService> {
+        get<retrofit2.Retrofit>().create(com.innovative.smis.data.api.PostponeApiService::class.java)
+    }
 
     // Repositories
     single<ContainmentRepository> {
@@ -42,9 +46,18 @@ val apiModule = module {
         )
     }
 
+    single<AdditionalRepairingRepository> {
+        AdditionalRepairingRepositoryImpl(
+            api = get<LaravelApiService>(),
+            dao = get()
+        )
+    }
+
     single<EmptyingServiceRepository> {
         EmptyingServiceRepository(
             apiService = get<LaravelApiService>(),
+            containmentApiService = get<ContainmentApiService>(),
+            postponeApiService = get<com.innovative.smis.data.api.PostponeApiService>(),
             formDao = get(),
             preferenceHelper = get(),
             context = androidContext()
@@ -60,7 +73,8 @@ val apiModule = module {
 
     viewModel<DesludgingVehicleViewModel> {
         DesludgingVehicleViewModel(
-            repository = get()
+            repository = get(),
+            preferenceHelper = get()
         )
     }
 
@@ -72,6 +86,20 @@ val apiModule = module {
 
     viewModel<EmptyingServiceFormViewModel> {
         EmptyingServiceFormViewModel(
+            repository = get(),
+            preferenceHelper = get()
+        )
+    }
+
+    viewModel<com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingListViewModel> {
+        com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingListViewModel(
+            repository = get(),
+            preferenceHelper = get()
+        )
+    }
+
+    viewModel<com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingFormViewModel> {
+        com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingFormViewModel(
             repository = get()
         )
     }

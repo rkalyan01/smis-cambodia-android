@@ -29,6 +29,7 @@ import com.innovative.smis.util.localization.StringResources
 fun ContainmentFormScreen(
     navController: NavController,
     applicationId: String,
+    sanitationCustomerId: String,
     modifier: Modifier = Modifier,
     viewModel: ContainmentFormViewModel = koinViewModel()
 ) {
@@ -39,8 +40,8 @@ fun ContainmentFormScreen(
     val currentLanguage = remember { LocalizationManager.getCurrentLanguage(context) }
     val languageCode = remember(currentLanguage) { LocalizationManager.getLanguageCode(currentLanguage) }
 
-    LaunchedEffect(applicationId) {
-        viewModel.loadContainmentData(applicationId)
+    LaunchedEffect(sanitationCustomerId) {
+        viewModel.loadContainmentData(sanitationCustomerId)
     }
 
     // Handle save result for success/error messages
@@ -81,36 +82,48 @@ fun ContainmentFormScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                },
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Form Header
-            item {
-                SectionHeader("Storage Tank Information")
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    },
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Form Header
+                item {
+                    SectionHeader("Storage Tank Information")
+                }
 
-            // Where is Your Toilet/Latrine Connected?
+            // Toilet Connection (Read-only)
             item {
                 OutlinedTextField(
                     value = uiState.toiletConnection,
-                    onValueChange = viewModel::onToiletConnectionChange,
-                    label = { Text("Where is Your Toilet/Latrine Connected?") },
-                    modifier = Modifier.fillMaxWidth()
+                    onValueChange = { },
+                    label = { Text("Toilet Connection") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false,
+                    colors = disabledTextFieldColors()
                 )
             }
 
-            // What Type of Storage Tank?
+            // Storage Tank Type
             item {
                 if (uiState.isLoadingDropdowns) {
                     Box(
@@ -121,7 +134,7 @@ fun ContainmentFormScreen(
                     }
                 } else {
                     DropdownMenuField(
-                        label = "What Type of Storage Tank?",
+                        label = "Storage Tank Type",
                         selectedValue = uiState.selectedStorageType,
                         selectedKey = uiState.selectedStorageTypeKey,
                         options = uiState.storageTypeOptions,
@@ -185,23 +198,23 @@ fun ContainmentFormScreen(
                 SectionHeader("Tank Specifications")
             }
 
-            // Size of Storage Tank (m3)
+            // Storage Tank Size
             item {
                 OutlinedTextField(
                     value = uiState.sizeOfStorageTankM3,
                     onValueChange = viewModel::onSizeOfStorageTankM3Change,
-                    label = { Text("Size of Storage Tank (m³)") },
+                    label = { Text("Storage Tank Size (m³)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // Construction Year
+            // Construction Year of Storage Tank
             item {
                 OutlinedTextField(
                     value = uiState.constructionYear,
                     onValueChange = viewModel::onConstructionYearChange,
-                    label = { Text("Construction Year") },
+                    label = { Text("Construction Year of Storage Tank") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -212,10 +225,10 @@ fun ContainmentFormScreen(
                 SectionHeader("Accessibility & History")
             }
 
-            // Accessibility to Desludging Vehicle
+            // Accessible to Desludging Vehicle (Yes/No)
             item {
                 DropdownMenuField(
-                    label = "Accessibility to Desludging Vehicle",
+                    label = "Accessible to Desludging Vehicle (Yes/No)",
                     selectedValue = uiState.accessibility,
                     selectedKey = uiState.accessibilityKey,
                     options = mapOf(
@@ -229,10 +242,10 @@ fun ContainmentFormScreen(
                 )
             }
 
-            // Ever Emptied the Storage Tank
+            // Ever Emptied the Storage Tank (Yes/No)
             item {
                 DropdownMenuField(
-                    label = "Ever Emptied the Storage Tank",
+                    label = "Ever Emptied the Storage Tank (Yes/No)",
                     selectedValue = uiState.everEmptied,
                     selectedKey = uiState.everEmptiedKey,
                     options = mapOf(
@@ -284,6 +297,7 @@ fun ContainmentFormScreen(
                 item {
                     FormErrorCard(uiState.errorMessage!!)
                 }
+            }
             }
         }
     }

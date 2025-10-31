@@ -1,6 +1,8 @@
 package com.innovative.smis.data.repository
 
 import com.innovative.smis.data.api.SitePreparationApiService
+import com.innovative.smis.data.api.ContainmentApiService
+import com.innovative.smis.data.api.PostponeApiService
 import com.innovative.smis.data.local.dao.SitePreparationFormDao
 import com.innovative.smis.data.local.dao.SyncQueueDao
 import com.innovative.smis.data.local.dao.TodoItemDao
@@ -12,7 +14,9 @@ import com.innovative.smis.data.local.entity.toApiRequest
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.data.model.response.SitePreparationCustomerDetails
 import com.innovative.smis.data.model.response.SitePreparationCustomerDetailsResponse
+import com.innovative.smis.data.model.response.ContainmentData
 import com.innovative.smis.data.model.request.SitePreparationFormRequest
+import com.innovative.smis.data.model.request.PostponeRequest
 
 import com.innovative.smis.util.common.Resource
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +31,8 @@ import com.innovative.smis.util.helper.PreferenceHelper
 
 class SitePreparationRepository(
     private val apiService: SitePreparationApiService,
+    private val containmentApiService: ContainmentApiService,
+    private val postponeApiService: PostponeApiService,
     private val formDao: SitePreparationFormDao,
     private val syncQueueDao: SyncQueueDao,
     private val todoItemDao: TodoItemDao,
@@ -48,9 +54,9 @@ class SitePreparationRepository(
                 response.body()?.data?.let { networkData ->
                     // Convert network data to entity with complete field mapping from API
                     val entity = SitePreparationFormEntity(
-                        id = java.util.UUID.randomUUID().toString(),
                         applicationId = applicationId,
                         createdBy = null,
+                        sanitationCustomerId = networkData.sanitationCustomerId,
                         sanitationCustomerName = networkData.applicantName,
                         sanitationCustomerContact = networkData.applicantContact,
                         sanitationCustomerAddress = null,
@@ -139,7 +145,7 @@ class SitePreparationRepository(
             if (response.isSuccessful && response.body()?.success == true) {
                 // Successfully submitted to API
                 formDao.updateSyncStatus(
-                    formId = entity.id,
+                    applicationId = entity.applicationId,
                     status = "SYNCED",
                     attempts = 0,
                     lastAttempt = System.currentTimeMillis(),
@@ -148,8 +154,8 @@ class SitePreparationRepository(
                 )
 
                 // Remove from sync queue since successfully synced
-                syncQueueDao.deleteSyncsByEntity("SITE_PREPARATION_FORM", entity.id)
-                println("DEBUG: Successfully synced Site Preparation form ${entity.id} to API and removed from sync queue")
+                syncQueueDao.deleteSyncsByEntity("SITE_PREPARATION_FORM", entity.applicationId.toString())
+                println("DEBUG: Successfully synced Site Preparation form ${entity.applicationId} to API and removed from sync queue")
 
                 Resource.Success(Unit)
             } else {
@@ -161,12 +167,12 @@ class SitePreparationRepository(
                     "API Error (${response.code()}): ${response.message()}"
                 }
 
-                println("DEBUG: API sync failed for Site Preparation form ${entity.id} - $detailedError")
+                println("DEBUG: API sync failed for Site Preparation form ${entity.applicationId} - $detailedError")
 
                 if (entity.syncAttempts < 3) {
                     // Keep as pending for retry
                     formDao.updateSyncStatus(
-                        formId = entity.id,
+                        applicationId = entity.applicationId,
                         status = "PENDING",
                         attempts = entity.syncAttempts + 1,
                         lastAttempt = System.currentTimeMillis(),
@@ -177,7 +183,7 @@ class SitePreparationRepository(
                 } else {
                     // Mark as failed after max retries
                     formDao.updateSyncStatus(
-                        formId = entity.id,
+                        applicationId = entity.applicationId,
                         status = "FAILED",
                         attempts = entity.syncAttempts + 1,
                         lastAttempt = System.currentTimeMillis(),
@@ -188,10 +194,10 @@ class SitePreparationRepository(
                 }
             }
         } catch (e: IOException) {
-            println("DEBUG: Network error for Site Preparation form ${entity.id}: ${e.message}")
+            println("DEBUG: Network error for Site Preparation form ${entity.applicationId}: ${e.message}")
             // Network error - keep as pending for retry
             formDao.updateSyncStatus(
-                formId = entity.id,
+                applicationId = entity.applicationId,
                 status = "PENDING",
                 attempts = entity.syncAttempts + 1,
                 lastAttempt = System.currentTimeMillis(),
@@ -200,9 +206,9 @@ class SitePreparationRepository(
             )
             Resource.Error("Saved locally. Sync will be retried later.")
         } catch (e: Exception) {
-            println("DEBUG: Unexpected error for Site Preparation form ${entity.id}: ${e.message}")
+            println("DEBUG: Unexpected error for Site Preparation form ${entity.applicationId}: ${e.message}")
             formDao.updateSyncStatus(
-                formId = entity.id,
+                applicationId = entity.applicationId,
                 status = "PENDING",
                 attempts = entity.syncAttempts + 1,
                 lastAttempt = System.currentTimeMillis(),
@@ -216,9 +222,9 @@ class SitePreparationRepository(
     private suspend fun queueForSync(entity: SitePreparationFormEntity) {
         try {
             val syncEntity = SyncQueueEntity(
-                id = java.util.UUID.randomUUID().toString(),
                 entityType = "SITE_PREPARATION_FORM",
-                entityId = entity.id,
+                id = java.util.UUID.randomUUID().toString(),
+                entityId = entity.applicationId.toString(),
                 operation = "UPDATE",
                 data = entityToJsonData(entity),
                 retryCount = 0,
@@ -229,7 +235,7 @@ class SitePreparationRepository(
                 priority = 1
             )
             syncQueueDao.insert(syncEntity)
-            println("DEBUG: Added Site Preparation form ${entity.id} to sync queue")
+            println("DEBUG: Added Site Preparation form ${entity.applicationId} to sync queue")
         } catch (e: Exception) {
             println("DEBUG: Failed to add Site Preparation form to sync queue: ${e.message}")
         }
@@ -250,10 +256,10 @@ class SitePreparationRepository(
             if (existingForm != null) return@withContext existingForm
 
             val draftForm = SitePreparationFormEntity(
-                id = java.util.UUID.randomUUID().toString(),
                 applicationId = applicationId,
                 createdBy = null,
                 syncStatus = "DRAFT",
+                sanitationCustomerId = null,
                 sanitationCustomerName = null,
                 sanitationCustomerContact = null,
                 sanitationCustomerAddress = null,
@@ -282,11 +288,11 @@ class SitePreparationRepository(
         }
     }
 
-    suspend fun submitForm(formId: String): Resource<Unit> {
+    suspend fun submitForm(applicationId: String): Resource<Unit> {
         return try {
             // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                formDao.markAsPending(formId)
+                formDao.markAsPending(applicationId.toInt())
             }
             Resource.Success(Unit)
         } catch (e: Exception) {
@@ -379,8 +385,16 @@ class SitePreparationRepository(
                 emit(Resource.Error("API Error: ${response.message()}", localDataFlow.first()))
             }
         } catch (e: IOException) {
-            emit(Resource.Error("Network error. Displaying cached data.", localDataFlow.first()))
+            android.util.Log.e("SitePreparationRepo", "❌ IOException: ${e.javaClass.simpleName} - ${e.message}", e)
+            val errorMsg = when {
+                e is javax.net.ssl.SSLException -> "SSL Certificate error: ${e.message}"
+                e.message?.contains("Unable to resolve host") == true -> "Cannot connect to server"
+                e.message?.contains("timeout") == true -> "Connection timeout"
+                else -> "Network error: ${e.message}"
+            }
+            emit(Resource.Error("$errorMsg. Displaying cached data.", localDataFlow.first()))
         } catch (e: Exception) {
+            android.util.Log.e("SitePreparationRepo", "❌ Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
             emit(Resource.Error(e.message ?: "An unknown error occurred.", localDataFlow.first()))
         }
     }
@@ -436,7 +450,7 @@ class SitePreparationRepository(
                 try {
                     // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
                     val formEntity = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        formDao.getFormById(sync.entityId)
+                        formDao.getFormByApplicationId(sync.entityId.toInt())
                     }
                     if (formEntity != null) {
                         val result = trySubmitToApi(formEntity)
@@ -464,13 +478,63 @@ class SitePreparationRepository(
         }
     }
 
+    fun getContainmentStatus(sanitationCustomerId: String): Flow<Resource<ContainmentData>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = containmentApiService.getContainmentStatus(sanitationCustomerId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data?.let { containment ->
+                    emit(Resource.Success(containment))
+                } ?: emit(Resource.Error("Containment not found"))
+            } else {
+                emit(Resource.Error("Containment not found"))
+            }
+        } catch (e: IOException) {
+            emit(Resource.Error("Network error loading containment status"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Unknown error loading containment status"))
+        }
+    }
+
+    suspend fun postponeApplication(
+        applicationId: Int,
+        postponeFrom: String,
+        postponeUntil: String,
+        reason: String,
+        remark: String
+    ): Resource<Unit> {
+        return try {
+            val request = PostponeRequest(
+                postponeFrom = postponeFrom,
+                postponeUntil = postponeUntil,
+                reason = reason,
+                remark = remark
+            )
+            val response = postponeApiService.postponeApplication(
+                applicationId = applicationId,
+                postponeAt = "Site-Preparation",
+                request = request
+            )
+            
+            if (response.isSuccessful && response.body()?.success == true) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error(response.body()?.message ?: "Failed to postpone application")
+            }
+        } catch (e: IOException) {
+            Resource.Error("Network error: ${e.message}")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error occurred")
+        }
+    }
+
 }
 
 fun SitePreparationCustomerDetails.toEntity(applicationId: Int): SitePreparationFormEntity {
     return SitePreparationFormEntity(
-        id = java.util.UUID.randomUUID().toString(),
         applicationId = applicationId,
         createdBy = null,
+        sanitationCustomerId = this.sanitationCustomerId,
         sanitationCustomerName = this.sanitationCustomerName,
         sanitationCustomerContact = this.sanitationCustomerContact,
         sanitationCustomerAddress = this.sanitationCustomerAddress,

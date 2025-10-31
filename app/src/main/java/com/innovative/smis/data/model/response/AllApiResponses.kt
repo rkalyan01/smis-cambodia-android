@@ -79,15 +79,23 @@ data class Application(
     @Json(name = "reference_number") val reference_number: String?,
     @Json(name = "application_status") val status: String,
     @Json(name = "applicant_name") val applicant_name: String?,
-    @Json(name = "address") val address: String?
+    @Json(name = "applicant_contact") val applicant_contact: String?,
+    @Json(name = "application_datetime") val application_datetime: String?,
+    @Json(name = "proposed_emptying_date") val proposed_emptying_date: String?,
+    @Json(name = "address") val address: String?,
+    @Json(name = "application_type") val application_type: String?
 )
 
 @JsonClass(generateAdapter = true)
 data class EmptyingFormResponse(
-    @Json(name = "success") val success: Boolean,
+    @Json(name = "success") val success: Boolean? = null,
+    @Json(name = "succes") val succes: Boolean? = null, // API typo workaround
     @Json(name = "message") val message: String?,
     @Json(name = "data") val data: EmptyingFormData?
-)
+) {
+    // Helper to get actual success value (handles both spellings)
+    val isSuccess: Boolean get() = success ?: succes ?: false
+}
 
 @JsonClass(generateAdapter = true)
 data class EmptyingFormData(
@@ -163,17 +171,25 @@ data class SanitationCustomerResponse(
 
 @JsonClass(generateAdapter = true)
 data class SanitationCustomerData(
+    @Json(name = "sanitation_customer_id") val sanitationCustomerId: String?,
     @Json(name = "sanitation_customer_name") val sanitationCustomerName: String?,
     @Json(name = "sanitation_customer_contact") val sanitationCustomerContact: String?,
     @Json(name = "pbc_customer_type") val pbcCustomerType: String?,
+    @Json(name = "application_type") val applicationType: String?, // ✅ Added to check On-Demand status
+    @Json(name = "applicant_name") val applicantName: String?, // ✅ Added for readonly field pattern
+    @Json(name = "applicant_contact") val applicantContact: String?, // ✅ Added for readonly field pattern
     @Json(name = "ever_emptied") val everEmptied: Boolean?,
     @Json(name = "last_emptied_year") val lastEmptiedYear: Int?,
     @Json(name = "emptied_nodate_reason") val emptiedNodateReason: String?,
     @Json(name = "not_emptied_before_reason") val notEmptiedBeforeReason: String?,
+    @Json(name = "emptying_purpose") val purposeOfEmptying: String?, // ✅ Fixed: Map from "emptying_purpose" (ID like "5")
+    @Json(name = "other_emptying_purpose") val otherEmptyingPurpose: String?,
     @Json(name = "size_of_storage_tank_m3") val sizeOfStorageTankM3: String?,
     @Json(name = "construction_year") val constructionYear: Int?,
     @Json(name = "accessibility") val accessibility: Boolean?,
-    @Json(name = "free_service_under_pbc") val freeServiceUnderPbc: Boolean?
+    @Json(name = "free_service_under_pbc") val freeServiceUnderPbc: Boolean?,
+    @Json(name = "amount_of_regular_pay") val amountOfRegularPay: String?,
+    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?
 )
 
 // =====================================
@@ -389,6 +405,7 @@ data class SitePreparationCustomerDetailsResponse(
 
 @JsonClass(generateAdapter = true)
 data class SitePreparationCustomerDetails(
+    @Json(name = "sanitation_customer_id") val sanitationCustomerId: String?,
     @Json(name = "sanitation_customer_name") val sanitationCustomerName: String?,
     @Json(name = "sanitation_customer_contact") val sanitationCustomerContact: String?,
     @Json(name = "sanitation_customer_address") val sanitationCustomerAddress: String?,

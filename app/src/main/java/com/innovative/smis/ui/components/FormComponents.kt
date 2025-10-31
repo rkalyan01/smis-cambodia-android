@@ -70,7 +70,8 @@ fun DropdownField(
     selectedValue: String,
     onValueSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    error: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -83,6 +84,7 @@ fun DropdownField(
                 value = selectedValue,
                 onValueChange = { },
                 label = { Text(label) },
+                isError = error != null,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
@@ -110,6 +112,15 @@ fun DropdownField(
                     )
                 }
             }
+        }
+
+        if (error != null) {
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
         }
     }
 }
@@ -171,7 +182,7 @@ fun YesNoRadioGroup(
                         selected = selectedOption == true,
                         onClick = { onOptionSelected(true) }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -190,7 +201,7 @@ fun YesNoRadioGroup(
                         selected = selectedOption == false,
                         onClick = { onOptionSelected(false) }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -306,7 +317,7 @@ fun RadioButtonGroup(
                         selected = (selectedValue == option),
                         onClick = { onValueSelected(option) }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(

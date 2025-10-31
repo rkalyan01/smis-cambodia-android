@@ -10,10 +10,14 @@ import android.net.Uri
 import android.provider.MediaStore
 
 import com.innovative.smis.data.api.LaravelApiService
+import com.innovative.smis.data.api.ContainmentApiService
+import com.innovative.smis.data.api.PostponeApiService
 import com.innovative.smis.util.helper.PreferenceHelper
 import com.innovative.smis.data.api.request.EmptyingServiceRequest
+import com.innovative.smis.data.model.request.PostponeRequest
 import com.innovative.smis.data.model.response.SanitationCustomerResponse
 import com.innovative.smis.data.model.response.ContainmentIssuesResponse
+import com.innovative.smis.data.model.response.ContainmentData
 import com.innovative.smis.data.model.response.SimpleDropdownResponse
 import com.innovative.smis.data.model.response.DesludgingVehicleListResponse
 import com.innovative.smis.data.model.response.EmptyingReadonlyDataResponse
@@ -23,9 +27,12 @@ import com.innovative.smis.data.local.entity.EmptyingServiceFormEntity
 import com.innovative.smis.data.local.entity.toApiRequest
 import com.innovative.smis.ui.features.emptyingservice.EmptyingServiceFormUiState
 import com.innovative.smis.util.common.Resource
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
 class EmptyingServiceRepository(
     private val apiService: LaravelApiService,
+    private val containmentApiService: ContainmentApiService,
+    private val postponeApiService: PostponeApiService,
     private val formDao: EmptyingServiceFormDao,
     private val preferenceHelper: PreferenceHelper,
     private val context: Context
@@ -57,29 +64,143 @@ class EmptyingServiceRepository(
     }
 
     suspend fun submitEmptyingService(applicationId: Int, request: EmptyingServiceRequest): Resource<Unit> {
-        return try {
+        try {
+            // Get eto_id from logged-in user preferences
+            val etoId = preferenceHelper.getEtoId()?.toString() ?: ""
+            
+            android.util.Log.d("EmptyingRepo", "=== SUBMITTING TO API ===")
+            android.util.Log.d("EmptyingRepo", "Original request desludging_vehicle_id: '${request.desludging_vehicle_id}'")
+            android.util.Log.d("EmptyingRepo", "Original request additional_repairing_id: '${request.additional_repairing_id}'")
+            android.util.Log.d("EmptyingRepo", "Original request sludge_type_a: '${request.sludge_type_a}'")
+            android.util.Log.d("EmptyingRepo", "Original request sludge_type_b: '${request.sludge_type_b}'")
+            android.util.Log.d("EmptyingRepo", "Original request service_receiver_name: '${request.service_receiver_name}'")
+            android.util.Log.d("EmptyingRepo", "Original request service_receiver_contact: '${request.service_receiver_contact}'")
+            
+            // ✅ CRITICAL FIX: Convert multi-select additional_repairing_id to single value
+            // Database column is integer type, can only accept single value, not comma-separated
+            val singleAdditionalRepairing = request.additional_repairing_id
+                ?.split(",")
+                ?.firstOrNull()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() && it != "Others" }
+            
+            android.util.Log.d("EmptyingRepo", "Converted additional_repairing_id from '${request.additional_repairing_id}' to '$singleAdditionalRepairing'")
+            
+            // ✅ CRITICAL FIX: Map presence_of_pumping_point to database enum values
+            // Database expects: "Yes (Cover, Tube, Pierce)" or "No (need to pierce the tank)"
+            val mappedPumpingPointPresence = when (request.presence_of_pumping_point) {
+                "Yes" -> "Yes (Cover, Tube, Pierce)"
+                "No" -> "No (need to pierce the tank)"
+                else -> request.presence_of_pumping_point
+            }
+            
+            android.util.Log.d("EmptyingRepo", "Mapped presence_of_pumping_point from '${request.presence_of_pumping_point}' to '$mappedPumpingPointPresence'")
+            
             // Process request with proper defaults and Base64 image conversion
             val processedRequest = request.copy(
-                no_of_trips = request.no_of_trips?.takeIf { it.isNotBlank() } ?: "1",
                 volume_of_sludge = request.volume_of_sludge ?: "0",
                 extra_payment = request.extra_payment?.takeIf { it.isNotBlank() } ?: "0",
-                eto_id = request.eto_id?.takeIf { it.isNotBlank() } ?: "1",
+                eto_id = request.eto_id?.takeIf { it.isNotBlank() } ?: etoId,
                 desludging_vehicle_id = request.desludging_vehicle_id?.takeIf { it.isNotBlank() } ?: "1",
+                additional_repairing_id = singleAdditionalRepairing, // Use only first selected value
+                presence_of_pumping_point = mappedPumpingPointPresence, // Use mapped database enum value
                 receipt_image = request.receipt_image?.let { convertUriToBase64(it) },
                 picture_of_emptying = request.picture_of_emptying?.let { convertUriToBase64(it) }
             )
+            
+            android.util.Log.d("EmptyingRepo", "Processed request desludging_vehicle_id: '${processedRequest.desludging_vehicle_id}'")
+            android.util.Log.d("EmptyingRepo", "Processed request sludge_type_a: '${processedRequest.sludge_type_a}'")
+            android.util.Log.d("EmptyingRepo", "Processed request sludge_type_b: '${processedRequest.sludge_type_b}'")
 
-            val response = apiService.updateEmptyingService(applicationId.toString(), processedRequest)
+            // ✅ STEP 1: POST /api/emptyings/create/{application_id}
+            // Send all fields EXCEPT extra_payment, receipt_number, comments, receipt_image
+            val createRequest = processedRequest.copy(
+                extra_payment = null,
+                receipt_number = null,
+                comments = null,
+                receipt_image = null
+            )
+            
+            android.util.Log.d("EmptyingRepo", "STEP 1: Creating emptying record (without payment details)")
+            android.util.Log.d("EmptyingRepo", "STEP 1 - service_receiver_name: '${createRequest.service_receiver_name}'")
+            android.util.Log.d("EmptyingRepo", "STEP 1 - service_receiver_contact: '${createRequest.service_receiver_contact}'")
+            val createResponse = apiService.createEmptyingService(applicationId, createRequest)
 
-            if (response.isSuccessful) {
-                Resource.Success(Unit)
+            if (!createResponse.isSuccessful) {
+                android.util.Log.e("EmptyingRepo", "STEP 1 failed: HTTP ${createResponse.code()} - ${createResponse.message()}")
+                return Resource.Error("Failed to create emptying service: ${createResponse.message()}")
+            }
+
+            // Get the emptying_id from the response
+            val responseBody = createResponse.body()
+            android.util.Log.d("EmptyingRepo", "STEP 1 response - isSuccess: ${responseBody?.isSuccess}, message: ${responseBody?.message}")
+            
+            val emptyingIdString = responseBody?.data?.id
+            if (emptyingIdString.isNullOrBlank()) {
+                android.util.Log.e("EmptyingRepo", "No emptying_id in response. Response body: $responseBody")
+                return Resource.Error("Failed to get emptying ID from response")
+            }
+            
+            val emptyingId = emptyingIdString.toIntOrNull()
+            if (emptyingId == null) {
+                android.util.Log.e("EmptyingRepo", "Invalid emptying_id format: $emptyingIdString")
+                return Resource.Error("Invalid emptying ID format")
+            }
+            
+            android.util.Log.d("EmptyingRepo", "STEP 1 successful. Emptying ID: $emptyingId")
+
+            // ✅ STEP 2: POST /api/emptyings/{emptying_id} with X-HTTP-Method-Override: PUT
+            // Send only extra_payment, receipt_number, comments, receipt_image
+            // Using POST with X-HTTP-Method-Override header for Laravel multipart compatibility
+            android.util.Log.d("EmptyingRepo", "STEP 2: Updating payment with POST + X-HTTP-Method-Override: PUT")
+            android.util.Log.d("EmptyingRepo", "STEP 2 - extra_payment: '${processedRequest.extra_payment}'")
+            android.util.Log.d("EmptyingRepo", "STEP 2 - receipt_number: '${processedRequest.receipt_number}'")
+            android.util.Log.d("EmptyingRepo", "STEP 2 - has receipt_image: ${processedRequest.receipt_image != null}")
+            
+            val extraPaymentBody = processedRequest.extra_payment?.let { 
+                okhttp3.RequestBody.create("text/plain".toMediaTypeOrNull(), it) 
+            }
+            val receiptNumberBody = processedRequest.receipt_number?.let { 
+                okhttp3.RequestBody.create("text/plain".toMediaTypeOrNull(), it) 
+            }
+            val commentsBody = processedRequest.comments?.let { 
+                okhttp3.RequestBody.create("text/plain".toMediaTypeOrNull(), it) 
+            }
+            val receiptImagePart = processedRequest.receipt_image?.let { base64Image ->
+                // Convert base64 to multipart
+                val imageBytes = android.util.Base64.decode(
+                    base64Image.substringAfter("base64,"), 
+                    android.util.Base64.NO_WRAP
+                )
+                val requestFile = okhttp3.RequestBody.create(
+                    "image/jpeg".toMediaTypeOrNull(), 
+                    imageBytes
+                )
+                okhttp3.MultipartBody.Part.createFormData("receipt_image", "receipt.jpg", requestFile)
+            }
+            
+            val updateResponse = apiService.updateEmptyingPaymentDetails(
+                emptyingId = emptyingId,
+                method = "PUT",
+                extraPayment = extraPaymentBody,
+                receiptNumber = receiptNumberBody,
+                comments = commentsBody,
+                receiptImage = receiptImagePart
+            )
+
+            if (updateResponse.isSuccessful) {
+                android.util.Log.d("EmptyingRepo", "STEP 2 successful. Both API calls completed!")
+                return Resource.Success(Unit)
             } else {
-                Resource.Error("Failed to submit emptying service: ${response.message()}")
+                android.util.Log.e("EmptyingRepo", "STEP 2 failed: ${updateResponse.message()}")
+                return Resource.Error("Emptying created but payment update failed: ${updateResponse.message()}")
             }
         } catch (e: IOException) {
-            Resource.Error("Network error submitting emptying service")
+            android.util.Log.e("EmptyingRepo", "Network error: ${e.message}", e)
+            return Resource.Error("Network error submitting emptying service")
         } catch (e: Exception) {
-            Resource.Error(e.message ?: "Unknown error submitting emptying service")
+            android.util.Log.e("EmptyingRepo", "Unknown error: ${e.message}", e)
+            return Resource.Error(e.message ?: "Unknown error submitting emptying service")
         }
     }
 
@@ -103,14 +224,12 @@ class EmptyingServiceRepository(
 
     suspend fun saveDraft(applicationId: Int, formData: EmptyingServiceFormUiState): Resource<String> {
         return try {
-            val formId = UUID.randomUUID().toString()
             val entity = EmptyingServiceFormEntity(
-                id = formId,
                 applicationId = applicationId,
                 emptiedDate = System.currentTimeMillis(),
                 startTime = formData.startTime,
                 endTime = formData.endTime,
-                noOfTrips = formData.noOfTrips,
+                additionalTripRequired = formData.additionalTripRequired,
                 applicantName = formData.applicantName,
                 applicantContact = formData.applicantContact,
                 serviceReceiverName = formData.serviceReceiverName,
@@ -122,7 +241,8 @@ class EmptyingServiceRepository(
                 pumpingPointPresence = formData.pumpingPointPresence,
                 pumpingPointType = formData.pumpingPointType,
                 freeUnderPBC = formData.freeUnderPBC,
-                additionalRepairingInEmptying = formData.additionalRepairingInEmptying,
+                additionalRepairingInEmptying = formData.additionalRepairingKeys.joinToString(","),
+                otherAdditionalRepairing = formData.otherAdditionalRepairing,
                 regularCost = formData.regularCost,
                 extraCost = formData.extraCost,
                 receiptNumber = formData.receiptNumber,
@@ -138,7 +258,7 @@ class EmptyingServiceRepository(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 formDao.upsert(entity)
             }
-            Resource.Success(formId)
+            Resource.Success(applicationId.toString())
         } catch (e: Exception) {
             Resource.Error("Failed to save draft: ${e.message}")
         }
@@ -146,14 +266,17 @@ class EmptyingServiceRepository(
 
     suspend fun submitFormOffline(applicationId: Int, formData: EmptyingServiceFormUiState): Resource<String> {
         return try {
-            val formId = UUID.randomUUID().toString()
+            android.util.Log.d("EmptyingRepo", "=== SAVING OFFLINE ===")
+            android.util.Log.d("EmptyingRepo", "desludgingVehicleId: '${formData.desludgingVehicleId}'")
+            android.util.Log.d("EmptyingRepo", "sludgeType: '${formData.sludgeType}'")
+            android.util.Log.d("EmptyingRepo", "typeOfSludge: '${formData.typeOfSludge}'")
+            
             val entity = EmptyingServiceFormEntity(
-                id = formId,
                 applicationId = applicationId,
                 emptiedDate = System.currentTimeMillis(),
                 startTime = formData.startTime,
                 endTime = formData.endTime,
-                noOfTrips = formData.noOfTrips,
+                additionalTripRequired = formData.additionalTripRequired,
                 applicantName = formData.applicantName,
                 applicantContact = formData.applicantContact,
                 serviceReceiverName = formData.serviceReceiverName,
@@ -165,7 +288,8 @@ class EmptyingServiceRepository(
                 pumpingPointPresence = formData.pumpingPointPresence,
                 pumpingPointType = formData.pumpingPointType,
                 freeUnderPBC = formData.freeUnderPBC,
-                additionalRepairingInEmptying = formData.additionalRepairingInEmptying,
+                additionalRepairingInEmptying = formData.additionalRepairingKeys.joinToString(","),
+                otherAdditionalRepairing = formData.otherAdditionalRepairing,
                 regularCost = formData.regularCost,
                 extraCost = formData.extraCost,
                 receiptNumber = formData.receiptNumber,
@@ -176,13 +300,19 @@ class EmptyingServiceRepository(
                 latitude = formData.latitude,
                 syncStatus = "PENDING"
             )
+            
+            android.util.Log.d("EmptyingRepo", "Entity desludgingVehicleId: '${entity.desludgingVehicleId}'")
+            android.util.Log.d("EmptyingRepo", "Entity sludgeType: '${entity.sludgeType}'")
 
             // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 formDao.upsert(entity)
             }
-            Resource.Success(formId)
+            
+            android.util.Log.d("EmptyingRepo", "Entity saved to database successfully")
+            Resource.Success(applicationId.toString())
         } catch (e: Exception) {
+            android.util.Log.e("EmptyingRepo", "Failed to save offline: ${e.message}", e)
             Resource.Error("Failed to save form offline: ${e.message}")
         }
     }
@@ -201,17 +331,17 @@ class EmptyingServiceRepository(
                     val result = submitEmptyingService(form.applicationId, request)
                     if (result is Resource.Success) {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            formDao.markAsSynced(form.id)
+                            formDao.markAsSynced(form.applicationId)
                         }
                         successCount++
                     } else {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            formDao.updateSyncStatus(form.id, "FAILED")
+                            formDao.updateSyncStatus(form.applicationId, "FAILED")
                         }
                     }
                 } catch (e: Exception) {
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        formDao.updateSyncStatus(form.id, "FAILED")
+                        formDao.updateSyncStatus(form.applicationId, "FAILED")
                     }
                 }
             }
@@ -312,6 +442,56 @@ class EmptyingServiceRepository(
             emit(Resource.Error("Network error loading additional repairing options"))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Unknown error loading additional repairing options"))
+        }
+    }
+
+    fun getContainmentStatus(sanitationCustomerId: String): Flow<Resource<ContainmentData>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = containmentApiService.getContainmentStatus(sanitationCustomerId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data?.let { containment ->
+                    emit(Resource.Success(containment))
+                } ?: emit(Resource.Error("Containment not found"))
+            } else {
+                emit(Resource.Error("Containment not found"))
+            }
+        } catch (e: IOException) {
+            emit(Resource.Error("Network error loading containment status"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Unknown error loading containment status"))
+        }
+    }
+
+    suspend fun postponeApplication(
+        applicationId: Int,
+        postponeFrom: String,
+        postponeUntil: String,
+        reason: String,
+        remark: String
+    ): Resource<Unit> {
+        return try {
+            val request = PostponeRequest(
+                postponeFrom = postponeFrom,
+                postponeUntil = postponeUntil,
+                reason = reason,
+                remark = remark
+            )
+            val response = postponeApiService.postponeApplication(
+                applicationId = applicationId,
+                postponeAt = "Emptying-Service",
+                request = request
+            )
+            
+            if (response.isSuccessful && response.body()?.success == true) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error(response.body()?.message ?: "Failed to postpone application")
+            }
+        } catch (e: IOException) {
+            Resource.Error("Network error: ${e.message}")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error occurred")
         }
     }
 }

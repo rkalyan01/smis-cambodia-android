@@ -61,34 +61,6 @@ interface LaravelApiService {
     // =====================================
 
     /**
-     * Create emptying service
-     * POST /api/emptyings
-     */
-    @Multipart
-    @PATCH("emptyings/{id}")
-    suspend fun createEmptyingService(
-        @Path("id") applicationId: Int,
-        @Part("start_time") startTime: okhttp3.RequestBody,
-        @Part("end_time") endTime: okhttp3.RequestBody,
-        @Part("volume_of_sludge") volumeOfSludge: okhttp3.RequestBody,
-        @Part("no_of_trips") noOfTrips: okhttp3.RequestBody,
-        @Part("sludge_type_a") sludgeTypeA: okhttp3.RequestBody,
-        @Part("sludge_type_b") sludgeTypeB: okhttp3.RequestBody,
-        @Part("location_of_containment") locationOfContainment: okhttp3.RequestBody,
-        @Part("presence_of_pumping_point") presenceOfPumpingPoint: okhttp3.RequestBody,
-        @Part("other_additional_repairing") otherAdditionalRepairing: okhttp3.RequestBody,
-        @Part("extra_payment") extraPayment: okhttp3.RequestBody,
-        @Part("receipt_number") receiptNumber: okhttp3.RequestBody,
-        @Part("comments") comments: okhttp3.RequestBody,
-        @Part("eto_id") etoId: okhttp3.RequestBody,
-        @Part("desludging_vehicle_id") desludgingVehicleId: okhttp3.RequestBody,
-        @Part("longitude") longitude: okhttp3.RequestBody,
-        @Part("latitude") latitude: okhttp3.RequestBody,
-        @Part receiptImage: okhttp3.MultipartBody.Part?,
-        @Part pictureOfEmptying: okhttp3.MultipartBody.Part?
-    ): Response<EmptyingFormResponse>
-
-    /**
      * Get emptying service readonly data
      * GET /api/emptyings/readonly-data/{application_id}
      */
@@ -99,18 +71,44 @@ interface LaravelApiService {
 
     /**
      * Get additional repairing options
-     * GET /api/emptyings/additional-repairing
+     * GET /api/site-preparation/show-additional-repairing
      */
-    @GET("emptyings/additional-repairing")
+    @GET("site-preparation/show-additional-repairing")
     suspend fun getAdditionalRepairingOptions(): Response<SimpleDropdownResponse>
 
     /**
-     * Update emptying service
+     * Create emptying service (use this instead of update for initial submission)
+     * POST /api/emptyings/create/{application_id}
+     */
+    @POST("emptyings/create/{application_id}")
+    suspend fun createEmptyingService(
+        @Path("application_id") applicationId: Int,
+        @Body request: EmptyingServiceRequest
+    ): Response<EmptyingFormResponse>
+
+    /**
+     * Update payment details for emptying service
+     * POST /api/emptyings/{emptying_id} with X-HTTP-Method-Override: PUT
+     * Using POST with method override header for Laravel multipart compatibility
+     */
+    @Multipart
+    @POST("emptyings/{emptying_id}")
+    suspend fun updateEmptyingPaymentDetails(
+        @Path("emptying_id") emptyingId: Int,
+        @Header("X-HTTP-Method-Override") method: String,
+        @Part("extra_payment") extraPayment: okhttp3.RequestBody?,
+        @Part("receipt_number") receiptNumber: okhttp3.RequestBody?,
+        @Part("comments") comments: okhttp3.RequestBody?,
+        @Part receiptImage: okhttp3.MultipartBody.Part?
+    ): Response<EmptyingFormResponse>
+
+    /**
+     * Update/Create emptying service (DEPRECATED - use createEmptyingService)
      * PATCH /api/emptyings/{id}
      */
     @PATCH("emptyings/{id}")
     suspend fun updateEmptyingService(
-        @Path("id") serviceId: String,
+        @Path("id") applicationId: String,
         @Body request: EmptyingServiceRequest
     ): Response<EmptyingFormResponse>
 
@@ -122,6 +120,61 @@ interface LaravelApiService {
     suspend fun getEmptyingServiceDetails(
         @Path("id") serviceId: String
     ): Response<EmptyingFormResponse>
+
+    // =====================================
+    // ADDITIONAL REPAIRING ENDPOINTS
+    // =====================================
+
+    /**
+     * Get trip filter applications
+     * GET /api/emptyings/trip-filter
+     */
+    @GET("emptyings/trip-filter")
+    suspend fun getTripFilterApplications(
+        @Query("application_status") applicationStatus: String,
+        @Query("eto_id") etoId: String,
+        @Query("additional_trip_required") additionalTripRequired: String
+    ): Response<TripFilterResponse>
+
+    /**
+     * Get regular payment amount
+     * GET /api/emptyings-trip/get-amount-regular-payment
+     */
+    @GET("emptyings-trip/get-amount-regular-payment")
+    suspend fun getRegularPaymentAmount(): Response<RegularPaymentAmountResponse>
+
+    /**
+     * Create trip entry
+     * POST /api/emptyings-trip/create/{emptying_id}
+     */
+    @POST("emptyings-trip/create/{emptying_id}")
+    suspend fun createTripEntry(
+        @Path("emptying_id") emptyingId: Int,
+        @Body request: com.innovative.smis.data.model.request.TripCreateRequest
+    ): Response<TripCreateResponse>
+
+    /**
+     * Update payment details for additional repairing
+     * PATCH /api/emptyings/{emptying_id}
+     */
+    @Multipart
+    @PATCH("emptyings/{emptying_id}")
+    suspend fun updatePaymentDetails(
+        @Path("emptying_id") emptyingId: Int,
+        @Part("amount_of_extra_payment") amountOfExtraPayment: okhttp3.RequestBody?,
+        @Part("receipt_number") receiptNumber: okhttp3.RequestBody?,
+        @Part("comments") comments: okhttp3.RequestBody?,
+        @Part receiptImage: okhttp3.MultipartBody.Part?
+    ): Response<PaymentUpdateResponse>
+
+    /**
+     * Get emptying details for payment update
+     * GET /api/emptyings/{emptying_id}
+     */
+    @GET("emptyings/{emptying_id}")
+    suspend fun getEmptyingDetails(
+        @Path("emptying_id") emptyingId: Int
+    ): Response<EmptyingDetailsResponse>
 
     /**
      * Get desludging vehicles by ETO ID

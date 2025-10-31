@@ -1,6 +1,7 @@
 package com.innovative.smis.data.repository
 
 import com.innovative.smis.data.api.ApiService
+import com.innovative.smis.data.api.EmptyingApiService
 import com.innovative.smis.data.model.response.ApplicationListResponse
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PreferenceHelper
@@ -14,6 +15,7 @@ import java.io.IOException
  */
 class WorkflowRepository(
     private val apiService: ApiService,
+    private val emptyingApiService: EmptyingApiService,
     private val preferenceHelper: PreferenceHelper
 ) {
     
@@ -52,7 +54,8 @@ class WorkflowRepository(
             val etoId = preferenceHelper.getEtoId()?.toString()
             val response = apiService.getFilteredApplications(
                 status = "Scheduled",
-                etoId = etoId
+                etoId = etoId,
+                siteVisitRequired = "yes"
             )
             
             if (response.isSuccessful && response.body() != null) {
@@ -69,17 +72,15 @@ class WorkflowRepository(
     
     /**
      * Get applications for Emptying Service workflow
+     * Uses special endpoint that handles complex OR logic:
      * Status: "Scheduled" (site_visit_required=no) OR "Site-Preparation" (site_visit_required=yes)
      */
     fun getEmptyingServiceApplications(): Flow<Resource<ApplicationListResponse>> = flow {
         emit(Resource.Loading())
         try {
             val etoId = preferenceHelper.getEtoId()?.toString()
-            // Use the new compound query endpoint for complex OR logic
-            val response = apiService.getFilteredApplications(
-                status = "Site-Preparation", // Fallback to one status until we implement the EmptyingApiService properly
-                etoId = etoId
-            )
+            // Use the special emptying-service-filter endpoint that handles complex OR logic on backend
+            val response = emptyingApiService.getEmptyingServiceApplications(etoId)
             
             if (response.isSuccessful && response.body() != null) {
                 emit(Resource.Success(response.body()!!))

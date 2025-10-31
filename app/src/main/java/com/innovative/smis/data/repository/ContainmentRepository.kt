@@ -12,6 +12,7 @@ import com.innovative.smis.ui.features.containment.ContainmentFormUiState
 import com.innovative.smis.util.common.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.catch
 import java.io.IOException
 import java.util.*
 
@@ -24,55 +25,52 @@ class ContainmentRepository(
 
     fun getStorageTypes(): Flow<Resource<Map<String, String>>> = flow {
         emit(Resource.Loading())
-        try {
-            val response = apiService.getStorageTypes()
-            if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.data?.let { types ->
-                    emit(Resource.Success(types))
-                } ?: emit(Resource.Error("No storage types data received"))
-            } else {
-                emit(Resource.Error("Failed to load storage types: ${response.message()}"))
-            }
-        } catch (e: IOException) {
-            emit(Resource.Error("Network error loading storage types"))
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Unknown error loading storage types"))
+        val response = apiService.getStorageTypes()
+        if (response.isSuccessful && response.body()?.success == true) {
+            response.body()?.data?.let { types ->
+                emit(Resource.Success(types))
+            } ?: emit(Resource.Error("No storage types data received"))
+        } else {
+            emit(Resource.Error("Failed to load storage types: ${response.message()}"))
+        }
+    }.catch { e ->
+        when (e) {
+            is IOException -> emit(Resource.Error("Network error loading storage types"))
+            else -> emit(Resource.Error(e.message ?: "Unknown error loading storage types"))
         }
     }
 
     fun getStorageConnections(): Flow<Resource<Map<String, String>>> = flow {
         emit(Resource.Loading())
-        try {
-            val response = apiService.getStorageConnections()
-            if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.data?.let { connections ->
-                    emit(Resource.Success(connections))
-                } ?: emit(Resource.Error("No storage connections data received"))
-            } else {
-                emit(Resource.Error("Failed to load storage connections: ${response.message()}"))
-            }
-        } catch (e: IOException) {
-            emit(Resource.Error("Network error loading storage connections"))
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Unknown error loading storage connections"))
+        val response = apiService.getStorageConnections()
+        if (response.isSuccessful && response.body()?.success == true) {
+            response.body()?.data?.let { connections ->
+                emit(Resource.Success(connections))
+            } ?: emit(Resource.Error("No storage connections data received"))
+        } else {
+            emit(Resource.Error("Failed to load storage connections: ${response.message()}"))
+        }
+    }.catch { e ->
+        when (e) {
+            is IOException -> emit(Resource.Error("Network error loading storage connections"))
+            else -> emit(Resource.Error(e.message ?: "Unknown error loading storage connections"))
         }
     }
 
     fun getContainmentStatus(sanitationCustomerId: String): Flow<Resource<ContainmentData>> = flow {
         emit(Resource.Loading())
-        try {
-            val response = apiService.getContainmentStatus(sanitationCustomerId)
-            if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.data?.let { containment ->
-                    emit(Resource.Success(containment))
-                } ?: emit(Resource.Error("Containment not found"))
-            } else {
-                emit(Resource.Error("Containment not found"))
-            }
-        } catch (e: IOException) {
-            emit(Resource.Error("Network error loading containment status"))
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Unknown error loading containment status"))
+        val response = apiService.getContainmentStatus(sanitationCustomerId)
+        if (response.isSuccessful && response.body()?.success == true) {
+            response.body()?.data?.let { containment ->
+                emit(Resource.Success(containment))
+            } ?: emit(Resource.Error("Containment not found"))
+        } else {
+            emit(Resource.Error("Containment not found"))
+        }
+    }.catch { e ->
+        when (e) {
+            is IOException -> emit(Resource.Error("Network error loading containment status"))
+            else -> emit(Resource.Error(e.message ?: "Unknown error loading containment status"))
         }
     }
 
@@ -119,7 +117,7 @@ class ContainmentRepository(
             val syncEntity = SyncQueueEntity(
                 id = UUID.randomUUID().toString(),
                 entityType = "CONTAINMENT_FORM",
-                entityId = entity.id,
+                entityId = entity.sanitationCustomerId,
                 operation = "CREATE", // Containment forms are typically created, not updated
                 data = entityToJsonData(entity),
                 retryCount = 0,
@@ -132,7 +130,7 @@ class ContainmentRepository(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 syncQueueDao.insert(syncEntity)
             }
-            println("DEBUG: Added containment form ${entity.id} to sync queue")
+            println("DEBUG: Added containment form ${entity.sanitationCustomerId} to sync queue")
         } catch (e: Exception) {
             println("DEBUG: Failed to add containment form to sync queue: ${e.message}")
         }
@@ -157,13 +155,25 @@ class ContainmentRepository(
     private suspend fun trySubmitToApi(entity: ContainmentFormEntity): Resource<Unit> {
         return try {
             val requestBody = entity.toApiRequest()
-            val response = apiService.createContainment(requestBody)
+            
+            // First check if containment exists
+            val checkResponse = apiService.getContainmentStatus(entity.sanitationCustomerId)
+            val containmentExists = checkResponse.isSuccessful && checkResponse.body()?.success == true
+            
+            // If exists, UPDATE; otherwise CREATE
+            val response = if (containmentExists) {
+                println("DEBUG: Containment exists for ${entity.sanitationCustomerId}, updating...")
+                apiService.updateContainment(entity.sanitationCustomerId, requestBody)
+            } else {
+                println("DEBUG: Containment does not exist for ${entity.sanitationCustomerId}, creating...")
+                apiService.createContainment(requestBody)
+            }
 
             if (response.isSuccessful) {
                 // Successfully submitted to API
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     formDao.updateSyncStatus(
-                        formId = entity.id,
+                        sanitationCustomerId = entity.sanitationCustomerId,
                         status = "SYNCED",
                         attempts = 0,
                         lastAttempt = System.currentTimeMillis(),
@@ -172,9 +182,10 @@ class ContainmentRepository(
                     )
 
                     // Remove from sync queue since successfully synced
-                    syncQueueDao.deleteSyncsByEntity("CONTAINMENT_FORM", entity.id)
+                    syncQueueDao.deleteSyncsByEntity("CONTAINMENT_FORM", entity.sanitationCustomerId)
                 }
-                println("DEBUG: Successfully synced Containment form ${entity.id} to API and removed from sync queue")
+                val action = if (containmentExists) "updated" else "created"
+                println("DEBUG: Successfully $action Containment form ${entity.sanitationCustomerId} to API and removed from sync queue")
 
                 Resource.Success(Unit)
             } else {
@@ -186,13 +197,13 @@ class ContainmentRepository(
                     "API Error (${response.code()}): ${response.message()}"
                 }
 
-                println("DEBUG: API sync failed for Containment form ${entity.id} - $detailedError")
+                println("DEBUG: API sync failed for Containment form ${entity.sanitationCustomerId} - $detailedError")
 
                 if (entity.syncAttempts < 3) {
                     // Keep as pending for retry
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         formDao.updateSyncStatus(
-                            formId = entity.id,
+                            sanitationCustomerId = entity.sanitationCustomerId,
                             status = "PENDING",
                             attempts = entity.syncAttempts + 1,
                             lastAttempt = System.currentTimeMillis(),
@@ -205,7 +216,7 @@ class ContainmentRepository(
                     // Mark as failed after max retries
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         formDao.updateSyncStatus(
-                            formId = entity.id,
+                            sanitationCustomerId = entity.sanitationCustomerId,
                             status = "FAILED",
                             attempts = entity.syncAttempts + 1,
                             lastAttempt = System.currentTimeMillis(),
@@ -217,11 +228,11 @@ class ContainmentRepository(
                 }
             }
         } catch (e: IOException) {
-            println("DEBUG: Network error for Containment form ${entity.id}: ${e.message}")
+            println("DEBUG: Network error for Containment form ${entity.sanitationCustomerId}: ${e.message}")
             // Network error - keep as pending for retry
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 formDao.updateSyncStatus(
-                    formId = entity.id,
+                    sanitationCustomerId = entity.sanitationCustomerId,
                     status = "PENDING",
                     attempts = entity.syncAttempts + 1,
                     lastAttempt = System.currentTimeMillis(),
@@ -231,10 +242,10 @@ class ContainmentRepository(
             }
             Resource.Error("Saved locally. Sync will be retried later.")
         } catch (e: Exception) {
-            println("DEBUG: Unknown error for Containment form ${entity.id}: ${e.message}")
+            println("DEBUG: Unknown error for Containment form ${entity.sanitationCustomerId}: ${e.message}")
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 formDao.updateSyncStatus(
-                    formId = entity.id,
+                    sanitationCustomerId = entity.sanitationCustomerId,
                     status = "PENDING",
                     attempts = entity.syncAttempts + 1,
                     lastAttempt = System.currentTimeMillis(),
@@ -268,10 +279,10 @@ class ContainmentRepository(
                         storageTankConnection = networkData.storage_tank_connection,
                         otherStorageTankConnection = networkData.other_storage_tank_connection,
                         sizeOfStorageTankM3 = networkData.size_of_storage_tank_m3,
-                        constructionYear = networkData.construction_year,
-                        accessibility = networkData.accessibility,
-                        everEmptied = networkData.ever_emptied,
-                        lastEmptiedYear = networkData.last_emptied_year,
+                        constructionYear = networkData.construction_year?.toString(),
+                        accessibility = networkData.accessibility?.let { if (it) "Yes" else "No" },
+                        everEmptied = networkData.ever_emptied?.let { if (it) "Yes" else "No" },
+                        lastEmptiedYear = networkData.last_emptied_year?.toString(),
                         syncStatus = "SYNCED"
                     )
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

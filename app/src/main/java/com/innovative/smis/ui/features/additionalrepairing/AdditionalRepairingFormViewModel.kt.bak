@@ -1,0 +1,403 @@
+package com.innovative.smis.ui.features.additionalrepairing
+
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.innovative.smis.data.local.entity.AdditionalRepairingFormEntity
+import com.innovative.smis.data.model.request.TripCreateRequest
+import com.innovative.smis.data.model.request.TripEntryUiState
+import com.innovative.smis.data.model.response.EmptyingDetailsData
+import com.innovative.smis.data.repository.AdditionalRepairingRepository
+import com.innovative.smis.util.common.Resource
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.util.UUID
+
+class AdditionalRepairingFormViewModel(
+    private val repository: AdditionalRepairingRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(AdditionalRepairingFormUiState())
+    val uiState: StateFlow<AdditionalRepairingFormUiState> = _uiState.asStateFlow()
+
+    private val _saveState = MutableStateFlow<Resource<Boolean>>(Resource.Idle())
+    val saveState: StateFlow<Resource<Boolean>> = _saveState.asStateFlow()
+    
+    private val _draftState = MutableStateFlow<Resource<Boolean>>(Resource.Idle())
+    val draftState: StateFlow<Resource<Boolean>> = _draftState.asStateFlow()
+
+    fun loadEmptyingDetails(emptyingId: Int) {
+        _uiState.update { it.copy(emptyingId = emptyingId) }
+        loadSavedDraft(emptyingId)
+        loadRegularPaymentAmount()
+        loadPaymentDetails(emptyingId)
+    }
+    
+    private fun loadSavedDraft(emptyingId: Int) {
+        viewModelScope.launch {
+            repository.getSavedDraft(emptyingId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.let { draft ->
+                            if (draft.syncStatus == "DRAFT" || draft.syncStatus == "PENDING" || draft.syncStatus == "FAILED") {
+                                loadDraftIntoUi(draft)
+                            }
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+    
+    private fun loadDraftIntoUi(draft: AdditionalRepairingFormEntity) {
+        try {
+            val tripEntries = JSONArray(draft.tripEntriesJson)
+            val trips = (0 until tripEntries.length()).map { i ->
+                val tripObj = tripEntries.getJSONObject(i)
+                TripEntryUiState(
+                    tripNumber = i + 1,
+                    startTime = tripObj.getString("startTime"),
+                    endTime = tripObj.getString("endTime"),
+                    amountOfRegularPayment = tripObj.getString("amountOfRegularPayment"),
+                    additionalTripRequired = tripObj.getString("additionalTripRequired")
+                )
+            }
+            
+            val receiptImageUri = if (draft.receiptImage.isNotEmpty()) {
+                Uri.parse(draft.receiptImage)
+            } else {
+                null
+            }
+            
+            _uiState.update {
+                it.copy(
+                    tripEntries = trips,
+                    amountOfExtraPayment = draft.amountOfExtraPayment,
+                    receiptNumber = draft.receiptNumber,
+                    receiptImageUri = receiptImageUri,
+                    comments = draft.comments,
+                    showPaymentSection = trips.lastOrNull()?.additionalTripRequired?.equals("no", ignoreCase = true) == true
+                )
+            }
+        } catch (e: Exception) {
+            // Ignore parsing errors
+        }
+    }
+
+    private fun loadRegularPaymentAmount() {
+        viewModelScope.launch {
+            repository.getRegularPaymentAmount().collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        _uiState.update { currentState ->
+                            val trips = currentState.tripEntries.toMutableList()
+                            if (trips.isEmpty()) {
+                                trips.add(TripEntryUiState(1, amountOfRegularPayment = result.data ?: "0"))
+                            } else {
+                                trips[0] = trips[0].copy(amountOfRegularPayment = result.data ?: "0")
+                            }
+                            currentState.copy(tripEntries = trips)
+                        }
+                    }
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(errorMessage = result.message) }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun loadPaymentDetails(emptyingId: Int) {
+        viewModelScope.launch {
+            repository.getEmptyingDetails(emptyingId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.let { data ->
+                            _uiState.update {
+                                it.copy(
+                                    paymentDetails = data,
+                                    amountOfRegularPayment = data.amountOfRegularPayment ?: "",
+                                    amountOfExtraPayment = data.amountOfExtraPayment ?: "",
+                                    receiptNumber = data.receiptNumber ?: "",
+                                    receiptImageUrl = data.receiptImage,
+                                    comments = data.comments ?: ""
+                                )
+                            }
+                        }
+                    }
+                    is Resource.Error -> {
+                        _uiState.update { it.copy(errorMessage = result.message) }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    fun onTripStartTimeChange(tripIndex: Int, startTime: String) {
+        _uiState.update { currentState ->
+            val trips = currentState.tripEntries.toMutableList()
+            if (tripIndex < trips.size) {
+                trips[tripIndex] = trips[tripIndex].copy(startTime = startTime)
+            }
+            currentState.copy(tripEntries = trips)
+        }
+    }
+
+    fun onTripEndTimeChange(tripIndex: Int, endTime: String) {
+        _uiState.update { currentState ->
+            val trips = currentState.tripEntries.toMutableList()
+            if (tripIndex < trips.size) {
+                trips[tripIndex] = trips[tripIndex].copy(endTime = endTime)
+            }
+            currentState.copy(tripEntries = trips)
+        }
+    }
+
+    fun onTripAdditionalRequiredChange(tripIndex: Int, required: String) {
+        _uiState.update { currentState ->
+            val trips = currentState.tripEntries.toMutableList()
+            if (tripIndex < trips.size) {
+                trips[tripIndex] = trips[tripIndex].copy(additionalTripRequired = required)
+                
+                if (required.equals("yes", ignoreCase = true)) {
+                    val nextTripNumber = trips.size + 1
+                    val regularPayment = trips.firstOrNull()?.amountOfRegularPayment ?: "0"
+                    trips.add(TripEntryUiState(nextTripNumber, amountOfRegularPayment = regularPayment))
+                    return@update currentState.copy(tripEntries = trips, showPaymentSection = false)
+                } else {
+                    while (trips.size > tripIndex + 1) {
+                        trips.removeAt(trips.size - 1)
+                    }
+                    return@update currentState.copy(tripEntries = trips, showPaymentSection = true)
+                }
+            } else {
+                currentState
+            }
+        }
+    }
+
+    fun onExtraPaymentChange(amount: String) {
+        _uiState.update { it.copy(amountOfExtraPayment = amount) }
+    }
+
+    fun onReceiptNumberChange(number: String) {
+        _uiState.update { it.copy(receiptNumber = number) }
+    }
+
+    fun onReceiptImageSelected(uri: Uri?) {
+        _uiState.update { it.copy(receiptImageUri = uri) }
+    }
+
+    fun onCommentsChange(comments: String) {
+        _uiState.update { it.copy(comments = comments) }
+    }
+
+    fun saveTrips() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val emptyingId = currentState.emptyingId ?: return@launch
+
+            if (!validateTrips()) {
+                _saveState.value = Resource.Error("Please fill all required fields")
+                return@launch
+            }
+
+            _saveState.value = Resource.Loading()
+
+            for (trip in currentState.tripEntries) {
+                val request = TripCreateRequest(
+                    startTime = trip.startTime,
+                    endTime = trip.endTime,
+                    amountOfRegularPaymentPerTrip = trip.amountOfRegularPayment,
+                    additionalTripRequired = trip.additionalTripRequired
+                )
+
+                repository.createTripEntry(emptyingId, request).collect { result ->
+                    when (result) {
+                        is Resource.Success -> {
+                        }
+                        is Resource.Error -> {
+                            _saveState.value = Resource.Error(result.message ?: "Failed to save trip")
+                            return@collect
+                        }
+                        else -> {}
+                    }
+                }
+            }
+
+            _saveState.value = Resource.Success(true)
+        }
+    }
+
+    fun updatePaymentDetails() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val emptyingId = currentState.emptyingId ?: return@launch
+
+            if (!validatePayment()) {
+                _saveState.value = Resource.Error("Please fill all payment fields")
+                return@launch
+            }
+
+            _saveState.value = Resource.Loading()
+
+            val receiptImage = currentState.receiptImageUri?.let { uri ->
+                val file = File(uri.path ?: "")
+                if (file.exists()) {
+                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                    MultipartBody.Part.createFormData("receipt_image", file.name, requestFile)
+                } else null
+            }
+
+            repository.updatePaymentDetails(
+                emptyingId = emptyingId,
+                amountOfExtraPayment = currentState.amountOfExtraPayment.takeIf { it.isNotEmpty() },
+                receiptNumber = currentState.receiptNumber.takeIf { it.isNotEmpty() },
+                comments = currentState.comments.takeIf { it.isNotEmpty() },
+                receiptImage = receiptImage
+            ).collect { result ->
+                _saveState.value = result
+            }
+        }
+    }
+
+    private fun validateTrips(): Boolean {
+        val trips = _uiState.value.tripEntries
+        return trips.all { trip ->
+            trip.startTime.isNotEmpty() && 
+            trip.endTime.isNotEmpty() && 
+            trip.additionalTripRequired.isNotEmpty()
+        }
+    }
+
+    private fun validatePayment(): Boolean {
+        val state = _uiState.value
+        return state.receiptNumber.isNotEmpty() || state.receiptImageUri != null
+    }
+
+    fun saveDraft() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val emptyingId = currentState.emptyingId ?: return@launch
+            
+            _draftState.value = Resource.Loading()
+            
+            val tripEntriesJson = JSONArray().apply {
+                currentState.tripEntries.forEach { trip ->
+                    put(JSONObject().apply {
+                        put("startTime", trip.startTime)
+                        put("endTime", trip.endTime)
+                        put("amountOfRegularPayment", trip.amountOfRegularPayment)
+                        put("additionalTripRequired", trip.additionalTripRequired)
+                    })
+                }
+            }.toString()
+            
+            val formEntity = AdditionalRepairingFormEntity(
+                id = UUID.randomUUID().toString(),
+                emptyingId = emptyingId,
+                tripEntriesJson = tripEntriesJson,
+                amountOfRegularPayment = currentState.amountOfRegularPayment,
+                amountOfExtraPayment = currentState.amountOfExtraPayment,
+                receiptNumber = currentState.receiptNumber,
+                receiptImage = currentState.receiptImageUri?.toString() ?: "",
+                comments = currentState.comments,
+                syncStatus = "DRAFT"
+            )
+            
+            repository.saveDraft(formEntity).collect { result ->
+                _draftState.value = result
+            }
+        }
+    }
+    
+    fun submitForm() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val emptyingId = currentState.emptyingId ?: return@launch
+
+            if (!validateTrips()) {
+                _saveState.value = Resource.Error("Please fill all required trip fields")
+                return@launch
+            }
+            
+            if (!validatePayment()) {
+                _saveState.value = Resource.Error("Please fill receipt number or upload receipt image")
+                return@launch
+            }
+
+            _saveState.value = Resource.Loading()
+            
+            val tripEntriesJson = JSONArray().apply {
+                currentState.tripEntries.forEach { trip ->
+                    put(JSONObject().apply {
+                        put("startTime", trip.startTime)
+                        put("endTime", trip.endTime)
+                        put("amountOfRegularPayment", trip.amountOfRegularPayment)
+                        put("additionalTripRequired", trip.additionalTripRequired)
+                    })
+                }
+            }.toString()
+            
+            val receiptImagePart = currentState.receiptImageUri?.let { uri ->
+                val file = File(uri.path ?: "")
+                if (file.exists()) {
+                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                    MultipartBody.Part.createFormData("receipt_image", file.name, requestFile)
+                } else null
+            }
+            
+            val formEntity = AdditionalRepairingFormEntity(
+                id = UUID.randomUUID().toString(),
+                emptyingId = emptyingId,
+                tripEntriesJson = tripEntriesJson,
+                amountOfRegularPayment = currentState.amountOfRegularPayment,
+                amountOfExtraPayment = currentState.amountOfExtraPayment,
+                receiptNumber = currentState.receiptNumber,
+                receiptImage = currentState.receiptImageUri?.toString() ?: "",
+                comments = currentState.comments
+            )
+            
+            repository.submitForm(formEntity, receiptImagePart).collect { result ->
+                _saveState.value = result
+            }
+        }
+    }
+
+    fun clearSaveState() {
+        _saveState.value = Resource.Idle()
+    }
+    
+    fun clearDraftState() {
+        _draftState.value = Resource.Idle()
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+}
+
+data class AdditionalRepairingFormUiState(
+    val emptyingId: Int? = null,
+    val tripEntries: List<TripEntryUiState> = listOf(TripEntryUiState(1)),
+    val showPaymentSection: Boolean = false,
+    
+    val paymentDetails: EmptyingDetailsData? = null,
+    val amountOfRegularPayment: String = "",
+    val amountOfExtraPayment: String = "",
+    val receiptNumber: String = "",
+    val receiptImageUri: Uri? = null,
+    val receiptImageUrl: String? = null,
+    val comments: String = "",
+    
+    val errorMessage: String? = null
+)

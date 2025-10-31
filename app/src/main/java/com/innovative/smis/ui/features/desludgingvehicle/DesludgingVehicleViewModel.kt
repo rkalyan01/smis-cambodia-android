@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.innovative.smis.data.model.response.VehicleResponse
 import com.innovative.smis.data.repository.DesludgingVehicleRepository
 import com.innovative.smis.util.common.Resource
-import com.innovative.smis.util.constants.AppConstants
+import com.innovative.smis.util.helper.PreferenceHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -19,7 +19,8 @@ data class DesludgingVehicleUiState(
 )
 
 class DesludgingVehicleViewModel(
-    private val repository: DesludgingVehicleRepository
+    private val repository: DesludgingVehicleRepository,
+    private val preferenceHelper: PreferenceHelper
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DesludgingVehicleUiState())
@@ -31,7 +32,19 @@ class DesludgingVehicleViewModel(
 
     fun loadVehicles() {
         viewModelScope.launch {
-            repository.getDesludgingVehicles(AppConstants.ETO_ID.toString()).collect { resource ->
+            // Get eto_id from logged-in user preferences
+            val etoId = preferenceHelper.getEtoId()?.toString()
+            
+            if (etoId == null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    errorMessage = "ETO ID not found. Please login again."
+                )
+                return@launch
+            }
+            
+            repository.getDesludgingVehicles(etoId).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
                         _uiState.value = _uiState.value.copy(

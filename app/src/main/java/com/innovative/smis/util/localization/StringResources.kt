@@ -84,6 +84,10 @@ object StringResources {
     const val SYNC_WHEN_ONLINE = "sync_when_online"
     const val ABOUT = "about"
     const val VERSION = "version"
+    const val ENGLISH = "english"
+    const val KHMER = "khmer"
+    const val SMIS_VERSION = "smis_version"
+    const val MEGABYTES = "megabytes"
 
     // Error messages
     const val ERROR_OCCURRED = "error_occurred"
@@ -111,6 +115,10 @@ object StringResources {
     const val EVER_EMPTIED = "ever_emptied"
     const val EMPTIED_NODATE_REASON = "emptied_nodate_reason"
     const val NOT_EMPTIED_BEFORE_REASON = "not_emptied_before_reason"
+    const val NAME_NOT_PROVIDED = "name_not_provided"
+    const val SANITATION_CUSTOMER_ID = "sanitation_customer_id"
+    const val AMOUNT_OF_REGULAR_PAYMENT = "amount_of_regular_payment"
+    const val REASON_FOR_NO_EMPTY_DATE = "reason_for_no_empty_date"
 
     // Status related
     const val STATUS_PENDING = "status_pending"
@@ -311,6 +319,11 @@ object StringResources {
     // Settings specific
     const val APPEARANCE = "appearance"
     const val DATA_SYNC = "data_sync"
+    const val TAP_TO_TEST_MANUAL_SYNC = "tap_to_test_manual_sync"
+    const val DATA_MANAGEMENT = "data_management"
+    const val CLEARING = "clearing"
+    const val CACHE_CLEARED = "cache_cleared"
+    const val CLEAR_CACHED_DATA_DESCRIPTION = "clear_cached_data_description"
 
     private val englishStrings = mapOf(
         APP_NAME to "SMIS",
@@ -394,6 +407,10 @@ object StringResources {
         EVER_EMPTIED to "Ever Emptied",
         EMPTIED_NODATE_REASON to "Emptied No Date Reason",
         NOT_EMPTIED_BEFORE_REASON to "Not Emptied Before Reason",
+        NAME_NOT_PROVIDED to "Name not provided",
+        SANITATION_CUSTOMER_ID to "Sanitation Customer ID",
+        AMOUNT_OF_REGULAR_PAYMENT to "Amount of Regular Payment",
+        REASON_FOR_NO_EMPTY_DATE to "Reason for No Empty Date",
         STATUS_PENDING to "Pending",
         STATUS_IN_PROGRESS to "In Progress",
         STATUS_COMPLETED to "Completed",
@@ -539,7 +556,27 @@ object StringResources {
         DOWNLOAD_OFFLINE_MAPS to "Download Offline Maps",
         MANAGE_OFFLINE_MAPS to "Manage Offline Maps",
         APPEARANCE to "Appearance",
-        DATA_SYNC to "Data & Sync"
+        DATA_SYNC to "Data & Sync",
+        TAP_TO_TEST_MANUAL_SYNC to "Tap to test manual sync",
+        DATA_MANAGEMENT to "Data Management",
+        CLEARING to "Clearing...",
+        CACHE_CLEARED to "Cache cleared",
+        CLEAR_CACHED_DATA_DESCRIPTION to "Clear cached data and refresh with new data",
+        APP_SETTINGS to "App Settings",
+        THEME to "Theme",
+        LIGHT to "Light",
+        DARK to "Dark",
+        AUTO to "Auto",
+        SELECT_LANGUAGE to "Select Language",
+        CLOSE to "Close",
+        AUTO_SYNC to "Auto Sync",
+        SYNC_WHEN_ONLINE to "Sync when online",
+        ABOUT to "About",
+        VERSION to "Version",
+        ENGLISH to "English",
+        KHMER to "Khmer",
+        SMIS_VERSION to "SMIS v1.0",
+        MEGABYTES to "MB"
     )
 
     private val khmerStrings = mapOf(
@@ -624,6 +661,10 @@ object StringResources {
         EVER_EMPTIED to "ធ្លាប់បូមកម្រាយ",
         EMPTIED_NODATE_REASON to "មូលហេតុបូមកម្រាយគ្មានកាលបរិច្ឆេទ",
         NOT_EMPTIED_BEFORE_REASON to "មូលហេតុមិនធ្លាប់បូមកម្រាយ",
+        NAME_NOT_PROVIDED to "មិនបានផ្តល់ឈ្មោះ",
+        SANITATION_CUSTOMER_ID to "លេខសម្គាល់អតិថិជនអនាម័យ",
+        AMOUNT_OF_REGULAR_PAYMENT to "ចំនួនទឹកប្រាក់ទូទាត់ធម្មតា",
+        REASON_FOR_NO_EMPTY_DATE to "មូលហេតុគ្មានកាលបរិច្ឆេទបូមកម្រាយ",
         STATUS_PENDING to "រង់ចាំ",
         STATUS_IN_PROGRESS to "កំពុងដំណើរការ",
         STATUS_COMPLETED to "បានបញ្ចប់",
@@ -769,7 +810,27 @@ object StringResources {
         DOWNLOAD_OFFLINE_MAPS to "ទាញយកផែនទីក្រៅបណ្តាញ",
         MANAGE_OFFLINE_MAPS to "គ្រប់គ្រងផែនទីក្រៅបណ្តាញ",
         APPEARANCE to "រូបរាង",
-        DATA_SYNC to "ទិន្នន័យ និង សមកាលកម្ម"
+        DATA_SYNC to "ទិន្នន័យ និង សមកាលកម្ម",
+        TAP_TO_TEST_MANUAL_SYNC to "ចុចដើម្បីសាកល្បងសមកាលកម្មដោយដៃ",
+        DATA_MANAGEMENT to "ការគ្រប់គ្រងទិន្នន័យ",
+        CLEARING to "កំពុងលុប...",
+        CACHE_CLEARED to "លុបរួចរាល់",
+        CLEAR_CACHED_DATA_DESCRIPTION to "លុបទិន្នន័យបណ្តោះអាសន្ន និងទទួលបាននូវទិន្នន័យថ្មី",
+        APP_SETTINGS to "ការកំណត់កម្មវិធី",
+        THEME to "រូបរាង",
+        LIGHT to "ភ្លឺ",
+        DARK to "ងងឹត",
+        AUTO to "ស្វ័យប្រវត្តិ",
+        SELECT_LANGUAGE to "ជ្រើសរើសភាសា",
+        CLOSE to "បិទ",
+        AUTO_SYNC to "ធ្វើសមកាលកម្មស្វ័យប្រវត្តិ",
+        SYNC_WHEN_ONLINE to "ធ្វើសមកាលកម្មពេលមានអ៊ីនធឺណិត",
+        ABOUT to "អំពី",
+        VERSION to "កំណែ",
+        ENGLISH to "អង់គ្លេស",
+        KHMER to "ខ្មែរ",
+        SMIS_VERSION to "SMIS v1.0",
+        MEGABYTES to "MB"
     )
 
     fun getString(key: String, languageCode: String): String {

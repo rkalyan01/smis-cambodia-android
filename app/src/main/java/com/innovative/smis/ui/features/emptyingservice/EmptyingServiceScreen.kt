@@ -1,8 +1,13 @@
 package com.innovative.smis.ui.features.emptyingservice
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -43,7 +48,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EmptyingServiceScreen(navController: NavController) {
+fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     val viewModel: EmptyingServiceViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -171,7 +176,11 @@ fun EmptyingServiceScreen(navController: NavController) {
 }
 
 @Composable
-private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, onOpenFormClick: () -> Unit) {
+private fun ApplicationTaskCard(
+    todoItem: TodoItem, 
+    context: Context,
+    onOpenFormClick: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val rotationAngle by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rotation")
     val statusText = todoItem.status ?: "Unknown"
@@ -227,6 +236,13 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, onOpenForm
                             text = date
                         )
                     }
+                    todoItem.applicantContact?.let { contact ->
+                        InfoRow(
+                            icon = Icons.Outlined.Phone,
+                            label = "Contact",
+                            text = contact
+                        )
+                    }
                 }
             }
             HorizontalDivider()
@@ -236,10 +252,24 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, onOpenForm
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${todoItem.applicantContact}"))
-                        context.startActivity(intent)
-                    }) { Icon(Icons.Outlined.Call, "Call Applicant", tint = MaterialTheme.colorScheme.primary) }
+                    IconButton(
+                        onClick = {
+                            todoItem.applicantContact?.let { contact ->
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contact"))
+                                context.startActivity(intent)
+                            }
+                        },
+                        enabled = !todoItem.applicantContact.isNullOrBlank()
+                    ) { 
+                        Icon(
+                            Icons.Outlined.Call, 
+                            "Call Applicant", 
+                            tint = if (todoItem.applicantContact.isNullOrBlank()) 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            else 
+                                MaterialTheme.colorScheme.primary
+                        ) 
+                    }
 //                    IconButton(onClick = {
 //                        val mapUri = Uri.parse("geo:0,0?q=${Uri.encode(todoItem.applicantName)}")
 //                        val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)

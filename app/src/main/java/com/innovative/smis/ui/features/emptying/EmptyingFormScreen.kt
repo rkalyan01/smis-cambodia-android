@@ -214,7 +214,7 @@ private fun EmptyingFormContent(
     SectionHeader("Request Details")
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Purpose of Emptying Request",
+        label = "Purpose of emptying request",
         options = state.purposeOptions.map { it.type },
         selectedValue = state.purposeOfEmptyingRequest,
         onValueSelected = { selectedPurpose: String ->
@@ -235,12 +235,20 @@ private fun EmptyingFormContent(
     
     Spacer(modifier = Modifier.height(8.dp))
     
+    val context = LocalContext.current
+    val proposeEmptyingDateMillis = com.innovative.smis.util.helper.DateFormatManager
+        .parseDisplayDate(context, state.proposeEmptyingDate)
     DatePickerField(
         label = "Propose Emptying Date",
-        selectedDate = state.proposeEmptyingDate,
-        onDateSelected = { onStateChange(state.copy(proposeEmptyingDate = it)) },
-        minDate = LocalDate.now(),
-        modifier = Modifier.fillMaxWidth()
+        selectedDate = proposeEmptyingDateMillis,
+        onDateSelected = { millis ->
+            val formattedDate = millis?.let {
+                com.innovative.smis.util.helper.DateFormatManager
+                    .formatTimestampForDisplay(context, it)
+            } ?: ""
+            onStateChange(state.copy(proposeEmptyingDate = formattedDate))
+        },
+        isFutureDateAllowed = true  // Allow future dates for proposed emptying
     )
     
     state.proposeEmptyingDateError?.let { error ->
@@ -282,12 +290,19 @@ private fun EmptyingFormContent(
     
     if (state.everEmptied == true) {
         Spacer(modifier = Modifier.height(8.dp))
+        val lastEmptiedDateMillis = com.innovative.smis.util.helper.DateFormatManager
+            .parseDisplayDate(context, state.lastEmptiedDate)
         DatePickerField(
             label = "Last Emptied Date",
-            selectedDate = state.lastEmptiedDate,
-            onDateSelected = { onStateChange(state.copy(lastEmptiedDate = it)) },
-            maxDate = LocalDate.now(), // Cannot be in future
-            modifier = Modifier.fillMaxWidth()
+            selectedDate = lastEmptiedDateMillis,
+            onDateSelected = { millis ->
+                val formattedDate = millis?.let {
+                    com.innovative.smis.util.helper.DateFormatManager
+                        .formatTimestampForDisplay(context, it)
+                } ?: ""
+                onStateChange(state.copy(lastEmptiedDate = formattedDate))
+            },
+            isFutureDateAllowed = false  // Cannot be in future
         )
     }
     

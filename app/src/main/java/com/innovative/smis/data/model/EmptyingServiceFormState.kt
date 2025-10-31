@@ -61,6 +61,7 @@ data class EmptyingServiceFormState(
     val latitude: Double? = null,
     val locationError: String? = null,
     val isLocationLoading: Boolean = false,
+    val buildingPointGeomExist: Boolean = false,
     
     // UI State
     val isLoading: Boolean = false,

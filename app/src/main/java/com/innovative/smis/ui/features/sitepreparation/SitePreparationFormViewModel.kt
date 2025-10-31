@@ -1,11 +1,13 @@
 package com.innovative.smis.ui.features.sitepreparation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.innovative.smis.data.local.entity.SitePreparationFormEntity
 import com.innovative.smis.data.repository.SitePreparationRepository
 import com.innovative.smis.data.model.response.ContainmentIssuesResponse
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.DateFormatManager
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +25,7 @@ sealed class SaveResult {
 data class SitePreparationFormState(
     val loadingState: Resource<SitePreparationFormEntity> = Resource.Idle(),
     val applicationId: String = "",
+    val sanitationCustomerId: String? = null,
     val applicantName: String = "",
     val applicantContact: String = "",
     val serviceReceiverName: String = "",
@@ -35,7 +38,7 @@ data class SitePreparationFormState(
     val notEmptiedBeforeReason: String = "",
     val reasonForNoEmptiedDate: String = "",
     val freeServiceUnderPbc: Boolean = false,
-    val additionalRepairing: String = "",
+    val additionalRepairingKeys: List<String> = emptyList(),
     val otherAdditionalRepairing: String = "",
     val extraPaymentRequired: Boolean? = null,
     val amountOfExtraPayment: String = "",
@@ -60,6 +63,36 @@ class SitePreparationFormViewModel(
 
     private var currentApplicationId: Int = 0
     private var currentFormId: String? = null
+    
+    /**
+     * Parse display date string to timestamp
+     * Tries all supported date formats (dd-MM-yyyy, MM-dd-yyyy, yyyy-MM-dd)
+     */
+    private fun parseDisplayDateToTimestamp(dateString: String): Long? {
+        if (dateString.isBlank()) return null
+        
+        val formats = listOf(
+            "dd-MM-yyyy",
+            "MM-dd-yyyy",
+            "yyyy-MM-dd"
+        )
+        
+        for (format in formats) {
+            try {
+                val sdf = SimpleDateFormat(format, Locale.getDefault())
+                sdf.isLenient = false
+                val date = sdf.parse(dateString)
+                if (date != null) {
+                    return date.time
+                }
+            } catch (e: Exception) {
+                // Try next format
+                continue
+            }
+        }
+        
+        return null
+    }
 
     fun loadApplicationDetails(applicationId: Int) {
         if (applicationId == 0) return
@@ -72,9 +105,11 @@ class SitePreparationFormViewModel(
         ) }
 
         initializeForm(applicationId)
+        
+        // Load dropdown data in parallel (non-blocking)
         loadDropdownData()
 
-        // Load API data
+        // Load API data in parallel with dropdown data
         viewModelScope.launch {
             repository.getSanitationCustomerDetails(applicationId.toString()).collect { result ->
                 when (result) {
@@ -83,6 +118,7 @@ class SitePreparationFormViewModel(
                             _uiState.update { currentState ->
                                 currentState.copy(
                                     loadingState = Resource.Idle(), // Clear loading state
+                                    sanitationCustomerId = apiData.sanitationCustomerId,
                                     applicantName = apiData.applicantName ?: "",
                                     applicantContact = apiData.applicantContact ?: "",
                                     purposeOfEmptying = getEmptyingPurposeText(apiData.purposeOfEmptying),
@@ -91,7 +127,10 @@ class SitePreparationFormViewModel(
                                     lastEmptiedYear = apiData.lastEmptiedYear?.toString() ?: "",
                                     notEmptiedBeforeReason = apiData.notEmptiedBeforeReason ?: "",
                                     freeServiceUnderPbc = apiData.freeServiceUnderPbc ?: false,
-                                    additionalRepairing = getAdditionalRepairingText(apiData.additionalRepairing),
+                                    additionalRepairingKeys = (apiData.additionalRepairing ?: "")
+                                        .split(",")
+                                        .map { it.trim() }
+                                        .filter { it.isNotEmpty() },
                                     otherAdditionalRepairing = apiData.otherAdditionalRepairing ?: "",
                                     extraPaymentRequired = apiData.extraPaymentRequired,
                                     amountOfExtraPayment = apiData.amountOfExtraPayment ?: "",
@@ -125,7 +164,7 @@ class SitePreparationFormViewModel(
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { entity ->
-                            currentFormId = entity.id
+                            currentFormId = entity.applicationId.toString()
                             // Only update editable fields from saved form
                             _uiState.update { currentState ->
                                 currentState.copy(
@@ -229,8 +268,18 @@ class SitePreparationFormViewModel(
         autoSaveDraft()
     }
 
-    fun onAdditionalRepairingChange(repairing: String) {
-        _uiState.update { it.copy(additionalRepairing = repairing) }
+    fun onAdditionalRepairingChange(selectedKeys: List<String>) {
+        // Check if "Others" is in the selection
+        val hasOthers = selectedKeys.any { key ->
+            val value = uiState.value.containmentIssuesList[key] ?: ""
+            value.contains("Others", ignoreCase = true)
+        }
+        
+        _uiState.update { it.copy(
+            additionalRepairingKeys = selectedKeys,
+            // Clear other field when "Others" is not selected
+            otherAdditionalRepairing = if (!hasOthers) "" else it.otherAdditionalRepairing
+        ) }
         autoSaveDraft()
     }
 
@@ -271,9 +320,9 @@ class SitePreparationFormViewModel(
                 val originalEntity = uiState.value.loadingState.data
 
                 val draftEntity = SitePreparationFormEntity(
-                    id = formId,
                     applicationId = currentApplicationId,
                     createdBy = null,
+                    sanitationCustomerId = originalEntity?.sanitationCustomerId,
                     sanitationCustomerName = originalEntity?.sanitationCustomerName,
                     sanitationCustomerContact = originalEntity?.sanitationCustomerContact,
                     sanitationCustomerAddress = originalEntity?.sanitationCustomerAddress,
@@ -289,13 +338,13 @@ class SitePreparationFormViewModel(
                     notEmptiedBeforeReason = currentState.notEmptiedBeforeReason,
                     reasonForNoEmptiedDate = currentState.reasonForNoEmptiedDate,
                     freeServiceUnderPbc = currentState.freeServiceUnderPbc,
-                    additionalRepairing = currentState.additionalRepairing,
+                    additionalRepairing = currentState.additionalRepairingKeys.joinToString(","),
                     otherAdditionalRepairing = currentState.otherAdditionalRepairing,
                     extraPaymentRequired = currentState.extraPaymentRequired,
                     amountOfExtraPayment = currentState.amountOfExtraPayment,
                     proposedEmptyingDate = currentState.proposedEmptyingDate,
                     needReschedule = currentState.needReschedule,
-                    newProposedEmptyingDate = null, // Will be handled by string conversion later
+                    newProposedEmptyingDate = parseDisplayDateToTimestamp(currentState.newProposedEmptyingDate),
                     syncStatus = "DRAFT"
                 )
 
@@ -312,15 +361,14 @@ class SitePreparationFormViewModel(
             val currentState = _uiState.value
             val originalEntity = uiState.value.loadingState.data
 
-            val formId = currentFormId ?: java.util.UUID.randomUUID().toString()
 
             // Format dates for PostgreSQL (YYYY-MM-DD format)
             val pgDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
             val formEntity = SitePreparationFormEntity(
-                id = formId,
                 applicationId = currentApplicationId,
                 createdBy = null,
+                sanitationCustomerId = originalEntity?.sanitationCustomerId,
                 sanitationCustomerName = originalEntity?.sanitationCustomerName,
                 sanitationCustomerContact = originalEntity?.sanitationCustomerContact,
                 sanitationCustomerAddress = originalEntity?.sanitationCustomerAddress,
@@ -336,13 +384,13 @@ class SitePreparationFormViewModel(
                 notEmptiedBeforeReason = currentState.notEmptiedBeforeReason,
                 reasonForNoEmptiedDate = currentState.reasonForNoEmptiedDate,
                 freeServiceUnderPbc = currentState.freeServiceUnderPbc,
-                additionalRepairing = currentState.additionalRepairing,
+                additionalRepairing = currentState.additionalRepairingKeys.joinToString(","),
                 otherAdditionalRepairing = currentState.otherAdditionalRepairing,
                 extraPaymentRequired = currentState.extraPaymentRequired,
                 amountOfExtraPayment = currentState.amountOfExtraPayment,
                 proposedEmptyingDate = currentState.proposedEmptyingDate,
                 needReschedule = currentState.needReschedule,
-                newProposedEmptyingDate = null, // Will be handled by string conversion later
+                newProposedEmptyingDate = parseDisplayDateToTimestamp(currentState.newProposedEmptyingDate),
                 syncStatus = "PENDING"
             )
 
@@ -350,6 +398,7 @@ class SitePreparationFormViewModel(
             println("Service Receiver Name: ${currentState.serviceReceiverName}")
             println("Applicant Contact: ${currentState.applicantContact}")
             println("Purpose: ${currentState.purposeOfEmptying}")
+            println("Additional Repairing Keys: ${currentState.additionalRepairingKeys.joinToString(",")}")
 
             when (val result = repository.saveFormDetails(formEntity)) {
                 is Resource.Success -> {
@@ -380,12 +429,11 @@ class SitePreparationFormViewModel(
             val currentState = _uiState.value
             val originalEntity = uiState.value.loadingState.data
 
-            val formId = currentFormId ?: java.util.UUID.randomUUID().toString()
 
             val formEntity = SitePreparationFormEntity(
-                id = formId,
                 applicationId = currentApplicationId,
                 createdBy = null,
+                sanitationCustomerId = originalEntity?.sanitationCustomerId,
                 sanitationCustomerName = originalEntity?.sanitationCustomerName,
                 sanitationCustomerContact = originalEntity?.sanitationCustomerContact,
                 sanitationCustomerAddress = originalEntity?.sanitationCustomerAddress,
@@ -401,13 +449,13 @@ class SitePreparationFormViewModel(
                 notEmptiedBeforeReason = currentState.notEmptiedBeforeReason,
                 reasonForNoEmptiedDate = currentState.reasonForNoEmptiedDate,
                 freeServiceUnderPbc = currentState.freeServiceUnderPbc,
-                additionalRepairing = currentState.additionalRepairing,
+                additionalRepairing = currentState.additionalRepairingKeys.joinToString(","),
                 otherAdditionalRepairing = currentState.otherAdditionalRepairing,
                 extraPaymentRequired = currentState.extraPaymentRequired,
                 amountOfExtraPayment = currentState.amountOfExtraPayment,
                 proposedEmptyingDate = currentState.proposedEmptyingDate,
                 needReschedule = currentState.needReschedule,
-                newProposedEmptyingDate = null, // Will be handled by string conversion later
+                newProposedEmptyingDate = parseDisplayDateToTimestamp(currentState.newProposedEmptyingDate),
                 syncStatus = "DRAFT"
             )
 
@@ -429,25 +477,10 @@ class SitePreparationFormViewModel(
     }
 
     private fun loadDropdownData() {
+        _uiState.update { it.copy(isLoadingDropdowns = true) }
+        
+        // Load containment issues dropdown only
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingDropdowns = true) }
-
-            // Load emptying reasons
-            repository.getEmptyingReasons().collect { emptyingResult ->
-                when (emptyingResult) {
-                    is Resource.Success -> {
-                        _uiState.update {
-                            it.copy(emptyingReasonsList = emptyingResult.data ?: emptyMap())
-                        }
-                    }
-                    is Resource.Error -> {
-                        // Continue loading other data even if this fails
-                    }
-                    else -> {}
-                }
-            }
-
-            // Load containment issues
             repository.getContainmentIssues().collect { containmentResult ->
                 when (containmentResult) {
                     is Resource.Success -> {
@@ -469,4 +502,38 @@ class SitePreparationFormViewModel(
             }
         }
     }
+
+    fun postponeApplication(
+        postponeFrom: String,
+        postponeUntil: String,
+        reason: String,
+        remark: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmitting = true) }
+            
+            val result = repository.postponeApplication(
+                applicationId = currentApplicationId,
+                postponeFrom = postponeFrom,
+                postponeUntil = postponeUntil,
+                reason = reason,
+                remark = remark
+            )
+            
+            _uiState.update { it.copy(isSubmitting = false) }
+            
+            when (result) {
+                is Resource.Success -> {
+                    onSuccess()
+                }
+                is Resource.Error -> {
+                    onError(result.message ?: "Failed to postpone application")
+                }
+                else -> {}
+            }
+        }
+    }
+
 }

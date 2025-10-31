@@ -22,9 +22,10 @@ import com.innovative.smis.data.local.entity.*
         EmptyingSchedulingFormEntity::class,
         SitePreparationFormEntity::class,
         EmptyingServiceFormEntity::class,
-        ContainmentFormEntity::class
+        ContainmentFormEntity::class,
+        AdditionalRepairingFormEntity::class
     ],
-    version = 11,
+    version = 22,
     exportSchema = false
 )
 
@@ -50,10 +51,11 @@ abstract class SMISDatabase : RoomDatabase() {
     abstract fun sitePreparationFormDao(): SitePreparationFormDao
     abstract fun emptyingServiceFormDao(): EmptyingServiceFormDao
     abstract fun containmentFormDao(): ContainmentFormDao
+    abstract fun additionalRepairingFormDao(): AdditionalRepairingFormDao
 
     companion object {
         const val DATABASE_NAME = "smis_database"
-        const val DATABASE_VERSION = 11
+        const val DATABASE_VERSION = 22
     }
 }
 

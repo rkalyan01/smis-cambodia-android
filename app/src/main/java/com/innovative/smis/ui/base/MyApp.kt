@@ -1,16 +1,21 @@
 package com.innovative.smis.ui.base
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.NavController
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.innovative.smis.ui.components.AppNavigationDrawer
+import kotlinx.coroutines.launch
 import com.innovative.smis.ui.features.buildingsurvey.BuildingSurveyScreen
 import com.innovative.smis.ui.features.buildingsurvey.ComprehensiveSurveyScreen
 import com.innovative.smis.ui.features.containment.ContainmentFormScreen
@@ -26,13 +31,14 @@ import com.innovative.smis.ui.features.permissions.PermissionRequestScreen
 import com.innovative.smis.ui.features.settings.SettingsScreen
 import com.innovative.smis.ui.features.sitepreparation.SitePreparationFormScreen
 import com.innovative.smis.ui.features.sitepreparation.SitePreparationScreen
+import com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingFormScreen
+import com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingListScreen
 import com.innovative.smis.ui.features.taskmanagement.TaskManagementScreen
 import com.innovative.smis.ui.features.todolist.TodoListScreen
 import com.innovative.smis.ui.theme.ThemeProvider
 import com.innovative.smis.util.constants.PrefConstant
 import com.innovative.smis.util.constants.ScreenName
 import com.innovative.smis.util.helper.PreferenceHelper
-import kotlinx.coroutines.launch
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
@@ -58,6 +64,8 @@ fun MyApp() {
 
     ThemeProvider {
         val navController = rememberNavController()
+        val context = LocalContext.current
+        
         NavHost(navController = navController, startDestination = startDestination) {
             // Permission Request Screen
             composable("permissions") {
@@ -96,43 +104,55 @@ private fun MainAppScreen(topLevelNavController: NavController) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // The AppNavigationDrawer is now at the top level. It will only be created ONCE.
+    // AppNavigationDrawer - gestures always enabled
     AppNavigationDrawer(
         navController = navController,
         topLevelNavController = topLevelNavController,
         drawerState = drawerState,
         gesturesEnabled = true
     ) { onMenuClick ->
-        // The NavHost is now INSIDE the drawer's content.
-        NavHost(navController = navController, startDestination = ScreenName.Dashboard) {
+        // The NavHost is INSIDE the drawer's content
+        NavHost(
+            navController = navController, 
+            startDestination = ScreenName.Dashboard,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
 
-            // Define all your screens here. They will be displayed within the drawer's content area.
+            // Define all your screens here
             composable(ScreenName.Dashboard) {
-                DashboardScreen(navController = navController, onMenuClick = onMenuClick)
+                DashboardScreen(
+                    navController = navController,
+                    onMenuClick = onMenuClick
+                )
             }
             composable(ScreenName.Map) {
                 MapScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable("emptying_scheduling") {
-                EmptyingSchedulingScreen(navController = navController)
+                EmptyingSchedulingScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable("site_preparation") {
-                SitePreparationScreen(navController = navController)
+                SitePreparationScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable("emptying_service") {
-                EmptyingServiceScreen(navController = navController)
+                EmptyingServiceScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable(ScreenName.TodoList) {
-                TodoListScreen(navController = navController)
+                TodoListScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable(ScreenName.Settings) {
-                SettingsScreen(navController = navController)
+                SettingsScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable("task_management") {
-                TaskManagementScreen(navController = navController)
+                TaskManagementScreen(navController = navController, onMenuClick = onMenuClick)
             }
             composable(ScreenName.DesludgingVehicle) {
-                DesludgingVehicleScreen(navController = navController)
+                DesludgingVehicleScreen(navController = navController, onMenuClick = onMenuClick)
+            }
+            composable("additional_repairing") {
+                AdditionalRepairingListScreen(navController = navController, onMenuClick = onMenuClick)
             }
 
             // Form Screens (Now they don't need the drawer wrapped around them)
@@ -152,7 +172,9 @@ private fun MainAppScreen(topLevelNavController: NavController) {
                 SitePreparationFormScreen(
                     applicationId = applicationId,
                     navController = navController,
-                    onNavigateToContainment = { id -> navController.navigate("containment_form/$id") }
+                    onNavigateToContainment = { id, sanitationCustomerId -> 
+                        navController.navigate("containment_form/$id/${sanitationCustomerId ?: ""}")
+                    }
                 )
             }
 
@@ -165,13 +187,29 @@ private fun MainAppScreen(topLevelNavController: NavController) {
             }
 
             composable(
-                "containment_form/{applicationId}",
-                arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
+                "containment_form/{applicationId}/{sanitationCustomerId}",
+                arguments = listOf(
+                    navArgument("applicationId") { type = NavType.StringType },
+                    navArgument("sanitationCustomerId") { type = NavType.StringType }
+                )
             ) { backStackEntry ->
                 val applicationId = backStackEntry.arguments?.getString("applicationId") ?: "0"
+                val sanitationCustomerId = backStackEntry.arguments?.getString("sanitationCustomerId") ?: ""
                 ContainmentFormScreen(
                     navController = navController,
-                    applicationId = applicationId
+                    applicationId = applicationId,
+                    sanitationCustomerId = sanitationCustomerId
+                )
+            }
+
+            composable(
+                "additional_repairing_form/{emptyingId}",
+                arguments = listOf(navArgument("emptyingId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val emptyingId = backStackEntry.arguments?.getInt("emptyingId") ?: 0
+                AdditionalRepairingFormScreen(
+                    navController = navController,
+                    emptyingId = emptyingId
                 )
             }
             composable("building_survey_new") {

@@ -1,13 +1,15 @@
 package com.innovative.smis.ui.features.sitepreparation
 
-import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,10 +17,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.innovative.smis.ui.components.DropdownMenuField
+import com.innovative.smis.ui.components.MultiSelectCheckboxGroup
+import com.innovative.smis.ui.components.PostponeDialog
+import com.innovative.smis.ui.components.PostponeData
+import com.innovative.smis.ui.components.DatePickerField
 import com.innovative.smis.util.common.Resource
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -29,13 +38,14 @@ import java.util.*
 fun SitePreparationFormScreen(
     applicationId: Int,
     navController: NavController,
-    onNavigateToContainment: (Int) -> Unit = { },
+    onNavigateToContainment: (Int, String?) -> Unit = { _, _ -> },
     viewModel: SitePreparationFormViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
+    var showPostponeDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(applicationId) {
         viewModel.loadApplicationDetails(applicationId)
@@ -45,18 +55,27 @@ fun SitePreparationFormScreen(
     
     LaunchedEffect(saveResult) {
         saveResult?.let { result ->
+            // CRITICAL: Check if we're on a valid destination before popping
+            val currentRoute = navController.currentDestination?.route
+            android.util.Log.d("NavigationGuard", "SitePreparation save result - current route: $currentRoute, result: $result")
+            
             when (result) {
                 is SaveResult.Success -> {
-                    // Show success message and navigate back
-                    if (result.shouldRefreshList) {
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("snackbar_message", result.message)
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("should_refresh", true)
+                    if (currentRoute != null && navController.previousBackStackEntry != null) {
+                        // Show success message and navigate back
+                        if (result.shouldRefreshList) {
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("snackbar_message", result.message)
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("should_refresh", true)
+                        }
+                        android.util.Log.d("NavigationGuard", "SitePreparation executing popBackStack")
+                        navController.popBackStack()
+                    } else {
+                        android.util.Log.d("NavigationGuard", "SitePreparation popBackStack skipped - invalid state")
                     }
-                    navController.popBackStack()
                 }
                 is SaveResult.Error -> {
                     // Handle error - could show snackbar or dialog
@@ -77,12 +96,32 @@ fun SitePreparationFormScreen(
                     }
                 },
                 actions = {
-                    TextButton(
-                        onClick = { 
-                            onNavigateToContainment(applicationId)
-                        }
+                    // Postpone icon button
+                    IconButton(
+                        onClick = { showPostponeDialog = true }
                     ) {
-                        Text("CONTAINMENT", fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Filled.EventBusy,
+                            contentDescription = "Postpone",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
+                    // Containment icon button
+                    IconButton(
+                        onClick = { 
+                            onNavigateToContainment(applicationId, uiState.sanitationCustomerId)
+                        },
+                        enabled = uiState.sanitationCustomerId != null
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Inventory,
+                            contentDescription = "Containment",
+                            tint = if (uiState.sanitationCustomerId != null) 
+                                MaterialTheme.colorScheme.onSurface 
+                            else 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
                     }
                 }
             )
@@ -134,6 +173,15 @@ fun SitePreparationFormScreen(
                     item {
                         FormSectionHeader("Applicant Information")
                     }
+                    
+                    // Sanitation Customer ID (readonly)
+                    item {
+                        ReadOnlyTextField(
+                            label = "Sanitation Customer ID",
+                            value = uiState.sanitationCustomerId ?: ""
+                        )
+                    }
+                    
                     item {
                         ReadOnlyTextField(
                             label = "Applicant Name",
@@ -141,74 +189,35 @@ fun SitePreparationFormScreen(
                         )
                     }
                     item {
-                        ReadOnlyTextField(
-                            label = "Applicant Contact",
-                            value = uiState.applicantContact
+                        OutlinedTextField(
+                            value = uiState.applicantContact,
+                            onValueChange = { },
+                            label = { Text("Applicant Contact") },
+                            readOnly = true,
+                            enabled = false,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            trailingIcon = {
+                                if (uiState.applicantContact.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.applicantContact}"))
+                                            context.startActivity(intent)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Phone,
+                                            contentDescription = "Call applicant",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         )
-                    }
-
-
-
-                    // Purpose of Emptying Request (readonly from API)
-                    item {
-                        FormSectionHeader("Purpose of Emptying Request")
-                    }
-                    item {
-                        ReadOnlyTextField(
-                            label = "Purpose of Emptying Request",
-                            value = uiState.purposeOfEmptying
-                        )
-                    }
-                    
-                    // Show "Other" field if purpose contains "Others, specify" (readonly)
-                    if (uiState.otherEmptyingPurpose.isNotBlank()) {
-                        item {
-                            ReadOnlyTextField(
-                                label = "Other Emptying Purpose",
-                                value = uiState.otherEmptyingPurpose
-                            )
-                        }
-                    }
-
-                    // Ever Emptied Section (readonly from API)
-                    item {
-                        FormSectionHeader("Emptying History")
-                    }
-                    item {
-                        ReadOnlyTextField(
-                            label = "Ever Emptied",
-                            value = if (uiState.everEmptied == true) "Yes" else if (uiState.everEmptied == false) "No" else ""
-                        )
-                    }
-
-                    // Show Last Emptied Year if Ever Emptied is Yes (readonly)
-                    if (uiState.everEmptied == true && uiState.lastEmptiedYear.isNotBlank()) {
-                        item {
-                            ReadOnlyTextField(
-                                label = "Last Emptied Date",
-                                value = "${uiState.lastEmptiedYear}-01-01"
-                            )
-                        }
-                    }
-
-                    // Show reason field if Ever Emptied is No (readonly if provided by API)
-                    if (uiState.everEmptied == false && uiState.notEmptiedBeforeReason.isNotBlank()) {
-                        item {
-                            ReadOnlyTextField(
-                                label = "Reason for no Emptied Date",
-                                value = uiState.notEmptiedBeforeReason
-                            )
-                        }
-                    }
-
-                    // Show reason field if Last Emptied Date is null but Ever Emptied is Yes (readonly if provided by API)
-                    if (uiState.everEmptied == true && uiState.lastEmptiedYear.isBlank() && uiState.reasonForNoEmptiedDate.isNotBlank()) {
-                        item {
-                            ReadOnlyTextField(
-                                label = "Reason for no Emptied Date",
-                                value = uiState.reasonForNoEmptiedDate
-                            )
-                        }
                     }
 
                     // Free Service Under PBC (readonly from API)
@@ -219,42 +228,65 @@ fun SitePreparationFormScreen(
                         )
                     }
 
-                    // Additional Repairing (readonly from API)
+                    // Additional Repairing (editable dropdown)
                     item {
                         FormSectionHeader("Additional Services")
                     }
                     item {
-                        ReadOnlyTextField(
-                            label = "Additional repairing",
-                            value = uiState.additionalRepairing
-                        )
+                        if (uiState.isLoadingDropdowns) {
+                            OutlinedTextField(
+                                value = "Loading...",
+                                onValueChange = {},
+                                label = { Text("Additional repairing") },
+                                readOnly = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            MultiSelectCheckboxGroup(
+                                label = "Additional repairing",
+                                options = uiState.containmentIssuesList,
+                                selectedKeys = uiState.additionalRepairingKeys,
+                                onSelectionChange = viewModel::onAdditionalRepairingChange,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
-                    if (uiState.otherAdditionalRepairing.isNotBlank()) {
+                    // Show "Others" input field if "Others" is selected for additional repairing
+                    if (uiState.additionalRepairingKeys.any { key ->
+                        val value = uiState.containmentIssuesList[key] ?: ""
+                        value.contains("Others", ignoreCase = true)
+                    }) {
                         item {
-                            ReadOnlyTextField(
-                                label = "Other Additional Repairing",
-                                value = uiState.otherAdditionalRepairing
+                            OutlinedTextField(
+                                value = uiState.otherAdditionalRepairing,
+                                onValueChange = viewModel::onOtherAdditionalRepairingChange,
+                                label = { Text("Other Additional Repairing") },
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
 
-                    // Payment Information (readonly from API)
+                    // Payment Information (editable)
                     item {
                         FormSectionHeader("Payment Information")
                     }
                     item {
-                        ReadOnlyTextField(
+                        YesNoRadioGroup(
                             label = "Extra payment required",
-                            value = if (uiState.extraPaymentRequired == true) "Yes" else if (uiState.extraPaymentRequired == false) "No" else ""
+                            selectedOption = uiState.extraPaymentRequired,
+                            onOptionSelected = viewModel::onExtraPaymentRequiredChange
                         )
                     }
 
-                    // Extra Payment Amount (readonly from API if required)
-                    if (uiState.extraPaymentRequired == true && uiState.amountOfExtraPayment.isNotBlank()) {
+                    // Extra Payment Amount (editable if required)
+                    if (uiState.extraPaymentRequired == true) {
                         item {
-                            ReadOnlyTextField(
-                                label = "Amount of Extra Payment",
-                                value = uiState.amountOfExtraPayment
+                            OutlinedTextField(
+                                value = uiState.amountOfExtraPayment,
+                                onValueChange = viewModel::onAmountOfExtraPaymentChange,
+                                label = { Text("Amount of Extra Payment") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
@@ -292,7 +324,24 @@ fun SitePreparationFormScreen(
                             label = { Text("Service Receiver Contact") },
                             enabled = !uiState.isReceiverSameAsApplicant,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                val contact = if (uiState.isReceiverSameAsApplicant) uiState.applicantContact else uiState.serviceReceiverContact
+                                if (contact.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contact"))
+                                            context.startActivity(intent)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Phone,
+                                            contentDescription = "Call service receiver",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         )
                     }
 
@@ -301,9 +350,25 @@ fun SitePreparationFormScreen(
                         FormSectionHeader("Scheduling Information")
                     }
                     item {
+                        // Display proposedEmptyingDate in user's preferred format
+                        val displayProposedDate = remember(uiState.proposedEmptyingDate) {
+                            try {
+                                if (uiState.proposedEmptyingDate.isNotEmpty()) {
+                                    val apiFormatter = com.innovative.smis.util.helper.DateFormatManager.getApiFormatter()
+                                    val displayFormatter = com.innovative.smis.util.helper.DateFormatManager.getDisplayFormatter(context)
+                                    val date = apiFormatter.parse(uiState.proposedEmptyingDate)
+                                    date?.let { displayFormatter.format(it) } ?: uiState.proposedEmptyingDate
+                                } else {
+                                    uiState.proposedEmptyingDate
+                                }
+                            } catch (e: Exception) {
+                                uiState.proposedEmptyingDate
+                            }
+                        }
+                        
                         ReadOnlyTextField(
                             label = "Propose Emptying Date",
-                            value = uiState.proposedEmptyingDate
+                            value = displayProposedDate
                         )
                     }
                     item {
@@ -317,71 +382,104 @@ fun SitePreparationFormScreen(
                     // New Proposed Emptying Date (if reschedule is yes)
                     if (uiState.needReschedule == true) {
                         item {
+                            val selectedMillis = com.innovative.smis.util.helper.DateFormatManager
+                                .parseDisplayDate(context, uiState.newProposedEmptyingDate)
+                            
                             DatePickerField(
                                 label = "New Proposed Emptying Date",
-                                selectedDateMillis = if (uiState.newProposedEmptyingDate.isNotBlank()) {
-                                    try {
-                                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                            .parse(uiState.newProposedEmptyingDate)?.time
-                                    } catch (e: Exception) {
-                                        null
-                                    }
-                                } else null,
-                                onDateSelected = { dateMillis ->
-                                    val formattedDate = if (dateMillis != null) {
-                                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                            .format(Date(dateMillis))
-                                    } else ""
+                                selectedDate = selectedMillis,
+                                onDateSelected = { millis ->
+                                    val formattedDate = millis?.let {
+                                        com.innovative.smis.util.helper.DateFormatManager
+                                            .formatTimestampForDisplay(context, it)
+                                    } ?: ""
                                     viewModel.onNewProposedEmptyingDateChange(formattedDate)
                                 },
-                                minDate = System.currentTimeMillis() // Prevent selecting past dates
+                                isFutureDateAllowed = true  // Allow future dates for rescheduling
                             )
                         }
                     }
 
-                    // Submit Button
+                    // Submit and Draft buttons
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.saveForm() },
-                            enabled = !uiState.isSubmitting,
-                            modifier = Modifier.fillMaxWidth()
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (uiState.isSubmitting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Submitting...")
-                            } else {
-                                Text("Submit Form")
+                            // Save Draft Button
+                            OutlinedButton(
+                                onClick = { viewModel.saveDraft() },
+                                enabled = !uiState.isSubmitting,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (uiState.isSubmitting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Saving...")
+                                } else {
+                                    Text("Draft")
+                                }
+                            }
+                            
+                            // Submit Button
+                            Button(
+                                onClick = { viewModel.saveForm() },
+                                enabled = !uiState.isSubmitting,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (uiState.isSubmitting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Submitting...")
+                                } else {
+                                    Text("Submit")
+                                }
                             }
                         }
-                        
-                        // Save Draft Button
-                        OutlinedButton(
-                            onClick = { viewModel.saveDraft() },
-                            enabled = !uiState.isSubmitting,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (uiState.isSubmitting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Saving...")
-                            } else {
-                                Text("Save as Draft")
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
             }
         }
+    }
+    
+    // Postpone Dialog
+    if (showPostponeDialog) {
+        PostponeDialog(
+            applicationId = applicationId,
+            currentDate = uiState.proposedEmptyingDate,
+            onDismiss = { showPostponeDialog = false },
+            onPostpone = { postponeData ->
+                viewModel.postponeApplication(
+                    postponeFrom = postponeData.postponeFrom,
+                    postponeUntil = postponeData.postponeUntil,
+                    reason = postponeData.reason,
+                    remark = postponeData.remark,
+                    onSuccess = {
+                        showPostponeDialog = false
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("snackbar_message", "Application postponed successfully")
+                        navController.popBackStack()
+                    },
+                    onError = { errorMessage ->
+                        showPostponeDialog = false
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("snackbar_message", errorMessage)
+                        navController.popBackStack()
+                    }
+                )
+            }
+        )
     }
 }
 
@@ -444,58 +542,6 @@ fun YesNoRadioGroup(
             }
         }
     }
-}
-
-@Composable
-fun DatePickerField(
-    label: String,
-    selectedDateMillis: Long?,
-    onDateSelected: (Long?) -> Unit,
-    minDate: Long? = null,
-    maxDate: Long? = null
-) {
-    val context = LocalContext.current
-    val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    
-    OutlinedTextField(
-        value = selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "",
-        onValueChange = { },
-        label = { Text(label) },
-        readOnly = true,
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    val calendar = Calendar.getInstance()
-                    if (selectedDateMillis != null) {
-                        calendar.timeInMillis = selectedDateMillis
-                    }
-                    
-                    val datePickerDialog = DatePickerDialog(
-                        context,
-                        { _, year, month, dayOfMonth ->
-                            val selectedCalendar = Calendar.getInstance()
-                            selectedCalendar.set(year, month, dayOfMonth)
-                            onDateSelected(selectedCalendar.timeInMillis)
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    )
-                    
-                    minDate?.let { datePickerDialog.datePicker.minDate = it }
-                    maxDate?.let { datePickerDialog.datePicker.maxDate = it }
-                    
-                    datePickerDialog.show()
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = "Select Date"
-                )
-            }
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

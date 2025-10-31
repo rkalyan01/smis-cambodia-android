@@ -13,7 +13,8 @@ interface ApiService {
     @GET("applications/filter")
     suspend fun getFilteredApplications(
         @Query("application_status") status: String? = null,
-        @Query("eto_id") etoId: String? = null
+        @Query("eto_id") etoId: String? = null,
+        @Query("site_visit_required") siteVisitRequired: String? = null
     ): Response<ApplicationListResponse>
     
     /**

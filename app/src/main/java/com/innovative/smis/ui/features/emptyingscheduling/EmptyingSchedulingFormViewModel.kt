@@ -23,35 +23,42 @@ sealed class SaveResult {
 data class EmptyingSchedulingFormState(
     val loadingState: Resource<EmptyingSchedulingFormEntity> = Resource.Idle(),
     val applicationDate: String = "",
+    val applicationType: String? = null,
+    val sanitationCustomerId: String? = null,
     val sanitationCustomerName: String? = null,
     val sanitationCustomerContact: String? = null,
     val applicantName: String = "",
     val applicantContact: String = "",
     val isApplicantSameAsCustomer: Boolean = false,
-    val purposeOfEmptying: String = "",
+    val purposeOfEmptying: String? = null, // ✅ Nullable - null means no selection
     val purposeOfEmptyingOther: String = "",
+    val isPurposeOfEmptyingReadonly: Boolean = false, // ✅ Readonly flag for purpose field
     val containmentIssuesOther: String = "",
     val proposeEmptyingDate: Long? = null,
     val everEmptied: Boolean? = null,
     val lastEmptiedYear: Int? = null,
-    val lastEmptiedDate: Long? = null,
+    val lastEmptiedDate: String = "",
     val notEmptiedBeforeReason: String = "",
     val reasonForNoEmptiedDate: String = "",
     val freeServiceUnderPBC: Boolean? = null,
     val sizeOfStorageTankM3: String? = null,
     val constructionYear: Int? = null,
-    val accessibility: Boolean? = null,
+    val accessibility: String? = null,
     val locationOfContainment: String? = null,
     val pumpingPointPresence: Boolean? = null,
     val pumpingPointDetails: String = "",
     val containmentIssues: String = "",
     val extraPaymentRequired: Boolean? = null,
     val extraPaymentAmount: String = "",
+    val amountOfRegularPayment: String = "",
     val siteVisitRequired: Boolean? = null,
     
     // Dropdown data
     val emptyingReasons: Map<String, String> = emptyMap(),
     val containmentIssuesList: Map<String, String> = emptyMap(),
+    val emptiedNoDateReasons: Map<String, String> = emptyMap(),
+    val notEmptiedReasons: Map<String, String> = emptyMap(),
+    val notEmptiedReasonOther: String = "",
     val isLoadingDropdowns: Boolean = false,
     val isSubmitting: Boolean = false
 )
@@ -67,6 +74,25 @@ class EmptyingSchedulingFormViewModel(
     val saveResult = _saveResult.receiveAsFlow()
 
     private var currentApplicationId: Int = 0
+    
+    /**
+     * Smart year expansion: Converts truncated years to 4-digit years
+     * - 0-9 → 2000-2009
+     * - 10-30 → 2010-2030
+     * - 31-99 → 1931-1999
+     * - 1000+ → unchanged
+     */
+    private fun expandYear(year: Int?): Int? {
+        return year?.let {
+            when {
+                it >= 1000 -> it // Already 4 digits
+                it in 0..9 -> 2000 + it // 0-9 → 2000-2009
+                it in 10..30 -> 2000 + it // 10-30 → 2010-2030
+                it in 31..99 -> 1900 + it // 31-99 → 1931-1999
+                else -> it
+            }
+        }
+    }
     private var currentFormId: String? = null
 
     fun loadApplicationDetails(applicationId: Int) {
@@ -109,10 +135,79 @@ class EmptyingSchedulingFormViewModel(
                 }
             }
             
+            // Load emptied no date reasons
+            repository.getEmptiedNoDateReasons().collect { reasonsResult ->
+                when (reasonsResult) {
+                    is Resource.Success -> {
+                        _uiState.update { 
+                            it.copy(emptiedNoDateReasons = reasonsResult.data ?: emptyMap()) 
+                        }
+                    }
+                    else -> {
+                        // Handle error silently, keep empty map
+                    }
+                }
+            }
+            
+            // Load not emptied reasons
+            repository.getNotEmptiedReasons().collect { reasonsResult ->
+                when (reasonsResult) {
+                    is Resource.Success -> {
+                        _uiState.update { 
+                            it.copy(notEmptiedReasons = reasonsResult.data ?: emptyMap()) 
+                        }
+                    }
+                    else -> {
+                        // Handle error silently, keep empty map
+                    }
+                }
+            }
+            
             _uiState.update { it.copy(isLoadingDropdowns = false) }
         }
     }
 
+    /**
+     * ✅ READONLY FIELD PATTERN: Load readonly fields from API
+     * This ensures that readonly fields always show authoritative API data,
+     * even if the local draft has different values saved.
+     */
+    private fun loadReadonlyDataFromApi(applicationId: Int) {
+        viewModelScope.launch {
+            repository.getSanitationCustomerDetails(applicationId).collect { result ->
+                when (result) {
+                    is Resource.Success -> {
+                        result.data?.data?.let { apiData ->
+                            println("DEBUG: Reloading readonly fields from API:")
+                            println("  Application Type (from API): '${apiData.applicationType}'")
+                            println("  Purpose Of Emptying (from API): '${apiData.purposeOfEmptying}'")
+                            println("  Applicant Name (from API): '${apiData.applicantName}'")
+                            println("  Applicant Contact (from API): '${apiData.applicantContact}'")
+                            
+                            // ✅ Update ONLY readonly fields with fresh API data
+                            _uiState.update { currentState ->
+                                currentState.copy(
+                                    // Readonly fields - ALWAYS from API
+                                    applicationType = apiData.applicationType,
+                                    purposeOfEmptying = apiData.purposeOfEmptying, // ✅ Preserve null
+                                    applicantName = apiData.applicantName ?: "",
+                                    applicantContact = apiData.applicantContact ?: "",
+                                    isPurposeOfEmptyingReadonly = !apiData.purposeOfEmptying.isNullOrBlank()
+                                )
+                            }
+                            
+                            println("DEBUG: Readonly fields updated. applicationType = ${apiData.applicationType}, isPurposeOfEmptyingReadonly = ${!apiData.purposeOfEmptying.isNullOrBlank()}")
+                        }
+                    }
+                    is Resource.Error -> {
+                        Log.d("EmptyingSchedulingVM", "Failed to reload readonly data from API: ${result.message}")
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+    
     private fun initializeForm(applicationId: Int) {        
         viewModelScope.launch {
             repository.getFormDetails(applicationId).collect { result ->
@@ -120,10 +215,11 @@ class EmptyingSchedulingFormViewModel(
                     is Resource.Success -> {
                         _uiState.update { it.copy(loadingState = result) }
                         result.data?.let { entity ->
-                            currentFormId = entity.id
+                            currentFormId = entity.applicationId.toString()
                             
                             // Debug logging to check what data is loaded
-                            println("DEBUG: Loading form data for editing:")
+                            println("DEBUG: Loading form data from local database:")
+                            println("  Purpose Of Emptying (from draft): '${entity.purposeOfEmptying}'")
                             println("  Customer Name: '${entity.sanitationCustomerName}'")
                             println("  Customer Contact: '${entity.sanitationCustomerContact}'")
                             println("  Customer Address: '${entity.sanitationCustomerAddress}'")
@@ -134,6 +230,8 @@ class EmptyingSchedulingFormViewModel(
                             _uiState.update {
                                 it.copy(
                                     applicationDate = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date()),
+                                    applicationType = entity.applicationType,
+                                    sanitationCustomerId = entity.sanitationCustomerId,
                                     sanitationCustomerName = entity.sanitationCustomerName,
                                     sanitationCustomerContact = entity.sanitationCustomerContact,
                                     applicantName = entity.applicantName ?: "",
@@ -141,24 +239,37 @@ class EmptyingSchedulingFormViewModel(
                                     isApplicantSameAsCustomer = entity.isApplicantSameAsCustomer ?: false,
                                     freeServiceUnderPBC = entity.freeServiceUnderPbc,
                                     everEmptied = entity.everEmptied,
-                                    lastEmptiedYear = entity.lastEmptiedYear?.toIntOrNull(),
+                                    lastEmptiedYear = expandYear(entity.lastEmptiedYear?.toIntOrNull()),
+                                    lastEmptiedDate = entity.lastEmptiedDate?.let { 
+                                        SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date(it)) 
+                                    } ?: "",
                                     notEmptiedBeforeReason = entity.notEmptiedBeforeReason ?: "",
+                                    notEmptiedReasonOther = entity.notEmptiedBeforeReasonOther ?: "",
                                     reasonForNoEmptiedDate = entity.emptiedNodateReason ?: "",
-                                    purposeOfEmptying = entity.purposeOfEmptying ?: "",
+                                    purposeOfEmptying = entity.purposeOfEmptying, // ✅ Keep null as null - don't convert to ""
                                     purposeOfEmptyingOther = entity.purposeOfEmptyingOther ?: "",
+                                    isPurposeOfEmptyingReadonly = false, // ✅ FIXED: Always false initially, will be set by API
                                     proposeEmptyingDate = entity.proposedEmptyingDate,
                                     sizeOfStorageTankM3 = entity.sizeOfContainment,
-                                    constructionYear = entity.yearOfInstallation?.toIntOrNull(),
-                                    accessibility = if (entity.containmentAccessibility?.isNotEmpty() == true) true else null,
+                                    constructionYear = expandYear(entity.yearOfInstallation?.toIntOrNull()),
+                                    accessibility = when(entity.containmentAccessibility) {
+                                        "Yes" -> "Accessible"
+                                        "No" -> "Not Accessible"
+                                        else -> null
+                                    },
                                     locationOfContainment = entity.locationOfContainment,
                                     pumpingPointPresence = entity.pumpingPointPresence,
                                     containmentIssues = entity.containmentIssues ?: "",
                                     containmentIssuesOther = entity.containmentIssuesOther ?: "",
                                     extraPaymentRequired = entity.extraPaymentRequired,
                                     extraPaymentAmount = entity.extraPaymentAmount ?: "",
+                                    amountOfRegularPayment = entity.amountOfRegularPayment ?: "",
                                     siteVisitRequired = entity.siteVisitRequired
                                 )
                             }
+                            
+                            // ✅ READONLY FIELD PATTERN: Reload readonly fields from API to ensure authoritative data
+                            loadReadonlyDataFromApi(applicationId)
                         }
                     }
                     is Resource.Error -> {
@@ -168,6 +279,7 @@ class EmptyingSchedulingFormViewModel(
                             it.copy(
                                 loadingState = Resource.Idle(),
                                 applicationDate = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date()),
+                                sanitationCustomerId = "",
                                 sanitationCustomerName = "",
                                 sanitationCustomerContact = "",
 
@@ -242,6 +354,11 @@ class EmptyingSchedulingFormViewModel(
         autoSaveDraft()
     }
     
+    fun onNotEmptiedReasonOtherChange(other: String) {
+        _uiState.update { it.copy(notEmptiedReasonOther = other) }
+        autoSaveDraft()
+    }
+    
     fun onPumpingPointDetailsChange(details: String) {
         _uiState.update { it.copy(pumpingPointDetails = details) }
         autoSaveDraft()
@@ -255,22 +372,24 @@ class EmptyingSchedulingFormViewModel(
         autoSaveDraft()
     }
     fun onLastEmptiedYearChange(year: Int?) { 
+        // Store raw value, expansion happens on submission
         _uiState.update { it.copy(lastEmptiedYear = year) }
         autoSaveDraft()
     }
     fun onReasonForNoEmptiedDateChange(reason: String) { 
-        _uiState.update { it.copy(reasonForNoEmptiedDate = reason) }
+        _uiState.update { it.copy(reasonForNoEmptiedDate = reason, lastEmptiedDate = "") }
         autoSaveDraft()
     }
     fun onSizeOfContainmentChange(size: String) { 
         _uiState.update { it.copy(sizeOfStorageTankM3 = size) }
         autoSaveDraft()
     }
-    fun onConstructionYearChange(year: Int) { 
+    fun onConstructionYearChange(year: Int?) { 
+        // Store raw value, expansion happens on submission
         _uiState.update { it.copy(constructionYear = year) }
         autoSaveDraft()
     }
-    fun onAccessibilityChange(accessibility: Boolean) { 
+    fun onAccessibilityChange(accessibility: String) { 
         _uiState.update { it.copy(accessibility = accessibility) }
         autoSaveDraft()
     }
@@ -290,13 +409,17 @@ class EmptyingSchedulingFormViewModel(
         _uiState.update { it.copy(extraPaymentAmount = amount) }
         autoSaveDraft()
     }
+    fun onAmountOfRegularPaymentChange(amount: String) { 
+        _uiState.update { it.copy(amountOfRegularPayment = amount) }
+        autoSaveDraft()
+    }
     fun onSiteVisitRequiredChange(isRequired: Boolean) { 
         _uiState.update { it.copy(siteVisitRequired = isRequired) }
         autoSaveDraft()
     }
     
-    fun onLastEmptiedDateChange(date: Long?) {
-        _uiState.update { it.copy(lastEmptiedDate = date) }
+    fun onLastEmptiedDateChange(date: String) {
+        _uiState.update { it.copy(lastEmptiedDate = date, reasonForNoEmptiedDate = "") }
         autoSaveDraft()
     }
 
@@ -316,6 +439,36 @@ class EmptyingSchedulingFormViewModel(
         autoSaveDraft()
     }
 
+    private fun convertDateStringToTimestamp(dateString: String): Long? {
+        return if (dateString.isNotBlank()) {
+            try {
+                // Extract year from date string and expand if needed
+                val parts = dateString.split("-")
+                if (parts.size == 3) {
+                    val day = parts[0]
+                    val month = parts[1]
+                    val yearStr = parts[2]
+                    
+                    // Expand 2-digit year to 4-digit year
+                    val expandedYear = if (yearStr.length <= 2) {
+                        val year = yearStr.toIntOrNull() ?: return null
+                        expandYear(year) ?: year
+                    } else {
+                        yearStr.toIntOrNull() ?: return null
+                    }
+                    
+                    // Create date string with expanded year
+                    val expandedDateString = "$day-$month-$expandedYear"
+                    SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).parse(expandedDateString)?.time
+                } else {
+                    SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).parse(dateString)?.time
+                }
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+    }
+
     fun autoSaveDraft() {
         viewModelScope.launch {
             currentFormId?.let { formId ->
@@ -323,9 +476,9 @@ class EmptyingSchedulingFormViewModel(
                 val originalEntity = uiState.value.loadingState.data
 
                 val draftEntity = EmptyingSchedulingFormEntity(
-                    id = formId,
                     applicationId = currentApplicationId,
                     createdBy = null,
+                    sanitationCustomerId = currentState.sanitationCustomerId,
                     sanitationCustomerName = currentState.sanitationCustomerName,
                     sanitationCustomerContact = currentState.sanitationCustomerContact,
                     sanitationCustomerAddress = null, // Not available in current UI state
@@ -334,23 +487,29 @@ class EmptyingSchedulingFormViewModel(
                     applicantName = currentState.applicantName,
                     applicantContact = currentState.applicantContact,
                     isApplicantSameAsCustomer = currentState.isApplicantSameAsCustomer,
-                    lastEmptiedYear = currentState.lastEmptiedYear?.toString(),
+                    lastEmptiedYear = expandYear(currentState.lastEmptiedYear)?.toString(),
                     everEmptied = currentState.everEmptied,
-                    emptiedNodateReason = if (currentState.everEmptied == true && currentState.lastEmptiedYear == null) currentState.reasonForNoEmptiedDate else null,
+                    emptiedNodateReason = if (currentState.everEmptied == true && currentState.lastEmptiedDate.isBlank()) currentState.reasonForNoEmptiedDate else null,
                     notEmptiedBeforeReason = if (currentState.everEmptied == false) currentState.reasonForNoEmptiedDate else null,
+                    notEmptiedBeforeReasonOther = if (currentState.everEmptied == false) currentState.notEmptiedReasonOther else null,
                     purposeOfEmptying = currentState.purposeOfEmptying,
                     purposeOfEmptyingOther = currentState.purposeOfEmptyingOther,
                     proposedEmptyingDate = currentState.proposeEmptyingDate,
-                    lastEmptiedDate = currentState.lastEmptiedDate,
+                    lastEmptiedDate = convertDateStringToTimestamp(currentState.lastEmptiedDate),
                     sizeOfContainment = currentState.sizeOfStorageTankM3,
-                    yearOfInstallation = currentState.constructionYear?.toString(),
-                    containmentAccessibility = if (currentState.accessibility == true) "Yes" else if (currentState.accessibility == false) "No" else null,
+                    yearOfInstallation = expandYear(currentState.constructionYear)?.toString(),
+                    containmentAccessibility = when(currentState.accessibility) {
+                    "Accessible" -> "Yes"
+                    "Not Accessible" -> "No"
+                    else -> null
+                },
                     locationOfContainment = currentState.locationOfContainment,
                     pumpingPointPresence = currentState.pumpingPointPresence,
                     containmentIssues = currentState.containmentIssues,
                     containmentIssuesOther = currentState.containmentIssuesOther,
                     extraPaymentRequired = currentState.extraPaymentRequired,
                     extraPaymentAmount = currentState.extraPaymentAmount,
+                    amountOfRegularPayment = currentState.amountOfRegularPayment,
                     siteVisitRequired = currentState.siteVisitRequired,
                     remarks = "",
                     estimatedVolume = "",
@@ -370,12 +529,12 @@ class EmptyingSchedulingFormViewModel(
             val currentState = _uiState.value
             val originalEntity = uiState.value.loadingState.data
 
-            val formId = currentFormId ?: java.util.UUID.randomUUID().toString()
             
             val formEntity = EmptyingSchedulingFormEntity(
-                id = formId,
                 applicationId = currentApplicationId,
                 createdBy = null,
+                applicationType = currentState.applicationType,
+                sanitationCustomerId = currentState.sanitationCustomerId,
                 sanitationCustomerName = currentState.sanitationCustomerName,
                 sanitationCustomerContact = currentState.sanitationCustomerContact,
                 sanitationCustomerAddress = null, // Not available in current UI state
@@ -384,23 +543,29 @@ class EmptyingSchedulingFormViewModel(
                 applicantName = currentState.applicantName,
                 applicantContact = currentState.applicantContact,
                 isApplicantSameAsCustomer = currentState.isApplicantSameAsCustomer,
-                lastEmptiedYear = currentState.lastEmptiedYear?.toString(),
+                lastEmptiedYear = expandYear(currentState.lastEmptiedYear)?.toString(),
                 everEmptied = currentState.everEmptied,
-                emptiedNodateReason = if (currentState.everEmptied == true && currentState.lastEmptiedYear == null) currentState.reasonForNoEmptiedDate else null,
+                emptiedNodateReason = if (currentState.everEmptied == true && currentState.lastEmptiedDate.isBlank()) currentState.reasonForNoEmptiedDate else null,
                 notEmptiedBeforeReason = if (currentState.everEmptied == false) currentState.reasonForNoEmptiedDate else null,
+                notEmptiedBeforeReasonOther = if (currentState.everEmptied == false) currentState.notEmptiedReasonOther else null,
                 purposeOfEmptying = currentState.purposeOfEmptying,
                 purposeOfEmptyingOther = currentState.purposeOfEmptyingOther,
                 proposedEmptyingDate = currentState.proposeEmptyingDate,
-                lastEmptiedDate = currentState.lastEmptiedDate,
+                lastEmptiedDate = convertDateStringToTimestamp(currentState.lastEmptiedDate),
                 sizeOfContainment = currentState.sizeOfStorageTankM3,
-                yearOfInstallation = currentState.constructionYear?.toString(),
-                containmentAccessibility = if (currentState.accessibility == true) "Yes" else if (currentState.accessibility == false) "No" else null,
+                yearOfInstallation = expandYear(currentState.constructionYear)?.toString(),
+                containmentAccessibility = when(currentState.accessibility) {
+                    "Accessible" -> "Yes"
+                    "Not Accessible" -> "No"
+                    else -> null
+                },
                 locationOfContainment = currentState.locationOfContainment,
                 pumpingPointPresence = currentState.pumpingPointPresence,
                 containmentIssues = currentState.containmentIssues,
                 containmentIssuesOther = currentState.containmentIssuesOther,
                 extraPaymentRequired = currentState.extraPaymentRequired,
                 extraPaymentAmount = currentState.extraPaymentAmount,
+                amountOfRegularPayment = currentState.amountOfRegularPayment,
                 siteVisitRequired = currentState.siteVisitRequired,
                 remarks = "",
                 estimatedVolume = "",
@@ -451,12 +616,12 @@ class EmptyingSchedulingFormViewModel(
             val currentState = _uiState.value
             val originalEntity = uiState.value.loadingState.data
 
-            val formId = currentFormId ?: java.util.UUID.randomUUID().toString()
             
             val formEntity = EmptyingSchedulingFormEntity(
-                id = formId,
                 applicationId = currentApplicationId,
                 createdBy = null,
+                applicationType = currentState.applicationType,
+                sanitationCustomerId = currentState.sanitationCustomerId,
                 sanitationCustomerName = currentState.sanitationCustomerName,
                 sanitationCustomerContact = currentState.sanitationCustomerContact,
                 sanitationCustomerAddress = null, // Not available in current UI state
@@ -465,23 +630,29 @@ class EmptyingSchedulingFormViewModel(
                 applicantName = currentState.applicantName,
                 applicantContact = currentState.applicantContact,
                 isApplicantSameAsCustomer = currentState.isApplicantSameAsCustomer,
-                lastEmptiedYear = currentState.lastEmptiedYear?.toString(),
+                lastEmptiedYear = expandYear(currentState.lastEmptiedYear)?.toString(),
                 everEmptied = currentState.everEmptied,
-                emptiedNodateReason = if (currentState.everEmptied == true && currentState.lastEmptiedYear == null) currentState.reasonForNoEmptiedDate else null,
+                emptiedNodateReason = if (currentState.everEmptied == true && currentState.lastEmptiedDate.isBlank()) currentState.reasonForNoEmptiedDate else null,
                 notEmptiedBeforeReason = if (currentState.everEmptied == false) currentState.reasonForNoEmptiedDate else null,
+                notEmptiedBeforeReasonOther = if (currentState.everEmptied == false) currentState.notEmptiedReasonOther else null,
                 purposeOfEmptying = currentState.purposeOfEmptying,
                 purposeOfEmptyingOther = currentState.purposeOfEmptyingOther,
                 proposedEmptyingDate = currentState.proposeEmptyingDate,
-                lastEmptiedDate = currentState.lastEmptiedDate,
+                lastEmptiedDate = convertDateStringToTimestamp(currentState.lastEmptiedDate),
                 sizeOfContainment = currentState.sizeOfStorageTankM3,
-                yearOfInstallation = currentState.constructionYear?.toString(),
-                containmentAccessibility = if (currentState.accessibility == true) "Yes" else if (currentState.accessibility == false) "No" else null,
+                yearOfInstallation = expandYear(currentState.constructionYear)?.toString(),
+                containmentAccessibility = when(currentState.accessibility) {
+                    "Accessible" -> "Yes"
+                    "Not Accessible" -> "No"
+                    else -> null
+                },
                 locationOfContainment = currentState.locationOfContainment,
                 pumpingPointPresence = currentState.pumpingPointPresence,
                 containmentIssues = currentState.containmentIssues,
                 containmentIssuesOther = currentState.containmentIssuesOther,
                 extraPaymentRequired = currentState.extraPaymentRequired,
                 extraPaymentAmount = currentState.extraPaymentAmount,
+                amountOfRegularPayment = currentState.amountOfRegularPayment,
                 siteVisitRequired = currentState.siteVisitRequired,
                 remarks = "",
                 estimatedVolume = "",

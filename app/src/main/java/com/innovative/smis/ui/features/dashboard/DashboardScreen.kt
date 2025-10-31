@@ -42,17 +42,23 @@ import com.innovative.smis.ui.features.logout.LogoutBottomSheet
 import com.innovative.smis.ui.features.dashboard.LogoutViewModel
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.constants.ScreenName
+import com.innovative.smis.util.helper.DateFormatManager
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
+fun DashboardScreen(
+    navController: NavController,
+    onMenuClick: (() -> Unit)? = null
+) {
     android.util.Log.d("DashboardScreen", "DashboardScreen created - onMenuClick is ${if (onMenuClick != null) "not null" else "null"}")
 
     val viewModel: DashboardViewModel = koinViewModel<DashboardViewModel>()
+    val scope = rememberCoroutineScope()
 
     // Log ViewModel creation success
     LaunchedEffect(Unit) {
@@ -99,19 +105,17 @@ fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = n
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val pullToRefreshState = rememberPullToRefreshState()
     val isRefreshing = uiState.isRefreshing
-//    // This effect triggers the refresh in the ViewModel when the user pulls
-//    if (pullToRefreshState.isRefreshing) {
-//        LaunchedEffect(true) {
-//            viewModel.refreshApplications()
-//        }
-//    }
-//
-//    // This effect stops the UI indicator when the ViewModel is no longer refreshing
-//    LaunchedEffect(uiState.isRefreshing) {
-//        if (!uiState.isRefreshing) {
-//            pullToRefreshState.endRefresh()
-//        }
-//    }
+    
+    // Stabilize the menu click callback to prevent it from being recreated during recomposition
+    val stableMenuClick = remember(onMenuClick) {
+        onMenuClick?.let {
+            {
+                android.util.Log.d("DashboardScreen", "🔥 Stable menu click triggered")
+                it()
+            }
+        }
+    }
+    
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -124,13 +128,12 @@ fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = n
                 })
             },
         topBar = {
-            android.util.Log.d("DashboardScreen", "Rendering TopBar with onMenuClick: ${if (onMenuClick != null) "not null" else "null"}")
             TopBar(
                 navController = navController,
                 viewModel = viewModel,
                 scrollBehavior = scrollBehavior,
                 onLogoutClick = { showLogoutSheet = true },
-                onMenuClick = onMenuClick
+                onMenuClick = stableMenuClick
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -166,12 +169,16 @@ fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = n
                 item {
                     android.util.Log.d("DashboardScreen", "🎯 Rendering Task List header")
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(StringResources.getString(StringResources.TASK_LIST, languageCode), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { navController.navigate(ScreenName.TodoList) }) {
+                        TextButton(onClick = { 
+                            navController.navigate(ScreenName.TodoList)
+                        }) {
                             Text(StringResources.getString(StringResources.VIEW_ALL, languageCode))
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(16.dp))
                         }
@@ -180,11 +187,10 @@ fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = n
                 when (val state = uiState.applicationLoadingState) {
                     is Resource.Loading -> {
                         android.util.Log.d("DashboardScreen", "🔄 Rendering Loading state - isRefreshing: $isRefreshing")
-                        if (!isRefreshing) {
-                            item {
-                                android.util.Log.d("DashboardScreen", "📱 Adding LoadingState item to LazyColumn")
-                                LoadingState()
-                            }
+                        // Always show loading indicator to prevent black screen during rapid navigation
+                        item {
+                            android.util.Log.d("DashboardScreen", "📱 Adding LoadingState item to LazyColumn")
+                            LoadingState()
                         }
                     }
                     is Resource.Success -> {
@@ -201,12 +207,14 @@ fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = n
                                     context = context,
                                     navController = navController,
                                     onOpenFormClick = {
-                                        // Navigate based on application status to form screens
-                                        when (todoItem.status?.lowercase()) {
-                                            "initiated" -> navController.navigate("emptying_scheduling_form/${todoItem.applicationId}")
-                                            "scheduled" -> navController.navigate("site_preparation_form/${todoItem.applicationId}")
-                                            "site-preparation" -> navController.navigate("emptying_service_form/${todoItem.applicationId}")
-                                            else -> { /* Don't show form for other statuses */ }
+                                        val route = when (todoItem.status?.lowercase()) {
+                                            "initiated" -> "emptying_scheduling_form/${todoItem.applicationId}"
+                                            "scheduled" -> "site_preparation_form/${todoItem.applicationId}"
+                                            "site-preparation" -> "emptying_service_form/${todoItem.applicationId}"
+                                            else -> null
+                                        }
+                                        route?.let {
+                                            navController.navigate(it)
                                         }
                                     }
                                 )
@@ -226,12 +234,14 @@ fun DashboardScreen(navController: NavController, onMenuClick: (() -> Unit)? = n
                                     context = context,
                                     navController = navController,
                                     onOpenFormClick = {
-                                        // Navigate based on application status to form screens
-                                        when (todoItem.status?.lowercase()) {
-                                            "initiated" -> navController.navigate("emptying_scheduling_form/${todoItem.applicationId}")
-                                            "scheduled" -> navController.navigate("site_preparation_form/${todoItem.applicationId}")
-                                            "site-preparation" -> navController.navigate("emptying_service_form/${todoItem.applicationId}")
-                                            else -> { /* Don't show form for other statuses */ }
+                                        val route = when (todoItem.status?.lowercase()) {
+                                            "initiated" -> "emptying_scheduling_form/${todoItem.applicationId}"
+                                            "scheduled" -> "site_preparation_form/${todoItem.applicationId}"
+                                            "site-preparation" -> "emptying_service_form/${todoItem.applicationId}"
+                                            else -> null
+                                        }
+                                        route?.let {
+                                            navController.navigate(it)
                                         }
                                     }
                                 )
@@ -273,9 +283,9 @@ fun TopBar(
     CenterAlignedTopAppBar(
         title = { Text(StringResources.getString(StringResources.DASHBOARD, languageCode), fontWeight = FontWeight.SemiBold) },
         navigationIcon = {
-            android.util.Log.d("TopBar", "NavigationIcon rendering - onMenuClick is ${if (onMenuClick != null) "not null" else "null"}")
+            // CRITICAL: Menu button hidden for 2 seconds after returning to dashboard
+            android.util.Log.d("TopBar", "NavigationIcon rendering - onMenuClick is ${if (onMenuClick != null) "visible" else "hidden (2s delay)"}")
             onMenuClick?.let { menuClick ->
-                android.util.Log.d("TopBar", "Rendering menu IconButton")
                 IconButton(
                     onClick = {
                         android.util.Log.d("TopBar", "🔥 HAMBURGER MENU CLICKED! 🔥")
@@ -293,32 +303,21 @@ fun TopBar(
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
-            } ?: run {
-                android.util.Log.w("TopBar", "onMenuClick is null - no navigation icon rendered")
             }
         },
         actions = {
-            // Emergency recovery button (only show if needed)
-            if (android.util.Log.isLoggable("DEBUG", android.util.Log.DEBUG)) {
-                IconButton(
-                    onClick = {
-                        android.util.Log.i("TopBar", "Emergency dashboard reload triggered")
-                        try {
-                            navController.navigate(ScreenName.Dashboard) {
-                                popUpTo(0) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.e("TopBar", "Emergency reload failed: ${e.message}")
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Reload Dashboard",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+            // Reload button - always visible
+            IconButton(
+                onClick = {
+                    android.util.Log.i("TopBar", "Dashboard refresh triggered")
+                    viewModel.refreshApplications()
                 }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -329,8 +328,13 @@ fun TopBar(
     )
 }
 @Composable
-fun QuickActionsSection(navController: NavController) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+fun QuickActionsSection(
+    navController: NavController
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         val context = LocalContext.current
         val languageCode = LocalizationManager.getCurrentLanguage(context)
         Text(StringResources.getString(StringResources.QUICK_ACTIONS, languageCode), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -338,15 +342,23 @@ fun QuickActionsSection(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickActionCard(title = "Emptying Scheduling", icon = Icons.Default.Schedule, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), onClick = { navController.navigate("emptying_scheduling") })
-            QuickActionCard(title = "Site Preparation", icon = Icons.Default.Construction, color = Color(0xFF7B1FA2), modifier = Modifier.weight(1f), onClick = { navController.navigate("site_preparation") })
+            QuickActionCard(title = "Emptying Scheduling", icon = Icons.Default.Schedule, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f), onClick = { 
+                navController.navigate("emptying_scheduling")
+            })
+            QuickActionCard(title = "Site Preparation", icon = Icons.Default.Construction, color = Color(0xFF7B1FA2), modifier = Modifier.weight(1f), onClick = { 
+                navController.navigate("site_preparation")
+            })
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            QuickActionCard(title = "Emptying Service", icon = Icons.Default.Build, color = Color(0xFF1976D2), modifier = Modifier.weight(1f), onClick = { navController.navigate("emptying_service") })
-            QuickActionCard(title = "Task Management", icon = Icons.Default.ManageAccounts, color = Color(0xFFE53935), modifier = Modifier.weight(1f), onClick = { navController.navigate("task_management") })
+            QuickActionCard(title = "Emptying Service", icon = Icons.Default.Build, color = Color(0xFF1976D2), modifier = Modifier.weight(1f), onClick = { 
+                navController.navigate("emptying_service")
+            })
+            QuickActionCard(title = "Additional Trips", icon = Icons.Default.Settings, color = Color(0xFFFF6F00), modifier = Modifier.weight(1f), onClick = { 
+                navController.navigate("additional_repairing")
+            })
         }
     }
 }
@@ -377,6 +389,7 @@ fun QuickActionCard(title: String, icon: ImageVector, color: Color, modifier: Mo
 @Composable
 private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navController: NavController, onOpenFormClick: () -> Unit) {
     android.util.Log.d("DashboardTodoItemCard", "🎨 Rendering card for application ID: ${todoItem.applicationId}, status: ${todoItem.status}")
+    val languageCode = LocalizationManager.getCurrentLanguage(context)
     var expanded by remember { mutableStateOf(false) }
     val rotationAngle by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rotation")
     val statusColor = when (todoItem.status?.lowercase()) {
@@ -390,7 +403,7 @@ private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navContr
         "reassigned" -> Color(0xFF6F42C1)
         else -> MaterialTheme.colorScheme.outline
     }
-    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    val todayStr = DateFormatManager.getTodayInApiFormat()
     val isToday = todoItem.proposedEmptyingDate == todayStr
     val cardBorder = if (isToday) BorderStroke(2.dp, Color(0xFFFF9800)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     Card(
@@ -409,7 +422,11 @@ private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navContr
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Application ID #${todoItem.applicationId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(todoItem.applicantName ?: "Name not provided", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        todoItem.applicantName ?: StringResources.getString(StringResources.NAME_NOT_PROVIDED, languageCode), 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Spacer(Modifier.width(8.dp))
                 LocalStatusBadge(text = todoItem.status ?: "", color = statusColor)
@@ -428,11 +445,23 @@ private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navContr
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${todoItem.applicantContact}"))
-                        context.startActivity(intent)
-                    }) {
-                        Icon(Icons.Outlined.Call, "Call Applicant", tint = MaterialTheme.colorScheme.primary)
+                    IconButton(
+                        onClick = {
+                            todoItem.applicantContact?.let { contact ->
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contact"))
+                                context.startActivity(intent)
+                            }
+                        },
+                        enabled = !todoItem.applicantContact.isNullOrBlank()
+                    ) {
+                        Icon(
+                            Icons.Outlined.Call, 
+                            "Call Applicant", 
+                            tint = if (todoItem.applicantContact.isNullOrBlank()) 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            else 
+                                MaterialTheme.colorScheme.primary
+                        )
                     }
 //                    IconButton(onClick = { /* TODO: Open map with location */ }) {
 //                        Icon(Icons.Outlined.LocationOn, "View on Map", tint = MaterialTheme.colorScheme.primary)
@@ -480,9 +509,12 @@ fun TaskFilters(
     selectedStatus: String,
     onStatusSelected: (String) -> Unit
 ) {
-    val statusFilters = listOf("All", "Today", "Initiated", "Scheduled", "Rescheduled", "Site-Preparation", "Emptied", "Completed", "Pending", "Cancelled", "Reassigned")
+    val statusFilters = listOf("All", "Today", "Initiated", "Scheduled", "Rescheduled", "Site-Preparation", "Emptied", "Completed", "Cancelled", "Reassigned")
 
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
         items(statusFilters) { status ->
             FilterChip(
                 selected = status == selectedStatus,

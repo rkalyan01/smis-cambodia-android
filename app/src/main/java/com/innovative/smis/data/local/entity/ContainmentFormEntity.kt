@@ -8,7 +8,6 @@ import java.util.*
 @Entity(tableName = "containment_forms")
 data class ContainmentFormEntity(
     @PrimaryKey
-    val id: String = UUID.randomUUID().toString(),
     val sanitationCustomerId: String,
     val applicationId: Int,
     

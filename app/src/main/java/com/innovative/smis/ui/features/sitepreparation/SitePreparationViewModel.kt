@@ -85,10 +85,10 @@ class SitePreparationViewModel(
                             val applications = applicationResponse?.data?.map { app ->
                                 TodoItem(
                                     applicationId = app.id.toIntOrNull() ?: 0,
-                                    applicationDatetime = null,
+                                    applicationDatetime = app.application_datetime,
                                     applicantName = app.applicant_name,
-                                    applicantContact = null,
-                                    proposedEmptyingDate = null,
+                                    applicantContact = app.applicant_contact,
+                                    proposedEmptyingDate = app.proposed_emptying_date,
                                     status = app.status
                                 )
                             } ?: emptyList()

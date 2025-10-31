@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.innovative.smis.data.repository.EmptyingServiceRepository
 import com.innovative.smis.data.api.request.EmptyingServiceRequest
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PreferenceHelper
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -14,7 +15,8 @@ import com.innovative.smis.data.model.PurposeOptionData
 import com.innovative.smis.data.model.response.EmptyingReadonlyDataResponse
 
 class EmptyingServiceFormViewModel(
-    private val repository: EmptyingServiceRepository
+    private val repository: EmptyingServiceRepository,
+    private val preferenceHelper: PreferenceHelper
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EmptyingServiceFormUiState())
@@ -29,7 +31,8 @@ class EmptyingServiceFormViewModel(
         if (applicationId == 0) return
         currentApplicationId = applicationId
 
-        val todayDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        // Store date in API format (YYYY-MM-DD) for consistent backend communication
+        val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         _uiState.update { it.copy(emptiedDate = todayDate) }
 
         // First load any existing draft
@@ -48,16 +51,31 @@ class EmptyingServiceFormViewModel(
                     is Resource.Success -> {
                         result.data?.data?.let { customerData ->
                             _uiState.update { currentState ->
-                                // Only update if not loaded from draft
+                                // ✅ READONLY FIELDS: Always set from API, never from draft
+                                // freeUnderPBC, regularCost, and building geometry always come from API
+                                
+                                // Only update applicant fields if not loaded from draft
                                 if (currentState.applicantName.isBlank()) {
                                     currentState.copy(
-                                        applicantName = customerData.sanitationCustomerName ?: "",
-                                        applicantContact = customerData.sanitationCustomerContact ?: "",
+                                        sanitationCustomerId = customerData.sanitationCustomerId,
+                                        applicantName = customerData.applicantName ?: "",
+                                        applicantContact = customerData.applicantContact ?: "",
                                         freeUnderPBC = customerData.freeServiceUnderPbc ?: false,
+                                        regularCost = customerData.amountOfRegularPay ?: "",
+                                        isRegularCostReadonly = true,
+                                        // ✅ buildingPointGeomExist - ONLY loaded from loadReadonlyData(), not here
                                         isLoading = false
                                     )
                                 } else {
-                                    currentState.copy(isLoading = false)
+                                    // Draft exists - keep applicant fields from draft, but ALWAYS update readonly fields from API
+                                    currentState.copy(
+                                        sanitationCustomerId = customerData.sanitationCustomerId,
+                                        freeUnderPBC = customerData.freeServiceUnderPbc ?: false, // ✅ ALWAYS from API
+                                        regularCost = customerData.amountOfRegularPay ?: "", // ✅ ALWAYS from API
+                                        isRegularCostReadonly = true,
+                                        // ✅ buildingPointGeomExist - ONLY loaded from loadReadonlyData(), not here
+                                        isLoading = false
+                                    )
                                 }
                             }
                         }
@@ -79,17 +97,51 @@ class EmptyingServiceFormViewModel(
     }
 
     fun onStartTimeChange(startTime: String) {
-        _uiState.update { it.copy(startTime = startTime) }
+        _uiState.update { 
+            val error = validateTimes(startTime, it.endTime)
+            it.copy(
+                startTime = startTime,
+                startTimeError = error,
+                endTimeError = if (error != null) null else it.endTimeError
+            )
+        }
     }
 
     fun onEndTimeChange(endTime: String) {
-        _uiState.update { it.copy(endTime = endTime) }
+        _uiState.update { 
+            val error = validateTimes(it.startTime, endTime)
+            it.copy(
+                endTime = endTime,
+                endTimeError = error,
+                startTimeError = if (error != null) null else it.startTimeError
+            )
+        }
+    }
+    
+    private fun validateTimes(startTime: String, endTime: String): String? {
+        if (startTime.isEmpty() || endTime.isEmpty()) {
+            return null
+        }
+        
+        return try {
+            val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            val startDate = timeFormat.parse(startTime)
+            val endDate = timeFormat.parse(endTime)
+            
+            if (startDate != null && endDate != null && startDate >= endDate) {
+                "Start time must be less than end time"
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
 
 
-    fun onNoOfTripsChange(trips: String) {
-        _uiState.update { it.copy(noOfTrips = trips) }
+    fun onAdditionalTripRequiredChange(required: String) {
+        _uiState.update { it.copy(additionalTripRequired = required) }
     }
 
     fun onServiceReceiverSameAsApplicantChange(same: Boolean) {
@@ -117,15 +169,20 @@ class EmptyingServiceFormViewModel(
     fun onDesludgingVehicleIdChange(licensePlate: String) {
         // Find the vehicle ID based on the selected license plate
         val vehicleId = _uiState.value.vehicleOptions.find { it.type == licensePlate }?.id ?: ""
+        android.util.Log.d("EmptyingService", "Vehicle selected - License: $licensePlate, ID: $vehicleId")
         _uiState.update {
             it.copy(
                 selectedVehicleLicensePlate = licensePlate,
-                desludgingVehicleId = vehicleId
+                desludgingVehicleId = vehicleId,
+                // Clear error when user selects a value
+                desludgingVehicleIdError = null
             )
         }
+        android.util.Log.d("EmptyingService", "State updated - desludgingVehicleId: ${_uiState.value.desludgingVehicleId}")
     }
 
     fun onSludgeTypeChange(sludgeType: String) {
+        android.util.Log.d("EmptyingService", "Sludge type changed to: $sludgeType")
         _uiState.update {
             it.copy(
                 sludgeType = sludgeType,
@@ -133,19 +190,22 @@ class EmptyingServiceFormViewModel(
                 typeOfSludge = if (sludgeType != "Mixed") "" else it.typeOfSludge
             )
         }
+        android.util.Log.d("EmptyingService", "State updated - sludgeType: ${_uiState.value.sludgeType}")
     }
 
     fun onTypeOfSludgeChange(typeOfSludge: String) {
         _uiState.update { it.copy(typeOfSludge = typeOfSludge) }
     }
 
-    fun onPumpingPointPresenceChange(presence: String) {
-        _uiState.update {
+    fun onPumpingPointTypeChange(type: String) {
+        _uiState.update { 
             it.copy(
-                pumpingPointPresence = presence,
-                // Clear Pumping Point Type when changing presence
-                pumpingPointType = if (presence != "Yes") "" else it.pumpingPointType
-            )
+                pumpingPointType = type,
+                // Automatically set presence to "Yes" when a type is selected
+                pumpingPointPresence = if (type.isNotEmpty()) "Yes" else "",
+                // Clear error when user selects a value
+                pumpingPointTypeError = null
+            ) 
         }
     }
 
@@ -153,12 +213,24 @@ class EmptyingServiceFormViewModel(
         _uiState.update { it.copy(freeUnderPBC = free) }
     }
 
-    fun onPumpingPointTypeChange(type: String) {
-        _uiState.update { it.copy(pumpingPointType = type) }
+    fun onAdditionalRepairingChange(selectedKeys: List<String>) {
+        // Check if "Others" is in the selection
+        val hasOthers = selectedKeys.any { key ->
+            val value = _uiState.value.additionalRepairingOptions[key] ?: key
+            value.contains("Others", ignoreCase = true)
+        }
+        
+        _uiState.update { 
+            it.copy(
+                additionalRepairingKeys = selectedKeys,
+                // Clear "other" field when "Others" is not selected
+                otherAdditionalRepairing = if (!hasOthers) "" else it.otherAdditionalRepairing
+            ) 
+        }
     }
 
-    fun onAdditionalRepairingChange(additionalRepairing: String) {
-        _uiState.update { it.copy(additionalRepairingInEmptying = additionalRepairing) }
+    fun onOtherAdditionalRepairingChange(other: String) {
+        _uiState.update { it.copy(otherAdditionalRepairing = other) }
     }
 
     fun onRegularCostChange(regularCost: String) {
@@ -197,6 +269,15 @@ class EmptyingServiceFormViewModel(
             }
         }
     }
+    
+    fun updateLocation(latitude: Double, longitude: Double) {
+        _uiState.update {
+            it.copy(
+                latitude = latitude,
+                longitude = longitude
+            )
+        }
+    }
 
     fun onEmptyingImageSelected(imageUri: String?) {
         _uiState.update { it.copy(pictureOfEmptying = imageUri ?: "") }
@@ -204,32 +285,112 @@ class EmptyingServiceFormViewModel(
 
     fun submitForm() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSubmitting = true) }
-
             val currentState = _uiState.value
+            
+            // Validate required fields
+            var hasError = false
+            var errorState = currentState
+            
+            // Validate Desludging Vehicle ID (mandatory field)
+            if (currentState.desludgingVehicleId.isEmpty()) {
+                errorState = errorState.copy(
+                    desludgingVehicleIdError = "Desludging Vehicle is required"
+                )
+                hasError = true
+            } else {
+                errorState = errorState.copy(desludgingVehicleIdError = null)
+            }
+            
+            // Validate Pumping Point Type (mandatory field)
+            if (currentState.pumpingPointType.isEmpty()) {
+                errorState = errorState.copy(
+                    pumpingPointTypeError = "Pumping Point Type is required"
+                )
+                hasError = true
+            } else {
+                errorState = errorState.copy(pumpingPointTypeError = null)
+            }
+            
+            // If there are errors, update state and return
+            if (hasError) {
+                _uiState.update { 
+                    errorState.copy(isSubmitting = false) 
+                }
+                return@launch
+            }
+            
+            // Clear any previous errors and set submitting state
+            _uiState.update { 
+                it.copy(
+                    desludgingVehicleIdError = null,
+                    pumpingPointTypeError = null,
+                    isSubmitting = true
+                ) 
+            }
 
             // Try online submission first, fallback to offline storage
             try {
+                // Get eto_id from logged-in user
+                val etoId = preferenceHelper.getEtoId()?.toString() ?: ""
+                
+                // Separate additional_repairing_id (keys only) from other_additional_repairing (Others text)
+                // Filter out "No" option and "Others" option
+                val selectedKeys = currentState.additionalRepairingKeys
+                    .filter { key ->
+                        val value = currentState.additionalRepairingOptions[key] ?: key
+                        // Exclude "No" and "Others" from the integer ID list
+                        !value.contains("No", ignoreCase = true) && 
+                        !value.contains("Others", ignoreCase = true)
+                    }
+                    .joinToString(",")
+                
+                val hasOthers = currentState.additionalRepairingKeys.any { key ->
+                    val value = currentState.additionalRepairingOptions[key] ?: key
+                    value.contains("Others", ignoreCase = true)
+                }
+                val othersText = if (hasOthers && currentState.otherAdditionalRepairing.isNotEmpty()) {
+                    currentState.otherAdditionalRepairing
+                } else {
+                    null
+                }
+                
+                android.util.Log.d("EmptyingService", "=== SUBMIT REQUEST DEBUG ===")
+                android.util.Log.d("EmptyingService", "desludgingVehicleId from state: '${currentState.desludgingVehicleId}'")
+                android.util.Log.d("EmptyingService", "sludgeType from state: '${currentState.sludgeType}'")
+                android.util.Log.d("EmptyingService", "typeOfSludge from state: '${currentState.typeOfSludge}'")
+                android.util.Log.d("EmptyingService", "additionalRepairingKeys: ${currentState.additionalRepairingKeys}")
+                android.util.Log.d("EmptyingService", "selectedKeys (filtered): '$selectedKeys'")
+                
                 val request = EmptyingServiceRequest(
+                    sanitation_customer_id = currentState.sanitationCustomerId,
                     start_time = currentState.startTime,
                     end_time = currentState.endTime,
                     volume_of_sludge = "3", // Default volume
-                    no_of_trips = currentState.noOfTrips,
+                    amount_of_regular_payment_per_trip = currentState.regularCost,
+                    additional_trip_required = currentState.additionalTripRequired,
                     sludge_type_a = if (currentState.sludgeType == "Mixed") "Mixed" else if (currentState.sludgeType == "Not Mixed") "Not mixed" else "",
                     sludge_type_b = if (currentState.sludgeType == "Mixed" && currentState.typeOfSludge.isNotEmpty()) currentState.typeOfSludge else "",
                     location_of_containment = "Around the house", // Default location
-                    presence_of_pumping_point = if (currentState.pumpingPointPresence == "Yes") "Yes (Cover, Tube, Pierce)" else "No (need to pierce the tank)",
-                    other_additional_repairing = currentState.additionalRepairingInEmptying,
+                    presence_of_pumping_point = currentState.pumpingPointPresence.ifEmpty { null },
+                    pumping_point_type = if (currentState.pumpingPointPresence == "Yes" && currentState.pumpingPointType.isNotEmpty()) currentState.pumpingPointType else null,
+                    additional_repairing_id = selectedKeys.takeIf { it.isNotEmpty() },
+                    other_additional_repairing = othersText,
                     extra_payment = currentState.extraCost,
                     receipt_number = currentState.receiptNumber,
                     comments = currentState.comments,
                     receipt_image = currentState.receiptImage,
                     picture_of_emptying = currentState.pictureOfEmptying,
-                    eto_id = "4", // Default ETO ID
+                    eto_id = etoId,
                     desludging_vehicle_id = currentState.desludgingVehicleId,
-                    longitude = currentState.longitude,
-                    latitude = currentState.latitude
+                    lng = currentState.longitude,
+                    lat = currentState.latitude,
+                    service_receiver_name = currentState.serviceReceiverName,
+                    service_receiver_contact = currentState.serviceReceiverContact
                 )
+                
+                android.util.Log.d("EmptyingService", "Request desludging_vehicle_id: '${request.desludging_vehicle_id}'")
+                android.util.Log.d("EmptyingService", "Request sludge_type_a: '${request.sludge_type_a}'")
+                android.util.Log.d("EmptyingService", "Request sludge_type_b: '${request.sludge_type_b}'")
 
                 val result = repository.submitEmptyingService(currentApplicationId, request)
 
@@ -291,23 +452,38 @@ class EmptyingServiceFormViewModel(
         viewModelScope.launch {
             repository.loadDraft(currentApplicationId)?.let { draft ->
                 _uiState.update { currentState ->
+                    // Find the license plate for the saved vehicle ID
+                    val licensePlate = currentState.vehicleOptions.find { 
+                        it.id == draft.desludgingVehicleId 
+                    }?.type ?: ""
+                    
+                    android.util.Log.d("EmptyingService", "=== LOADING DRAFT ===")
+                    android.util.Log.d("EmptyingService", "Draft freeUnderPBC: ${draft.freeUnderPBC} (IGNORED - readonly field)")
+                    android.util.Log.d("EmptyingService", "Loading draft - vehicleId: ${draft.desludgingVehicleId}, licensePlate: $licensePlate")
+                    
                     currentState.copy(
                         startTime = draft.startTime,
                         endTime = draft.endTime,
-                        noOfTrips = draft.noOfTrips,
-                        applicantName = draft.applicantName,
-                        applicantContact = draft.applicantContact,
+                        additionalTripRequired = draft.additionalTripRequired,
+                        // ✅ READONLY FIELDS - Excluded from draft loading, always loaded from API
+                        // applicantName - loaded from loadReadonlyData()
+                        // applicantContact - loaded from loadReadonlyData()
                         serviceReceiverName = draft.serviceReceiverName,
                         serviceReceiverContact = draft.serviceReceiverContact,
                         isServiceReceiverSameAsApplicant = draft.isServiceReceiverSameAsApplicant,
                         desludgingVehicleId = draft.desludgingVehicleId,
+                        selectedVehicleLicensePlate = licensePlate,
                         sludgeType = draft.sludgeType,
                         typeOfSludge = draft.typeOfSludge,
                         pumpingPointPresence = draft.pumpingPointPresence,
                         pumpingPointType = draft.pumpingPointType,
-                        freeUnderPBC = draft.freeUnderPBC,
-                        additionalRepairingInEmptying = draft.additionalRepairingInEmptying,
-                        regularCost = draft.regularCost,
+                        // freeUnderPBC - READONLY: Always loaded from API via loadReadonlyData()
+                        additionalRepairingKeys = (draft.additionalRepairingInEmptying ?: "")
+                            .split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() },
+                        otherAdditionalRepairing = draft.otherAdditionalRepairing,
+                        // regularCost - READONLY: Always loaded from API via loadReadonlyData()
                         extraCost = draft.extraCost,
                         receiptNumber = draft.receiptNumber,
                         receiptImage = draft.receiptImage,
@@ -324,7 +500,9 @@ class EmptyingServiceFormViewModel(
     private suspend fun loadDropdownOptions() {
         // Load desludging vehicles
         try {
-            val vehicleResult = repository.getDesludgingVehicles(4) // TODO: Use actual ETO ID
+            // Get eto_id from logged-in user
+            val etoId = preferenceHelper.getEtoId() ?: 0
+            val vehicleResult = repository.getDesludgingVehicles(etoId)
             when (vehicleResult) {
                 is Resource.Success -> {
                     val vehicles = vehicleResult.data?.vehicles
@@ -359,18 +537,47 @@ class EmptyingServiceFormViewModel(
             repository.loadAdditionalRepairingOptions().collect { resource ->
                 if (resource is Resource.Success) {
                     val additionalOptions = resource.data?.data ?: emptyMap()
-                    _uiState.update { it.copy(additionalRepairingOptions = additionalOptions) }
+                    android.util.Log.d("EmptyingService", "=== ADDITIONAL REPAIRING OPTIONS LOADED ===")
+                    android.util.Log.d("EmptyingService", "Options: $additionalOptions")
+                    
+                    _uiState.update { currentState ->
+                        // Use pending keys (from readonly data) if available, otherwise use current keys
+                        val keysToValidate = if (currentState.pendingAdditionalRepairingKeys.isNotEmpty()) {
+                            currentState.pendingAdditionalRepairingKeys
+                        } else {
+                            currentState.additionalRepairingKeys
+                        }
+                        
+                        // Validate keys against newly loaded options
+                        val validKeys = keysToValidate.filter { key ->
+                            additionalOptions.containsKey(key)
+                        }
+                        
+                        android.util.Log.d("EmptyingService", "Validating keys: $keysToValidate")
+                        android.util.Log.d("EmptyingService", "Valid keys: $validKeys")
+                        
+                        if (validKeys.size != keysToValidate.size) {
+                            android.util.Log.w("EmptyingService", "Some keys invalid. Valid: $validKeys, Invalid: ${keysToValidate - validKeys.toSet()}")
+                        }
+                        
+                        currentState.copy(
+                            additionalRepairingOptions = additionalOptions,
+                            additionalRepairingKeys = validKeys, // Apply validated keys
+                            pendingAdditionalRepairingKeys = emptyList() // Clear pending keys after validation
+                        )
+                    }
                 }
             }
         } catch (e: Exception) {
-            // Log error but continue loading
+            android.util.Log.e("EmptyingService", "Error loading additional repairing options", e)
         }
     }
 
     private fun convertDateToTimestamp(dateString: String): Long? {
         return try {
             if (dateString.isBlank()) return null
-            val formatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+            // Date is now stored in API format (yyyy-MM-dd)
+            val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             formatter.parse(dateString)?.time
         } catch (e: Exception) {
             System.currentTimeMillis() // Fallback to current time
@@ -378,11 +585,25 @@ class EmptyingServiceFormViewModel(
     }
 
     fun loadReadonlyData(applicationId: Int) {
+        android.util.Log.d("EmptyingService", "=== LOADING READONLY DATA for app $applicationId ===")
         viewModelScope.launch {
             repository.loadReadonlyData(applicationId).collect { resource ->
+                android.util.Log.d("EmptyingService", "Readonly data resource: ${resource.javaClass.simpleName}")
                 _uiState.update { it.copy(readonlyDataLoadingState = resource) }
-                if (resource is Resource.Success) {
-                    handleReadonlyDataSuccess(resource.data)
+                when (resource) {
+                    is Resource.Success -> {
+                        android.util.Log.d("EmptyingService", "Readonly data SUCCESS")
+                        handleReadonlyDataSuccess(resource.data)
+                    }
+                    is Resource.Error -> {
+                        android.util.Log.e("EmptyingService", "Readonly data ERROR: ${resource.message}")
+                    }
+                    is Resource.Loading -> {
+                        android.util.Log.d("EmptyingService", "Readonly data LOADING...")
+                    }
+                    else -> {
+                        android.util.Log.d("EmptyingService", "Readonly data IDLE or other state")
+                    }
                 }
             }
         }
@@ -391,26 +612,86 @@ class EmptyingServiceFormViewModel(
     private fun handleReadonlyDataSuccess(response: com.innovative.smis.data.model.response.EmptyingReadonlyDataResponse?) {
         response?.data?.let { data ->
             _uiState.update { currentState ->
-                val vehicleId = data.desludging_vehicle_id?.toString() ?: ""
+                val vehicleId = data.desludgingVehicleId?.toString() ?: ""
                 // Find the corresponding license plate for the vehicle ID
                 val licensePlate = currentState.vehicleOptions.find { it.id == vehicleId }?.type ?: ""
+                
+                val additionalRepairingKeys = (data.additionalRepairing ?: "")
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                
+                android.util.Log.d("EmptyingService", "=== READONLY DATA LOADED ===")
+                android.util.Log.d("EmptyingService", "freeServiceUnderPbc from API: ${data.freeServiceUnderPbc}")
+                android.util.Log.d("EmptyingService", "buildingPointGeomExist from API: ${data.buildingPointGeomExist}")
+                android.util.Log.d("EmptyingService", "additionalRepairing from API: '${data.additionalRepairing}'")
+                android.util.Log.d("EmptyingService", "Parsed keys: $additionalRepairingKeys")
+                android.util.Log.d("EmptyingService", "Available options: ${currentState.additionalRepairingOptions}")
+                android.util.Log.d("EmptyingService", "otherAdditionalRepairing: '${data.otherAdditionalRepairing}'")
+                
+                // Verify that the keys actually exist in the options
+                val validKeys = additionalRepairingKeys.filter { key ->
+                    currentState.additionalRepairingOptions.containsKey(key)
+                }
+                
+                if (validKeys.size != additionalRepairingKeys.size) {
+                    android.util.Log.w("EmptyingService", "Options not loaded yet. Storing pending keys: $additionalRepairingKeys")
+                }
 
                 currentState.copy(
-                    applicantName = data.applicant_name,
-                    applicantContact = data.applicant_contact,
-                    freeUnderPBC = data.free_service_under_pbc,
-                    additionalRepairingInEmptying = data.additional_repairing ?: "",
-                    extraCost = data.amount_of_extra_payment ?: "",
+                    applicantName = data.applicantName ?: "",
+                    applicantContact = data.applicantContact ?: "",
+                    freeUnderPBC = data.freeServiceUnderPbc,
+                    additionalRepairingKeys = validKeys,
+                    pendingAdditionalRepairingKeys = additionalRepairingKeys, // Store original keys for later validation
+                    otherAdditionalRepairing = data.otherAdditionalRepairing ?: "",
+                    regularCost = data.amountOfRegularPayment ?: "",
+                    extraCost = data.amountOfExtraPayment ?: "0",
                     desludgingVehicleId = vehicleId,
                     selectedVehicleLicensePlate = licensePlate,
+                    buildingPointGeomExist = data.buildingPointGeomExist ?: false, // ✅ Set from readonly data
                     // Set readonly flags
                     isApplicantNameReadonly = true,
                     isApplicantContactReadonly = true,
                     isFreeUnderPBCReadonly = true,
-                    isAdditionalRepairingReadonly = true,
-                    isExtraCostReadonly = data.extra_payment_required,
+                    isAdditionalRepairingReadonly = false,
+                    isRegularCostReadonly = true,
+                    isExtraCostReadonly = false,
                     isLoading = false
                 )
+            }
+        }
+    }
+
+    fun postponeApplication(
+        postponeFrom: String,
+        postponeUntil: String,
+        reason: String,
+        remark: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmitting = true) }
+            
+            val result = repository.postponeApplication(
+                applicationId = currentApplicationId,
+                postponeFrom = postponeFrom,
+                postponeUntil = postponeUntil,
+                reason = reason,
+                remark = remark
+            )
+            
+            _uiState.update { it.copy(isSubmitting = false) }
+            
+            when (result) {
+                is Resource.Success -> {
+                    onSuccess()
+                }
+                is Resource.Error -> {
+                    onError(result.message ?: "Failed to postpone application")
+                }
+                else -> {}
             }
         }
     }

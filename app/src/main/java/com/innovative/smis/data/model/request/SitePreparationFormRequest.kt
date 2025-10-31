@@ -6,10 +6,12 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class SitePreparationFormRequest(
     @Json(name = "application_id") val applicationId: Int,
+    @Json(name = "sanitation_customer_id") val sanitationCustomerId: String?,
     @Json(name = "site_prep_date") val sitePrepDate: String?,
     @Json(name = "customer_name") val customerName: String,
     @Json(name = "customer_contact") val customerContact: String,
     @Json(name = "additional_repairing") val additionalRepairing: String?,
+    @Json(name = "other_additional_repairing") val otherAdditionalRepairing: String?,
     @Json(name = "extra_payment_required") val extraPaymentRequired: String?,
     @Json(name = "amount_of_extra_payment") val amountOfExtraPayment: String?,
     @Json(name = "applicant_name") val applicantName: String?,
@@ -25,5 +27,7 @@ data class SitePreparationFormRequest(
     @Json(name = "size_of_storage_tank_m3") val sizeOfStorageTankM3: String?,
     @Json(name = "construction_year") val constructionYear: String?,
     @Json(name = "accessibility") val accessibility: String?,
-    @Json(name = "ever_emptied") val everEmptied: String?
+    @Json(name = "ever_emptied") val everEmptied: String?,
+    @Json(name = "need_reschedule") val needReschedule: String?,
+    @Json(name = "new_proposed_emptying_date") val newProposedEmptyingDate: String?
 )

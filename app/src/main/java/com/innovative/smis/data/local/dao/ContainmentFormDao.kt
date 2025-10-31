@@ -16,9 +16,6 @@ interface ContainmentFormDao {
     @Query("SELECT * FROM containment_forms WHERE applicationId = :applicationId LIMIT 1")
     suspend fun getFormByApplicationId(applicationId: Int): ContainmentFormEntity?
     
-    @Query("SELECT * FROM containment_forms WHERE id = :formId LIMIT 1")
-    suspend fun getFormById(formId: String): ContainmentFormEntity?
-    
     @Query("SELECT * FROM containment_forms WHERE sanitationCustomerId = :sanitationCustomerId")
     fun getFormBySanitationCustomerIdFlow(sanitationCustomerId: String): Flow<ContainmentFormEntity?>
     
@@ -31,9 +28,9 @@ interface ContainmentFormDao {
     @Query("SELECT * FROM containment_forms WHERE syncStatus IN ('PENDING', 'FAILED')")
     suspend fun getPendingSyncForms(): List<ContainmentFormEntity>
     
-    @Query("UPDATE containment_forms SET syncStatus = :status, syncAttempts = :attempts, lastSyncAttempt = :lastAttempt, syncError = :error, updatedAt = :updatedAt WHERE id = :formId")
+    @Query("UPDATE containment_forms SET syncStatus = :status, syncAttempts = :attempts, lastSyncAttempt = :lastAttempt, syncError = :error, updatedAt = :updatedAt WHERE sanitationCustomerId = :sanitationCustomerId")
     suspend fun updateSyncStatus(
-        formId: String,
+        sanitationCustomerId: String,
         status: String,
         attempts: Int,
         lastAttempt: Long,
@@ -41,8 +38,8 @@ interface ContainmentFormDao {
         updatedAt: Long
     )
     
-    @Query("DELETE FROM containment_forms WHERE id = :formId")
-    suspend fun deleteById(formId: String)
+    @Query("DELETE FROM containment_forms WHERE sanitationCustomerId = :sanitationCustomerId")
+    suspend fun deleteById(sanitationCustomerId: String)
     
     @Query("SELECT COUNT(*) FROM containment_forms WHERE syncStatus = 'PENDING'")
     suspend fun getPendingSyncCount(): Int

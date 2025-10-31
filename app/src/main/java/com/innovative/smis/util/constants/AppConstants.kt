@@ -28,7 +28,7 @@ object PrefConstant {
 }
 
 object ApiConstants {
-    const val BASE_URL = "https://smis-11.innovativesolution.com.np/api/"  // Android emulator localhost alias
+    const val BASE_URL = "https://smis-beta.muninfosys.com/api/"
     const val TIMEOUT_SECONDS = 30L
 }
 

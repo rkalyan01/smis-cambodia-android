@@ -16,10 +16,17 @@ class PreferenceHelper(context: Context) {
         private const val KEY_OFFLINE_MODE = "offline_mode"
         private const val KEY_AUTO_SYNC = "auto_sync"
         private const val KEY_CACHE_SIZE_LIMIT = "cache_size_limit"
+        private const val KEY_DATE_FORMAT = "date_format"
     }
 
     enum class ThemeMode {
         LIGHT, DARK, AUTO
+    }
+
+    enum class DateFormat(val pattern: String, val displayName: String) {
+        DD_MM_YYYY("dd-MM-yyyy", "DD-MM-YYYY (22-01-2025)"),
+        MM_DD_YYYY("MM-dd-yyyy", "MM-DD-YYYY (01-22-2025)"),
+        YYYY_MM_DD("yyyy-MM-dd", "YYYY-MM-DD (2025-01-22)")
     }
 
     var selectedLanguage: String
@@ -48,6 +55,18 @@ class PreferenceHelper(context: Context) {
     var cacheSizeLimit: Float
         get() = sharedPreferences.getFloat(KEY_CACHE_SIZE_LIMIT, 500f)
         set(value) = sharedPreferences.edit().putFloat(KEY_CACHE_SIZE_LIMIT, value).apply()
+
+    var dateFormat: DateFormat
+        get() {
+            val format = sharedPreferences.getString(KEY_DATE_FORMAT, DateFormat.YYYY_MM_DD.name) 
+                ?: DateFormat.YYYY_MM_DD.name
+            return try {
+                DateFormat.valueOf(format)
+            } catch (e: Exception) {
+                DateFormat.YYYY_MM_DD
+            }
+        }
+        set(value) = sharedPreferences.edit().putString(KEY_DATE_FORMAT, value.name).apply()
 
     fun getAuthToken(): String? {
         return sharedPreferences.getString("AUTH_TOKEN", null)

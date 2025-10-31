@@ -7,6 +7,7 @@ import com.innovative.smis.data.model.PurposeOptionData
 data class EmptyingServiceFormUiState(
     // Application Information
     val applicationId: Int = 0,
+    val sanitationCustomerId: String? = null,
     
     // Loading State
     val loadingState: Resource<EmptyingServiceFormEntity> = Resource.Idle(),
@@ -17,11 +18,10 @@ data class EmptyingServiceFormUiState(
     val emptiedDate: String = "",
     val startTime: String = "",
     val endTime: String = "",
-    val noOfTrips: String = "",
+    val additionalTripRequired: String = "no", // "yes" or "no"
     val emptiedDateError: String? = null,
     val startTimeError: String? = null,
     val endTimeError: String? = null,
-    val noOfTripsError: String? = null,
     
     // Personnel Information
     val applicantName: String = "",
@@ -40,16 +40,19 @@ data class EmptyingServiceFormUiState(
     val sludgeType: String = "", // "Mixed" or "Not Mixed"
     val typeOfSludge: String = "", // Only when sludgeType is "Mixed": "Processing food", "Oil and fat (restaurant)", "Content of fuel"
     val pumpingPointPresence: String = "", // "Yes" or "No"
-    val pumpingPointType: String = "", // When "Yes": "Cover", "Tube", "Pierce"
+    val pumpingPointType: String = "", // Mandatory: "Cover", "Tube", "Pierce"
     val desludgingVehicleIdError: String? = null,
     val sludgeTypeError: String? = null,
+    val pumpingPointTypeError: String? = null,
     
     // Service Information
     val freeUnderPBC: Boolean = false,
-    val additionalRepairingInEmptying: String = "",
+    val additionalRepairingKeys: List<String> = emptyList(),
+    val pendingAdditionalRepairingKeys: List<String> = emptyList(), // Stores unvalidated keys from API until options load
+    val otherAdditionalRepairing: String = "",
     val additionalRepairingOptions: Map<String, String> = emptyMap(),
     val regularCost: String = "",
-    val extraCost: String = "",
+    val extraCost: String = "0",
     val regularCostError: String? = null,
     val extraCostError: String? = null,
     
@@ -65,6 +68,7 @@ data class EmptyingServiceFormUiState(
     val latitude: Double? = null,
     val locationError: String? = null,
     val isLocationLoading: Boolean = false,
+    val buildingPointGeomExist: Boolean = false,
     
     // UI State
     val isLoading: Boolean = false,
@@ -76,6 +80,7 @@ data class EmptyingServiceFormUiState(
     val isApplicantContactReadonly: Boolean = false,
     val isFreeUnderPBCReadonly: Boolean = false,
     val isAdditionalRepairingReadonly: Boolean = false,
+    val isRegularCostReadonly: Boolean = false,
     val isExtraCostReadonly: Boolean = false,
     val isSaving: Boolean = false,
     val syncStatus: String = "DRAFT", // DRAFT, PENDING, SYNCED, FAILED
@@ -94,13 +99,13 @@ fun EmptyingServiceFormUiState.hasValidationErrors(): Boolean {
     return emptiedDateError != null ||
             startTimeError != null ||
             endTimeError != null ||
-            noOfTripsError != null ||
             applicantNameError != null ||
             applicantContactError != null ||
             serviceReceiverNameError != null ||
             serviceReceiverContactError != null ||
             desludgingVehicleIdError != null ||
             sludgeTypeError != null ||
+            pumpingPointTypeError != null ||
             regularCostError != null ||
             extraCostError != null ||
             receiptNumberError != null ||
@@ -110,19 +115,34 @@ fun EmptyingServiceFormUiState.hasValidationErrors(): Boolean {
 }
 
 fun EmptyingServiceFormUiState.isFormValid(): Boolean {
-    return emptiedDate.isNotEmpty() &&
+    // Location is only required if building point geometry doesn't exist
+    val locationValid = if (buildingPointGeomExist) {
+        true // Location not required when building geometry exists
+    } else {
+        longitude != null && latitude != null
+    }
+    
+    val baseValid = emptiedDate.isNotEmpty() &&
             startTime.isNotEmpty() &&
             endTime.isNotEmpty() &&
-            noOfTrips.isNotEmpty() &&
+            additionalTripRequired.isNotEmpty() &&
             applicantName.isNotEmpty() &&
             applicantContact.isNotEmpty() &&
             (!isServiceReceiverSameAsApplicant || (serviceReceiverName.isNotEmpty() && serviceReceiverContact.isNotEmpty())) &&
             desludgingVehicleId.isNotEmpty() &&
             sludgeType.isNotEmpty() &&
-            receiptNumber.isNotEmpty() &&
-            longitude != null &&
-            latitude != null &&
+            pumpingPointType.isNotEmpty() &&
+            locationValid &&
             !hasValidationErrors()
+    
+    // If additional trip is NOT required (no), both receipt number and receipt image are mandatory
+    val receiptValid = if (additionalTripRequired == "no") {
+        receiptNumber.isNotEmpty() && receiptImage.isNotEmpty()
+    } else {
+        true // Receipt not required when additional trip is yes
+    }
+    
+    return baseValid && receiptValid
 }
 
 fun EmptyingServiceFormUiState.isLocationCaptured(): Boolean {

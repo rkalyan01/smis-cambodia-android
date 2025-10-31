@@ -84,7 +84,11 @@ class ApplicationRepositoryImpl(
                 reference_number = "REF-$applicationId",
                 status = status,
                 applicant_name = "Updated Application",
-                address = "Updated Address"
+                applicant_contact = null,
+                application_datetime = null,
+                proposed_emptying_date = null,
+                address = "Updated Address",
+                application_type = null
             )
             emit(Resource.Success(application))
         } catch (e: Exception) {

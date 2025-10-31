@@ -441,7 +441,7 @@ private fun ToiletInformationSection(
                 SurveyTextFieldWithError(
                     value = state.sharedConnectionBin,
                     onValueChange = { onStateChange(state.copy(sharedConnectionBin = it)) },
-                    label = "Shared Connection BIN",
+                    label = "BIN No (If shared latrine/building,if shared)",
                     error = null,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -478,7 +478,7 @@ private fun ToiletInformationSection(
                     SurveyTextFieldWithError(
                         value = state.storageTankTypeOther,
                         onValueChange = { onStateChange(state.copy(storageTankTypeOther = it)) },
-                        label = "Specify Other Tank Type *",
+                        label = "Other Tank Type *",
                         error = state.validationErrors["storageTankTypeOther"],
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -487,7 +487,7 @@ private fun ToiletInformationSection(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 SurveyDropdownField(
-                    label = "Storage Tank Outlet *",
+                    label = "Outlet of Storage Tank *",
                     options = state.storageTankOutletOptions.map { 
                         it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } 
                     },
@@ -505,7 +505,7 @@ private fun ToiletInformationSection(
                     SurveyTextFieldWithError(
                         value = state.storageTankOutletOther,
                         onValueChange = { onStateChange(state.copy(storageTankOutletOther = it)) },
-                        label = "Specify Other Outlet *",
+                        label = "Other Connection *",
                         error = state.validationErrors["storageTankOutletOther"],
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -516,7 +516,7 @@ private fun ToiletInformationSection(
                 SurveyTextFieldWithError(
                     value = state.storageTankSize,
                     onValueChange = { onStateChange(state.copy(storageTankSize = it)) },
-                    label = "Tank Size (m³)",
+                    label = "Storage Tank Size (m³)",
                     error = null,
                     keyboardType = KeyboardType.Number,
                     modifier = Modifier.fillMaxWidth()
@@ -527,7 +527,7 @@ private fun ToiletInformationSection(
                 SurveyTextFieldWithError(
                     value = state.storageTankYear,
                     onValueChange = { onStateChange(state.copy(storageTankYear = it)) },
-                    label = "Construction Year",
+                    label = "Construction Year of Storage Tank",
                     error = null,
                     keyboardType = KeyboardType.Number,
                     modifier = Modifier.fillMaxWidth()
@@ -536,7 +536,7 @@ private fun ToiletInformationSection(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 RadioButtonGroupField(
-                    label = "Tank Accessible",
+                    label = "Accessible to Desludging Vehicle (Yes/No)",
                     options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
                     selectedValue = state.storageTankAccessible.replaceFirstChar { it.uppercase() },
                     onValueSelected = { onStateChange(state.copy(storageTankAccessible = it.lowercase())) },
@@ -546,7 +546,7 @@ private fun ToiletInformationSection(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 RadioButtonGroupField(
-                    label = "Ever Emptied",
+                    label = "Ever Emptied the Storage Tank (Yes/No)",
                     options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
                     selectedValue = state.storageTankEmptied.replaceFirstChar { it.uppercase() },
                     onValueSelected = { onStateChange(state.copy(storageTankEmptied = it.lowercase())) },

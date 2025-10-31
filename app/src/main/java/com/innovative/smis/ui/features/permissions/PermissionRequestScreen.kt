@@ -2,6 +2,7 @@ package com.innovative.smis.ui.features.permissions
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -45,33 +46,57 @@ fun PermissionRequestScreen(
     val currentLanguage = remember { LocalizationManager.getCurrentLanguage(context) }
     val languageCode = remember(currentLanguage) { LocalizationManager.getLanguageCode(currentLanguage) }
     
-    val requiredPermissions = listOf(
-        PermissionInfo(
-            permission = Manifest.permission.CAMERA,
-            title = StringResources.getString(StringResources.CAMERA_ACCESS, languageCode),
-            description = StringResources.getString(StringResources.TAKE_PHOTOS_DESCRIPTION, languageCode),
-            icon = Icons.Default.PhotoCamera
-        ),
-        PermissionInfo(
-            permission = Manifest.permission.READ_EXTERNAL_STORAGE,
-            title = StringResources.getString(StringResources.PHOTO_GALLERY_ACCESS, languageCode),
-            description = StringResources.getString(StringResources.SELECT_PHOTOS_DESCRIPTION, languageCode),
-            icon = Icons.Default.PhotoLibrary
-        ),
-        PermissionInfo(
-            permission = Manifest.permission.ACCESS_FINE_LOCATION,
-            title = StringResources.getString(StringResources.LOCATION_ACCESS, languageCode),
-            description = StringResources.getString(StringResources.LOCATION_ACCESS_DESCRIPTION, languageCode),
-            icon = Icons.Default.LocationOn
-        ),
-        PermissionInfo(
-            permission = Manifest.permission.ACCESS_COARSE_LOCATION,
-            title = StringResources.getString(StringResources.APPROXIMATE_LOCATION, languageCode),
-            description = StringResources.getString(StringResources.GENERAL_LOCATION_DESCRIPTION, languageCode),
-            icon = Icons.Default.MyLocation,
-            isRequired = false
-        )
-    )
+    // Build permission list based on Android version
+    val requiredPermissions = remember {
+        buildList {
+            // Camera permission - always required
+            add(
+                PermissionInfo(
+                    permission = Manifest.permission.CAMERA,
+                    title = StringResources.getString(StringResources.CAMERA_ACCESS, languageCode),
+                    description = StringResources.getString(StringResources.TAKE_PHOTOS_DESCRIPTION, languageCode),
+                    icon = Icons.Default.PhotoCamera,
+                    isRequired = true
+                )
+            )
+            
+            // Photo/Media permissions - version specific
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ uses READ_MEDIA_IMAGES
+                add(
+                    PermissionInfo(
+                        permission = Manifest.permission.READ_MEDIA_IMAGES,
+                        title = StringResources.getString(StringResources.PHOTO_GALLERY_ACCESS, languageCode),
+                        description = StringResources.getString(StringResources.SELECT_PHOTOS_DESCRIPTION, languageCode),
+                        icon = Icons.Default.PhotoLibrary,
+                        isRequired = true
+                    )
+                )
+            } else {
+                // Android 12 and below uses READ_EXTERNAL_STORAGE
+                add(
+                    PermissionInfo(
+                        permission = Manifest.permission.READ_EXTERNAL_STORAGE,
+                        title = StringResources.getString(StringResources.PHOTO_GALLERY_ACCESS, languageCode),
+                        description = StringResources.getString(StringResources.SELECT_PHOTOS_DESCRIPTION, languageCode),
+                        icon = Icons.Default.PhotoLibrary,
+                        isRequired = true
+                    )
+                )
+            }
+            
+            // Location permission - always required
+            add(
+                PermissionInfo(
+                    permission = Manifest.permission.ACCESS_FINE_LOCATION,
+                    title = StringResources.getString(StringResources.LOCATION_ACCESS, languageCode),
+                    description = StringResources.getString(StringResources.LOCATION_ACCESS_DESCRIPTION, languageCode),
+                    icon = Icons.Default.LocationOn,
+                    isRequired = true
+                )
+            )
+        }
+    }
     
     var permissionStates by remember {
         mutableStateOf(
@@ -184,34 +209,22 @@ fun PermissionRequestScreen(
                 if (permissionsToRequest.isNotEmpty()) {
                     permissionLauncher.launch(permissionsToRequest)
                 } else {
+                    preferenceHelper.setBoolean(PrefConstant.PERMISSIONS_REQUESTED, true)
                     onPermissionsGranted()
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            enabled = allRequiredGranted || permissionStates.values.any { !it }
         ) {
-            if (allRequiredGranted) {
-                Text("Continue to App")
-            } else {
-                Text("Grant Permissions")
-            }
+            Text(
+                if (allRequiredGranted) "Continue to App" else "Grant All Permissions"
+            )
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Skip button (only if not all required permissions are needed)
-        TextButton(
-            onClick = {
-                preferenceHelper.setBoolean(PrefConstant.PERMISSIONS_REQUESTED, true)
-                onPermissionsGranted()
-            }
-        ) {
-            Text("Continue without some permissions")
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -229,9 +242,7 @@ private fun PermissionCard(
                 MaterialTheme.colorScheme.surfaceVariant
             }
         ),
-        border = if (isGranted) {
-            null
-        } else if (permissionInfo.isRequired) {
+        border = if (!isGranted) {
             androidx.compose.foundation.BorderStroke(
                 1.dp,
                 MaterialTheme.colorScheme.outline
@@ -262,24 +273,11 @@ private fun PermissionCard(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = permissionInfo.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                    
-                    if (permissionInfo.isRequired) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "*",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                    }
-                }
+                Text(
+                    text = permissionInfo.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium
+                )
                 
                 Text(
                     text = permissionInfo.description,

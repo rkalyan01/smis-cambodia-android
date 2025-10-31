@@ -46,15 +46,15 @@ interface SitePreparationApiService {
     suspend fun getSanitationCustomerDetails(@Path("id") applicationId: Int): Response<SitePreparationCustomerDetailsResponse>
 
     /**
-     * Get emptying reasons for Purpose of Emptying Request dropdown
+     * Get emptying reasons for Purpose of emptying request dropdown
      */
     @GET("site-preparation/show-emptying-reason")
     suspend fun getEmptyingReasons(): Response<SimpleDropdownResponse>
 
     /**
-     * Get containment issues for dropdown
+     * Get additional repairing options for dropdown
      */
-    @GET("site-preparation/show-issue-with-containment")
+    @GET("site-preparation/show-additional-repairing")
     suspend fun getContainmentIssues(): Response<SimpleDropdownResponse>
 
     /**

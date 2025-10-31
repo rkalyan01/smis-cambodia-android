@@ -386,13 +386,13 @@ class OfflineManager(
 
     private suspend fun syncEmptyingSchedulingForm(sync: SyncQueueEntity) {
         try {
-            val formEntity = emptyingSchedulingFormDao.getFormById(sync.entityId)
+            val formEntity = emptyingSchedulingFormDao.getFormByApplicationId(sync.entityId.toInt())
             if (formEntity != null) {
                 val request = formEntity.toApiRequest()
                 val response = emptyingSchedulingApiService.updateEmptyingScheduling(formEntity.applicationId, request)
 
                 if (response.isSuccessful) {
-                    emptyingSchedulingFormDao.markAsSynced(formEntity.id)
+                    emptyingSchedulingFormDao.markAsSynced(formEntity.applicationId)
                 } else {
                     throw Exception("API error: ${response.code()}")
                 }
@@ -404,13 +404,13 @@ class OfflineManager(
 
     private suspend fun syncSitePreparationForm(sync: SyncQueueEntity) {
         try {
-            val formEntity = sitePreparationFormDao.getFormById(sync.entityId)
+            val formEntity = sitePreparationFormDao.getFormByApplicationId(sync.entityId.toInt())
             if (formEntity != null) {
                 val request = formEntity.toApiRequest(formEntity.applicationId)
                 val response = sitePreparationApiService.updateSitePreparation(formEntity.applicationId, request)
 
                 if (response.isSuccessful) {
-                    sitePreparationFormDao.markAsSynced(formEntity.id)
+                    sitePreparationFormDao.markAsSynced(formEntity.applicationId)
                 } else {
                     throw Exception("API error: ${response.code()}")
                 }
@@ -422,13 +422,13 @@ class OfflineManager(
 
     private suspend fun syncEmptyingServiceForm(sync: SyncQueueEntity) {
         try {
-            val formEntity = emptyingServiceFormDao.getFormById(sync.entityId)
+            val formEntity = emptyingServiceFormDao.getFormByApplicationId(sync.entityId.toInt())
             if (formEntity != null) {
                 val request = formEntity.toApiRequest()
                 val response = emptyingServiceApiService.submitEmptyingService(formEntity.applicationId, request)
 
                 if (response.isSuccessful) {
-                    emptyingServiceFormDao.markAsSynced(formEntity.id)
+                    emptyingServiceFormDao.markAsSynced(formEntity.applicationId)
                 } else {
                     throw Exception("API error: ${response.code()}")
                 }
@@ -494,7 +494,7 @@ class OfflineManager(
             // Queue for sync
             queueForSync(
                 entityType = EntityType.EMPTYING_SCHEDULING_FORM.name,
-                entityId = form.id,
+                entityId = form.applicationId.toString(),
                 operation = SyncOperation.UPDATE.name,
                 data = emptyingSchedulingFormToJson(form)
             )
@@ -518,7 +518,7 @@ class OfflineManager(
             // Queue for sync
             queueForSync(
                 entityType = EntityType.SITE_PREPARATION_FORM.name,
-                entityId = form.id,
+                entityId = form.applicationId.toString(),
                 operation = SyncOperation.UPDATE.name,
                 data = sitePreparationFormToJson(form)
             )
@@ -542,7 +542,7 @@ class OfflineManager(
             // Queue for sync
             queueForSync(
                 entityType = EntityType.EMPTYING_SERVICE_FORM.name,
-                entityId = form.id,
+                entityId = form.applicationId.toString(),
                 operation = SyncOperation.UPDATE.name,
                 data = emptyingServiceFormToJson(form)
             )

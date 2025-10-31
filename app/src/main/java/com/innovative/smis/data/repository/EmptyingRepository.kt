@@ -104,7 +104,7 @@ class EmptyingRepositoryImpl(
             val response = apiService.submitEmptyingForm(request)
             if (response.isSuccessful) {
                 val formResponse = response.body()
-                if (formResponse != null && formResponse.success) {
+                if (formResponse != null && formResponse.isSuccess) {
                     emit(Resource.Success(formResponse))
                 } else {
                     emit(Resource.Error(formResponse?.message ?: "Failed to submit form"))
@@ -127,7 +127,7 @@ class EmptyingRepositoryImpl(
             val response = apiService.updateEmptyingForm(applicationId, request)
             if (response.isSuccessful) {
                 val formResponse = response.body()
-                if (formResponse != null && formResponse.success) {
+                if (formResponse != null && formResponse.isSuccess) {
                     emit(Resource.Success(formResponse))
                 } else {
                     emit(Resource.Error(formResponse?.message ?: "Failed to update form"))
@@ -173,7 +173,7 @@ class EmptyingRepositoryImpl(
             val response = apiService.submitSitePreparation(request)
             if (response.isSuccessful) {
                 val formResponse = response.body()
-                if (formResponse != null && formResponse.success) {
+                if (formResponse != null && formResponse.isSuccess) {
                     emit(Resource.Success(formResponse))
                 } else {
                     emit(Resource.Error(formResponse?.message ?: "Failed to submit site preparation"))
@@ -196,7 +196,7 @@ class EmptyingRepositoryImpl(
             val response = apiService.submitEmptyingService(request)
             if (response.isSuccessful) {
                 val formResponse = response.body()
-                if (formResponse != null && formResponse.success) {
+                if (formResponse != null && formResponse.isSuccess) {
                     emit(Resource.Success(formResponse))
                 } else {
                     emit(Resource.Error(formResponse?.message ?: "Failed to submit emptying service"))

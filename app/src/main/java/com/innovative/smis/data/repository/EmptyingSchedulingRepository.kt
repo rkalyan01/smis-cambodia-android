@@ -31,6 +31,27 @@ class EmptyingSchedulingRepository(
     private val preferenceHelper: com.innovative.smis.util.helper.PreferenceHelper // For getting eto_id
 ) {
 
+    /**
+     * ✅ Get fresh customer details from API only (for readonly field reload)
+     */
+    fun getSanitationCustomerDetails(applicationId: Int): Flow<Resource<SanitationCustomerResponse>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = apiService.getSanitationCustomerDetails(applicationId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.let { apiResponse ->
+                    emit(Resource.Success(apiResponse))
+                } ?: emit(Resource.Error("No data received from server"))
+            } else {
+                emit(Resource.Error("API Error: ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            emit(Resource.Error("Network error"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Unknown error"))
+        }
+    }
+    
     fun getFormDetails(applicationId: Int): Flow<Resource<EmptyingSchedulingFormEntity>> = flow {
         emit(Resource.Loading())
 
@@ -60,18 +81,19 @@ class EmptyingSchedulingRepository(
                     // Only update if we have meaningful data from API, preserve local data otherwise
                     if (localData != null) {
                         // Merge network data with existing local data, preserving user-entered fields
+                        // IMPORTANT: Preserve local data if network data is null OR empty string
                         val mergedEntity = localData.copy(
-                            // Only update customer info if API provides it
-                            sanitationCustomerName = networkData.sanitationCustomerName ?: localData.sanitationCustomerName,
-                            sanitationCustomerContact = networkData.sanitationCustomerContact ?: localData.sanitationCustomerContact,
-                            pbcCustomerType = networkData.pbcCustomerType ?: localData.pbcCustomerType,
+                            // Only update customer info if API provides non-empty data
+                            sanitationCustomerName = networkData.sanitationCustomerName?.takeIf { it.isNotBlank() } ?: localData.sanitationCustomerName,
+                            sanitationCustomerContact = networkData.sanitationCustomerContact?.takeIf { it.isNotBlank() } ?: localData.sanitationCustomerContact,
+                            pbcCustomerType = networkData.pbcCustomerType?.takeIf { it.isNotBlank() } ?: localData.pbcCustomerType,
                             freeServiceUnderPbc = networkData.freeServiceUnderPbc ?: localData.freeServiceUnderPbc,
-                            lastEmptiedYear = networkData.lastEmptiedYear?.toString() ?: localData.lastEmptiedYear,
+                            lastEmptiedYear = networkData.lastEmptiedYear?.toString()?.takeIf { it.isNotBlank() } ?: localData.lastEmptiedYear,
                             everEmptied = networkData.everEmptied ?: localData.everEmptied,
-                            emptiedNodateReason = networkData.emptiedNodateReason ?: localData.emptiedNodateReason,
-                            notEmptiedBeforeReason = networkData.notEmptiedBeforeReason ?: localData.notEmptiedBeforeReason,
-                            sizeOfContainment = networkData.sizeOfStorageTankM3 ?: localData.sizeOfContainment,
-                            yearOfInstallation = networkData.constructionYear?.toString() ?: localData.yearOfInstallation,
+                            emptiedNodateReason = networkData.emptiedNodateReason?.takeIf { it.isNotBlank() } ?: localData.emptiedNodateReason,
+                            notEmptiedBeforeReason = networkData.notEmptiedBeforeReason?.takeIf { it.isNotBlank() } ?: localData.notEmptiedBeforeReason,
+                            sizeOfContainment = networkData.sizeOfStorageTankM3?.takeIf { it.isNotBlank() } ?: localData.sizeOfContainment,
+                            yearOfInstallation = networkData.constructionYear?.toString()?.takeIf { it.isNotBlank() } ?: localData.yearOfInstallation,
                             containmentAccessibility = if (networkData.accessibility == true) "Yes" else if (networkData.accessibility == false) "No" else localData.containmentAccessibility,
                             // Keep applicant data and other user-entered fields unchanged
                             updatedAt = System.currentTimeMillis()
@@ -130,7 +152,7 @@ class EmptyingSchedulingRepository(
             val syncEntity = SyncQueueEntity(
                 id = java.util.UUID.randomUUID().toString(),
                 entityType = "EMPTYING_SCHEDULING_FORM",
-                entityId = entity.id,
+                entityId = entity.applicationId.toString(),
                 operation = "UPDATE",
                 data = entityToJsonData(entity),
                 retryCount = 0,
@@ -144,7 +166,7 @@ class EmptyingSchedulingRepository(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 syncQueueDao.insert(syncEntity)
             }
-            println("DEBUG: Added form ${entity.id} to sync queue")
+            println("DEBUG: Added form ${entity.applicationId} to sync queue")
         } catch (e: Exception) {
             println("DEBUG: Failed to add to sync queue: ${e.message}")
         }
@@ -178,7 +200,7 @@ class EmptyingSchedulingRepository(
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     // Successfully submitted to API
                     formDao.updateSyncStatus(
-                        formId = entity.id,
+                        applicationId = entity.applicationId,
                         status = "SYNCED",
                         attempts = 0,
                         lastAttempt = System.currentTimeMillis(),
@@ -187,9 +209,9 @@ class EmptyingSchedulingRepository(
                     )
 
                     // Remove from sync queue since successfully synced
-                    syncQueueDao.deleteSyncsByEntity("EMPTYING_SCHEDULING_FORM", entity.id)
+                    syncQueueDao.deleteSyncsByEntity("EMPTYING_SCHEDULING_FORM", entity.applicationId.toString())
                 }
-                println("DEBUG: Successfully synced form ${entity.id} to API and removed from sync queue")
+                println("DEBUG: Successfully synced form ${entity.applicationId} to API and removed from sync queue")
 
                 Resource.Success(Unit)
             } else {
@@ -201,7 +223,7 @@ class EmptyingSchedulingRepository(
                     "API Error (${response.code()}): ${response.message()}"
                 }
 
-                println("DEBUG: API sync failed for form ${entity.id} - $detailedError")
+                println("DEBUG: API sync failed for form ${entity.applicationId} - $detailedError")
 
                 // Check if it's a database constraint error that shouldn't be retried
                 val shouldRetry = when {
@@ -218,7 +240,7 @@ class EmptyingSchedulingRepository(
                     if (shouldRetry && entity.syncAttempts < 3) {
                         // Keep as pending for retry
                         formDao.updateSyncStatus(
-                            formId = entity.id,
+                            applicationId = entity.applicationId,
                             status = "PENDING",
                             attempts = entity.syncAttempts + 1,
                             lastAttempt = System.currentTimeMillis(),
@@ -228,7 +250,7 @@ class EmptyingSchedulingRepository(
                     } else {
                         // Mark as failed - don't retry
                         formDao.updateSyncStatus(
-                            formId = entity.id,
+                            applicationId = entity.applicationId,
                             status = "FAILED",
                             attempts = entity.syncAttempts + 1,
                             lastAttempt = System.currentTimeMillis(),
@@ -236,8 +258,8 @@ class EmptyingSchedulingRepository(
                             updatedAt = System.currentTimeMillis()
                         )
                         // Remove from sync queue to prevent endless retries
-                        syncQueueDao.deleteSyncsByEntity("EMPTYING_SCHEDULING_FORM", entity.id)
-                        println("DEBUG: Marked form ${entity.id} as FAILED - will not retry")
+                        syncQueueDao.deleteSyncsByEntity("EMPTYING_SCHEDULING_FORM", entity.applicationId.toString())
+                        println("DEBUG: Marked form ${entity.applicationId} as FAILED - will not retry")
                     }
                 }
 
@@ -248,7 +270,7 @@ class EmptyingSchedulingRepository(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 // Network error - keep as pending for later sync
                 formDao.updateSyncStatus(
-                    formId = entity.id,
+                    applicationId = entity.applicationId,
                     status = "PENDING",
                     attempts = entity.syncAttempts + 1,
                     lastAttempt = System.currentTimeMillis(),
@@ -262,7 +284,7 @@ class EmptyingSchedulingRepository(
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 // Other error - mark as failed
                 formDao.updateSyncStatus(
-                    formId = entity.id,
+                    applicationId = entity.applicationId,
                     status = "FAILED",
                     attempts = entity.syncAttempts + 1,
                     lastAttempt = System.currentTimeMillis(),
@@ -299,10 +321,10 @@ class EmptyingSchedulingRepository(
 
     suspend fun createDraftForm(applicationId: Int, createdBy: String?): EmptyingSchedulingFormEntity {
         val draftForm = EmptyingSchedulingFormEntity(
-            id = java.util.UUID.randomUUID().toString(),
             applicationId = applicationId,
             createdBy = createdBy,
             syncStatus = "DRAFT",
+            sanitationCustomerId = null,
             sanitationCustomerName = null,
             sanitationCustomerContact = null,
             sanitationCustomerAddress = null,
@@ -314,6 +336,7 @@ class EmptyingSchedulingRepository(
             everEmptied = null,
             emptiedNodateReason = null,
             notEmptiedBeforeReason = null,
+            notEmptiedBeforeReasonOther = null,
             purposeOfEmptying = null,
             purposeOfEmptyingOther = null,
             proposedEmptyingDate = null,
@@ -327,6 +350,7 @@ class EmptyingSchedulingRepository(
             containmentIssuesOther = null,
             extraPaymentRequired = null,
             extraPaymentAmount = null,
+            amountOfRegularPayment = null,
             siteVisitRequired = null,
             remarks = null,
             estimatedVolume = null
@@ -348,9 +372,9 @@ class EmptyingSchedulingRepository(
         }
     }
 
-    suspend fun submitForm(formId: String): Resource<Unit> {
+    suspend fun submitForm(applicationId: String): Resource<Unit> {
         return try {
-            formDao.markAsPending(formId)
+            formDao.markAsPending(applicationId.toInt())
             Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Error("Failed to submit form: ${e.message}")
@@ -429,8 +453,16 @@ class EmptyingSchedulingRepository(
                 emit(Resource.Error("API Error: ${response.message()}", localDataFlow.first()))
             }
         } catch (e: IOException) {
-            emit(Resource.Error("Network error. Displaying cached data.", localDataFlow.first()))
+            android.util.Log.e("EmptyingSchedulingRepo", "❌ IOException: ${e.javaClass.simpleName} - ${e.message}", e)
+            val errorMsg = when {
+                e is javax.net.ssl.SSLException -> "SSL Certificate error: ${e.message}"
+                e.message?.contains("Unable to resolve host") == true -> "Cannot connect to server"
+                e.message?.contains("timeout") == true -> "Connection timeout"
+                else -> "Network error: ${e.message}"
+            }
+            emit(Resource.Error("$errorMsg. Displaying cached data.", localDataFlow.first()))
         } catch (e: Exception) {
+            android.util.Log.e("EmptyingSchedulingRepo", "❌ Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
             emit(Resource.Error(e.message ?: "An unknown error occurred.", localDataFlow.first()))
         }
     }
@@ -471,6 +503,42 @@ class EmptyingSchedulingRepository(
         }
     }
 
+    fun getEmptiedNoDateReasons(): Flow<Resource<Map<String, String>>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = apiService.getEmptiedNoDateReasons()
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data?.let { reasons ->
+                    emit(Resource.Success(reasons))
+                } ?: emit(Resource.Error("No emptied no date reasons data received"))
+            } else {
+                emit(Resource.Error("Failed to load emptied no date reasons: ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            emit(Resource.Error("Network error loading emptied no date reasons"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Unknown error loading emptied no date reasons"))
+        }
+    }
+
+    fun getNotEmptiedReasons(): Flow<Resource<Map<String, String>>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = apiService.getNotEmptiedReasons()
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data?.let { reasons ->
+                    emit(Resource.Success(reasons))
+                } ?: emit(Resource.Error("No not emptied reasons data received"))
+            } else {
+                emit(Resource.Error("Failed to load not emptied reasons: ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            emit(Resource.Error("Network error loading not emptied reasons"))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message ?: "Unknown error loading not emptied reasons"))
+        }
+    }
+
     // Method to get pending syncs for debugging
     suspend fun getPendingSyncs(): List<SyncQueueEntity> {
         return syncQueueDao.getRetryableSyncs()
@@ -496,7 +564,7 @@ class EmptyingSchedulingRepository(
             for (sync in pendingSyncs) {
                 try {
                     // Get the form data from local database
-                    val formEntity = formDao.getFormById(sync.entityId)
+                    val formEntity = formDao.getFormByApplicationId(sync.entityId.toInt())
                     if (formEntity != null) {
                         val result = trySubmitToApi(formEntity)
                         if (result is Resource.Success) {

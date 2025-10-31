@@ -10,7 +10,6 @@ import java.util.*
 @Entity(tableName = "site_preparation_forms")
 data class SitePreparationFormEntity(
     @PrimaryKey
-    val id: String,
     val applicationId: Int,
     // Audit fields
     val createdAt: Long = System.currentTimeMillis(),
@@ -22,6 +21,7 @@ data class SitePreparationFormEntity(
     val errorMessage: String? = null,
 
     // Customer Details
+    val sanitationCustomerId: String?,
     val sanitationCustomerName: String?,
     val sanitationCustomerContact: String?,
     val sanitationCustomerAddress: String?,
@@ -59,9 +59,9 @@ data class SitePreparationFormEntity(
 // Extension function for SanitationCustomerData to create SitePreparationFormEntity
 fun SanitationCustomerData.toSitePreparationEntity(applicationId: Int): SitePreparationFormEntity {
     return SitePreparationFormEntity(
-        id = java.util.UUID.randomUUID().toString(),
         applicationId = applicationId,
         createdBy = null,
+        sanitationCustomerId = this.sanitationCustomerId,
         sanitationCustomerName = this.sanitationCustomerName,
         sanitationCustomerContact = this.sanitationCustomerContact,
         sanitationCustomerAddress = null, // Not available in SanitationCustomerData
@@ -120,12 +120,34 @@ fun SitePreparationFormEntity.toApiRequest(applicationId: Int): SitePreparationF
         else -> ""
     }
 
+    // Handle new proposed emptying date - convert timestamp to yyyy-MM-dd format
+    val newProposedEmptyingDateValue = when {
+        this.newProposedEmptyingDate != null && this.newProposedEmptyingDate != 0L -> {
+            try {
+                pgDateFormatter.format(Date(this.newProposedEmptyingDate))
+            } catch (e: Exception) {
+                ""
+            }
+        }
+        else -> ""
+    }
+
     return SitePreparationFormRequest(
         applicationId = applicationId,
+        sanitationCustomerId = this.sanitationCustomerId,
         sitePrepDate = "", // Site prep date is usually current date, can be set by form
         customerName = this.customerName ?: this.sanitationCustomerName ?: "",
         customerContact = this.customerContact ?: this.sanitationCustomerContact ?: "",
-        additionalRepairing = this.additionalRepairing ?: this.otherAdditionalRepairing ?: "",
+        additionalRepairing = this@toApiRequest.additionalRepairing?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() && it != "Others" }
+            ?.joinToString(",")
+            ?.takeIf { it.isNotEmpty() } ?: "",
+        otherAdditionalRepairing = if (this@toApiRequest.additionalRepairing?.contains("Others", ignoreCase = true) == true && this@toApiRequest.otherAdditionalRepairing?.isNotEmpty() == true) {
+            this@toApiRequest.otherAdditionalRepairing
+        } else {
+            ""
+        },
         extraPaymentRequired = if (this.extraPaymentRequired == true) "yes" else if (this.extraPaymentRequired == false) "no" else "yes",
         amountOfExtraPayment = this.amountOfExtraPayment ?: "",
         applicantName = this.applicantName ?: this.sanitationCustomerName ?: "",
@@ -141,6 +163,8 @@ fun SitePreparationFormEntity.toApiRequest(applicationId: Int): SitePreparationF
         sizeOfStorageTankM3 = "", // Will be filled from containment data if available
         constructionYear = "", // Will be filled from containment data if available
         accessibility = "", // Will be filled from containment data if available
-        everEmptied = if (this.everEmptied == true) "yes" else if (this.everEmptied == false) "no" else "yes"
+        everEmptied = if (this.everEmptied == true) "yes" else if (this.everEmptied == false) "no" else "yes",
+        needReschedule = if (this.needReschedule == true) "yes" else if (this.needReschedule == false) "no" else null,
+        newProposedEmptyingDate = newProposedEmptyingDateValue.takeIf { it.isNotEmpty() }
     )
 }

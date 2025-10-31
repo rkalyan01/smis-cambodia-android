@@ -1,5 +1,8 @@
 package com.innovative.smis.data.model.response
 
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
+
 // Simple response classes that don't require KSP code generation
 // These are used for dropdown data endpoints that were causing compilation issues
 
@@ -21,22 +24,28 @@ typealias ContainmentIssuesResponse = SimpleDropdownResponse
 typealias EmptyingReasonResponse = SimpleDropdownResponse
 
 // Emptying Service readonly data response
+@JsonClass(generateAdapter = true)
 data class EmptyingReadonlyData(
-    val application_id: Int,
-    val eto_id: Int,
-    val desludging_vehicle_id: Int?,
-    val application_datetime: String,
-    val applicant_name: String,
-    val applicant_contact: String,
-    val free_service_under_pbc: Boolean,
-    val additional_repairing: String?,
-    val other_additional_repairing: String?,
-    val extra_payment_required: Boolean,
-    val amount_of_extra_payment: String?
+    @Json(name = "application_id") val applicationId: Int,
+    @Json(name = "eto_id") val etoId: Int,
+    @Json(name = "desludging_vehicle_id") val desludgingVehicleId: Int?,
+    @Json(name = "sanitation_customer_id") val sanitationCustomerId: String?,
+    @Json(name = "application_datetime") val applicationDatetime: String,
+    @Json(name = "applicant_name") val applicantName: String?, // Nullable because API can return null
+    @Json(name = "applicant_contact") val applicantContact: String?, // Nullable because API can return null
+    @Json(name = "issues_with_containment") val issuesWithContainment: String?,
+    @Json(name = "free_service_under_pbc") val freeServiceUnderPbc: Boolean,
+    @Json(name = "amount_of_regular_payment") val amountOfRegularPayment: String?,
+    @Json(name = "additional_repairing") val additionalRepairing: String?,
+    @Json(name = "other_additional_repairing") val otherAdditionalRepairing: String?,
+    @Json(name = "extra_payment_required") val extraPaymentRequired: Boolean,
+    @Json(name = "amount_of_extra_payment") val amountOfExtraPayment: String?,
+    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?
 )
 
+@JsonClass(generateAdapter = true)
 data class EmptyingReadonlyDataResponse(
-    val success: Boolean,
-    val message: String? = null,
-    val data: EmptyingReadonlyData? = null
+    @Json(name = "success") val success: Boolean,
+    @Json(name = "message") val message: String? = null,
+    @Json(name = "data") val data: EmptyingReadonlyData? = null
 )

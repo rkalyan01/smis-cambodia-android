@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.DateFormatManager
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
 import org.koin.androidx.compose.koinViewModel
@@ -46,7 +47,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodoListScreen(navController: NavController) {
+fun TodoListScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     val viewModel: TodoListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -225,7 +226,7 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
         "reassigned" -> Color(0xFF6F42C1)
         else -> MaterialTheme.colorScheme.outline
     }
-    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    val todayStr = DateFormatManager.getTodayInApiFormat()
     val isToday = todoItem.proposedEmptyingDate == todayStr
     val cardBorder = if (isToday) BorderStroke(2.dp, Color(0xFFFF9800)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 
@@ -312,7 +313,7 @@ fun TaskFilters(
     onDateFilterClick: () -> Unit,
     onClearDateFilterClick: () -> Unit
 ) {
-    val statusFilters = listOf("All", "Today", "Scheduled", "Pending", "Completed", "Cancelled")
+    val statusFilters = listOf("All", "Today", "Initiated")
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(statusFilters) { status ->

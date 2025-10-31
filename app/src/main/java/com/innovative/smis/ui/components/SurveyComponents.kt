@@ -137,7 +137,7 @@ fun RadioButtonGroupField(
                             onClick = { onValueSelected(option) },
                             role = Role.RadioButton
                         )
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(

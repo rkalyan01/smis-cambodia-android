@@ -58,8 +58,17 @@ class TodoListRepository(
         val initialData = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             localDataFlow.first()
         }
-        if (initialData.isNotEmpty()) {
-            emit(Resource.Success(initialData))
+        
+        // Apply date filtering to cached data if needed
+        val filteredInitialData = if (filter.isToday) {
+            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            initialData.filter { it.proposedEmptyingDate == todayStr }
+        } else {
+            initialData
+        }
+        
+        if (filteredInitialData.isNotEmpty()) {
+            emit(Resource.Success(filteredInitialData))
         }
 
         try {
@@ -83,7 +92,9 @@ class TodoListRepository(
 
             val response = apiService.getFilteredApplications(
                 status = apiStatus,
-                etoId = etoId
+                etoId = etoId,
+                dateFrom = apiFromDate,
+                dateTo = apiToDate
             )
 
             if (response.isSuccessful && response.body()?.success == true) {
@@ -125,7 +136,16 @@ class TodoListRepository(
 
                     val domainItems = cachedItems.map { it.toDomainModel() }
                     android.util.Log.d("TodoListRepository", "🔄 Converted ${cachedItems.size} entities to ${domainItems.size} domain models")
-                    domainItems
+                    
+                    // Apply date filtering if needed
+                    val filteredDomainItems = if (filter.isToday) {
+                        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        domainItems.filter { it.proposedEmptyingDate == todayStr }
+                    } else {
+                        domainItems
+                    }
+                    
+                    filteredDomainItems
                 }
 
                 android.util.Log.d("TodoListRepository", "🎯 Final result: ${updatedData.size} items to emit")
@@ -133,13 +153,21 @@ class TodoListRepository(
 
             } else {
                 val errorMessage = response.body()?.message ?: "API Error: ${response.code()}"
-                emit(Resource.Error(errorMessage, initialData))
+                emit(Resource.Error(errorMessage, filteredInitialData))
             }
 
         } catch (e: IOException) {
-            emit(Resource.Error("Network error. Displaying cached data.", initialData))
+            android.util.Log.e("TodoListRepository", "❌ IOException occurred: ${e.javaClass.simpleName} - ${e.message}", e)
+            val errorMsg = when {
+                e is javax.net.ssl.SSLException -> "SSL Certificate error: ${e.message}"
+                e.message?.contains("Unable to resolve host") == true -> "Cannot connect to server. Check internet connection."
+                e.message?.contains("timeout") == true -> "Connection timeout. Server may be slow or unreachable."
+                else -> "Network error: ${e.message}"
+            }
+            emit(Resource.Error("$errorMsg Displaying cached data.", filteredInitialData))
         } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "An unknown error occurred.", initialData))
+            android.util.Log.e("TodoListRepository", "❌ Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
+            emit(Resource.Error(e.message ?: "An unknown error occurred.", filteredInitialData))
         }
     }
 

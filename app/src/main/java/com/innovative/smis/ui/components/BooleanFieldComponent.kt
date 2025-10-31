@@ -37,7 +37,7 @@ fun BooleanField(
                         selected = value,
                         onClick = { onValueChange(true) }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -59,7 +59,7 @@ fun BooleanField(
                         selected = !value,
                         onClick = { onValueChange(false) }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(

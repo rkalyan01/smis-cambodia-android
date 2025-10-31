@@ -55,7 +55,7 @@ fun ContainmentFormSheet(
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                label = { Text("Size of Storage Tank (m³)") },
+                label = { Text("Storage Tank Size (m³)") },
                 modifier = Modifier.fillMaxWidth()
             )
         }

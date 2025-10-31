@@ -25,12 +25,22 @@ class ContainmentFormViewModel(
         currentSanitationCustomerId = sanitationCustomerId
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, isLoadingDropdowns = true) }
 
-            // Load dropdown data first
-            loadDropdownData()
+            // Load dropdown data first and wait for completion
+            val storageTypes = repository.getStorageTypes().first { it !is Resource.Loading }
+            val storageConnections = repository.getStorageConnections().first { it !is Resource.Loading }
+            
+            // Update UI with dropdown options
+            if (storageTypes is Resource.Success) {
+                _uiState.update { it.copy(storageTypeOptions = storageTypes.data ?: emptyMap()) }
+            }
+            if (storageConnections is Resource.Success) {
+                _uiState.update { it.copy(storageConnectionOptions = storageConnections.data ?: emptyMap()) }
+            }
+            _uiState.update { it.copy(isLoadingDropdowns = false) }
 
-            // Try to load existing containment data
+            // Now load existing containment data and map keys to values
             repository.getContainmentStatus(sanitationCustomerId).collect { result ->
                 when (result) {
                     is Resource.Success -> {
@@ -39,19 +49,19 @@ class ContainmentFormViewModel(
                             _uiState.update { currentState ->
                                 currentState.copy(
                                     toiletConnection = "Storage Tank", // Default value
-                                    selectedStorageTypeKey = findKeyByValue(currentState.storageTypeOptions, containment.type_of_storage_tank),
-                                    selectedStorageType = containment.type_of_storage_tank ?: "",
+                                    selectedStorageTypeKey = containment.type_of_storage_tank ?: "",
+                                    selectedStorageType = currentState.storageTypeOptions[containment.type_of_storage_tank] ?: "",
                                     otherTypeOfStorageTank = containment.other_type_of_storage_tank ?: "",
-                                    selectedStorageConnectionKey = findKeyByValue(currentState.storageConnectionOptions, containment.storage_tank_connection),
-                                    selectedStorageConnection = containment.storage_tank_connection ?: "",
+                                    selectedStorageConnectionKey = containment.storage_tank_connection ?: "",
+                                    selectedStorageConnection = currentState.storageConnectionOptions[containment.storage_tank_connection] ?: "",
                                     otherStorageTankConnection = containment.other_storage_tank_connection ?: "",
                                     sizeOfStorageTankM3 = containment.size_of_storage_tank_m3 ?: "",
-                                    constructionYear = containment.construction_year ?: "",
-                                    accessibilityKey = containment.accessibility?.lowercase() ?: "",
-                                    accessibility = containment.accessibility ?: "",
-                                    everEmptiedKey = containment.ever_emptied?.lowercase() ?: "",
-                                    everEmptied = containment.ever_emptied ?: "",
-                                    lastEmptiedYear = containment.last_emptied_year ?: "",
+                                    constructionYear = containment.construction_year?.toString() ?: "",
+                                    accessibilityKey = containment.accessibility?.let { if (it) "yes" else "no" } ?: "",
+                                    accessibility = containment.accessibility?.let { if (it) "Yes" else "No" } ?: "",
+                                    everEmptiedKey = containment.ever_emptied?.let { if (it) "yes" else "no" } ?: "",
+                                    everEmptied = containment.ever_emptied?.let { if (it) "Yes" else "No" } ?: "",
+                                    lastEmptiedYear = containment.last_emptied_year?.toString() ?: "",
                                     hasExistingData = true,
                                     isLoading = false
                                 )
@@ -69,58 +79,6 @@ class ContainmentFormViewModel(
                     is Resource.Idle -> {
                         // Idle state - do nothing
                     }
-                }
-            }
-        }
-    }
-
-    private fun findKeyByValue(options: Map<String, String>, value: String?): String {
-        return options.entries.find { it.value == value }?.key ?: ""
-    }
-
-    private fun loadDropdownData() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingDropdowns = true) }
-
-            // Load storage types
-            repository.getStorageTypes().collect { result ->
-                when (result) {
-                    is Resource.Success -> {
-                        _uiState.update {
-                            it.copy(
-                                storageTypeOptions = result.data ?: emptyMap(),
-                                isLoadingDropdowns = false
-                            )
-                        }
-                    }
-                    is Resource.Error -> {
-                        _uiState.update {
-                            it.copy(
-                                errorMessage = result.message,
-                                isLoadingDropdowns = false
-                            )
-                        }
-                    }
-                    else -> {}
-                }
-            }
-
-            // Load storage connections
-            repository.getStorageConnections().collect { result ->
-                when (result) {
-                    is Resource.Success -> {
-                        _uiState.update {
-                            it.copy(
-                                storageConnectionOptions = result.data ?: emptyMap()
-                            )
-                        }
-                    }
-                    is Resource.Error -> {
-                        _uiState.update {
-                            it.copy(errorMessage = result.message)
-                        }
-                    }
-                    else -> {}
                 }
             }
         }
@@ -199,16 +157,17 @@ class ContainmentFormViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
-            val result = if (isUpdateMode) {
-                repository.updateContainment(currentSanitationCustomerId, currentState)
-            } else {
-                repository.createContainment(currentSanitationCustomerId, currentState)
-            }
+            // Repository will check if containment exists and either create or update accordingly
+            val result = repository.saveContainment(
+                sanitationCustomerId = currentSanitationCustomerId,
+                applicationId = 0, // Application ID not used for containment
+                formData = currentState
+            )
 
             when (result) {
                 is Resource.Success -> {
                     _uiState.update { it.copy(isSubmitting = false) }
-                    val message = result.message ?: "Containment updated successfully"
+                    val message = result.message ?: "Containment saved successfully"
                     _saveResult.send(SaveResult.Success(message, shouldRefreshList = true))
                 }
                 is Resource.Error -> {

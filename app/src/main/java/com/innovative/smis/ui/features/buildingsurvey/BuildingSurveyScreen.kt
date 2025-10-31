@@ -463,22 +463,37 @@ private fun BuildingSurveyFormContent(
         
         Spacer(modifier = Modifier.height(8.dp))
         
+        val context = LocalContext.current
+        val constructionDateMillis = com.innovative.smis.util.helper.DateFormatManager
+            .parseDisplayDate(context, state.constructionDate)
         DatePickerField(
             label = "Construction Date",
-            selectedDate = state.constructionDate,
-            onDateSelected = { onStateChange(state.copy(constructionDate = it)) },
-            maxDate = LocalDate.now(),
-            modifier = Modifier.fillMaxWidth()
+            selectedDate = constructionDateMillis,
+            onDateSelected = { millis ->
+                val formattedDate = millis?.let {
+                    com.innovative.smis.util.helper.DateFormatManager
+                        .formatTimestampForDisplay(context, it)
+                } ?: ""
+                onStateChange(state.copy(constructionDate = formattedDate))
+            },
+            isFutureDateAllowed = false  // Only allow past dates for construction
         )
         
         Spacer(modifier = Modifier.height(8.dp))
         
+        val lastEmptiedDateMillis = com.innovative.smis.util.helper.DateFormatManager
+            .parseDisplayDate(context, state.lastEmptiedDate)
         DatePickerField(
             label = "Last Emptied Date",
-            selectedDate = state.lastEmptiedDate,
-            onDateSelected = { onStateChange(state.copy(lastEmptiedDate = it)) },
-            maxDate = LocalDate.now(),
-            modifier = Modifier.fillMaxWidth()
+            selectedDate = lastEmptiedDateMillis,
+            onDateSelected = { millis ->
+                val formattedDate = millis?.let {
+                    com.innovative.smis.util.helper.DateFormatManager
+                        .formatTimestampForDisplay(context, it)
+                } ?: ""
+                onStateChange(state.copy(lastEmptiedDate = formattedDate))
+            },
+            isFutureDateAllowed = false  // Only allow past dates for last emptied
         )
         
         Spacer(modifier = Modifier.height(8.dp))

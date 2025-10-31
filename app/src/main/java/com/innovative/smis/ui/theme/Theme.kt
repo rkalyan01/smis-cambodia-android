@@ -108,8 +108,18 @@ fun SMISTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = Color.Transparent.toArgb()
+            
+            // Set navigation bar color based on theme for better visibility
+            window.navigationBarColor = if (darkTheme) {
+                Color(0xFF1C1B1F).toArgb() // Dark surface color
+            } else {
+                Color(0xFFFFFBFE).toArgb() // Light surface color
+            }
+            
             WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

@@ -32,6 +32,7 @@ class SettingsViewModel(
     data class SettingsUiState(
         val selectedLanguage: String = Languages.ENGLISH,
         val themeMode: PreferenceHelper.ThemeMode = PreferenceHelper.ThemeMode.AUTO,
+        val dateFormat: PreferenceHelper.DateFormat = PreferenceHelper.DateFormat.DD_MM_YYYY,
         val isOfflineModeEnabled: Boolean = true,
         val isAutoSyncEnabled: Boolean = true,
         val isLoading: Boolean = false,
@@ -40,7 +41,8 @@ class SettingsViewModel(
         val syncResult: String? = null,
         val databaseSizeMB: Double = 0.0,
         val isClearingCache: Boolean = false,
-        val cacheCleared: Boolean = false
+        val cacheCleared: Boolean = false,
+        val shouldLogout: Boolean = false
     )
 
     init {
@@ -52,6 +54,7 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(
             selectedLanguage = preferenceHelper.selectedLanguage,
             themeMode = preferenceHelper.themeMode,
+            dateFormat = preferenceHelper.dateFormat,
             isOfflineModeEnabled = preferenceHelper.isOfflineModeEnabled,
             isAutoSyncEnabled = preferenceHelper.isAutoSyncEnabled
         )
@@ -99,6 +102,27 @@ class SettingsViewModel(
             _uiState.value = _uiState.value.copy(
                 message = if (_uiState.value.selectedLanguage == Languages.KHMER)
                     "កំហុសក្នុងការផ្លាស់ប្តូររូបរាង" else "Failed to change theme"
+            )
+        }
+    }
+
+    fun setDateFormat(dateFormat: PreferenceHelper.DateFormat) {
+        try {
+            preferenceHelper.dateFormat = dateFormat
+            _uiState.value = _uiState.value.copy(
+                dateFormat = dateFormat,
+                message = if (_uiState.value.selectedLanguage == Languages.KHMER)
+                    "ទម្រង់កាលបរិច្ឆេទត្រូវបានផ្លាស់ប្តូរ" else "Date format changed successfully"
+            )
+
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(2000)
+                _uiState.value = _uiState.value.copy(message = null)
+            }
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                message = if (_uiState.value.selectedLanguage == Languages.KHMER)
+                    "កំហុសក្នុងការផ្លាស់ប្តូរទម្រង់កាលបរិច្ឆេទ" else "Failed to change date format"
             )
         }
     }
@@ -187,7 +211,7 @@ class SettingsViewModel(
                 val failedForms = emptyingSchedulingRepository.getFailedForms()
                 println("DEBUG: Found ${failedForms.size} failed forms that won't be retried")
                 failedForms.forEach { form ->
-                    println("DEBUG: Failed form - ID: ${form.id}, App ID: ${form.applicationId}, Error: ${form.errorMessage}")
+                    println("DEBUG: Failed form - ID: ${form.applicationId}, App ID: ${form.applicationId}, Error: ${form.errorMessage}")
                 }
                 
                 // Attempt sync
@@ -342,5 +366,35 @@ class SettingsViewModel(
                 _uiState.value = _uiState.value.copy(message = null)
             }
         }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            try {
+                Log.d("SettingsViewModel", "Logging out user...")
+                
+                // Clear all user preferences and auth data
+                preferenceHelper.clearAll()
+                
+                // Clear ALL database tables to ensure no residual user data persists
+                database.clearAllTables()
+                
+                Log.d("SettingsViewModel", "All user data and database cleared successfully")
+                
+                // Signal to navigate to login
+                _uiState.value = _uiState.value.copy(shouldLogout = true)
+                
+            } catch (e: Exception) {
+                Log.e("SettingsViewModel", "Failed to logout", e)
+                _uiState.value = _uiState.value.copy(
+                    message = if (_uiState.value.selectedLanguage == Languages.KHMER)
+                        "កំហុសក្នុងការចាកចេញ" else "Failed to logout"
+                )
+            }
+        }
+    }
+
+    fun resetLogoutFlag() {
+        _uiState.value = _uiState.value.copy(shouldLogout = false)
     }
 }

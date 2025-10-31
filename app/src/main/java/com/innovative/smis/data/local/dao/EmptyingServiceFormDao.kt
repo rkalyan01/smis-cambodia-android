@@ -15,9 +15,6 @@ interface EmptyingServiceFormDao {
     @Query("SELECT * FROM emptying_service_forms WHERE applicationId = :applicationId LIMIT 1")
     suspend fun getFormByApplicationId(applicationId: Int): EmptyingServiceFormEntity?
 
-    @Query("SELECT * FROM emptying_service_forms WHERE id = :formId LIMIT 1")
-    suspend fun getFormById(formId: String): EmptyingServiceFormEntity?
-
     @Query("SELECT * FROM emptying_service_forms WHERE applicationId = :applicationId")
     fun getFormByApplicationIdFlow(applicationId: Int): Flow<EmptyingServiceFormEntity?>
 
@@ -27,17 +24,17 @@ interface EmptyingServiceFormDao {
     @Query("SELECT * FROM emptying_service_forms WHERE syncStatus IN ('PENDING', 'FAILED')")
     suspend fun getUnsyncedForms(): List<EmptyingServiceFormEntity>
 
-    @Query("UPDATE emptying_service_forms SET syncStatus = 'SYNCED', updatedAt = :timestamp WHERE id = :formId")
-    suspend fun markAsSynced(formId: String, timestamp: Long = System.currentTimeMillis())
+    @Query("UPDATE emptying_service_forms SET syncStatus = 'SYNCED', updatedAt = :timestamp WHERE applicationId = :applicationId")
+    suspend fun markAsSynced(applicationId: Int, timestamp: Long = System.currentTimeMillis())
 
     @Query("""
         UPDATE emptying_service_forms 
         SET syncStatus = :status, 
             updatedAt = :timestamp
-        WHERE id = :formId
+        WHERE applicationId = :applicationId
     """)
     suspend fun updateSyncStatus(
-        formId: String, 
+        applicationId: Int, 
         status: String, 
         timestamp: Long = System.currentTimeMillis()
     )

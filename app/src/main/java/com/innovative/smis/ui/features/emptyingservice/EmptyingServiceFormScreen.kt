@@ -11,6 +11,9 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,13 +26,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.Intent
 import android.net.Uri
 import com.innovative.smis.ui.components.SectionHeader
 import com.innovative.smis.ui.components.LoadingDialog
 import com.innovative.smis.ui.components.CheckboxField
 import com.innovative.smis.ui.components.ImagePickerComponent
 import com.innovative.smis.ui.components.DropdownField
+import com.innovative.smis.ui.components.MultiSelectCheckboxGroup
 import com.innovative.smis.ui.components.RadioButtonGroupField
+import com.innovative.smis.ui.components.PostponeDialog
+import com.innovative.smis.ui.components.PostponeData
+import com.innovative.smis.ui.components.ReadOnlyTextField
 import com.innovative.smis.util.common.Resource
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -41,6 +49,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
+import androidx.compose.ui.Alignment.Companion.Center
+import com.google.android.gms.location.LocationServices
+import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.google.android.gms.maps.CameraUpdateFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +70,7 @@ fun EmptyingServiceFormScreen(
     viewModel: EmptyingServiceFormViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -58,35 +79,55 @@ fun EmptyingServiceFormScreen(
     var serviceDetailsExpanded by remember { mutableStateOf(false) }
     var vehicleDetailsExpanded by remember { mutableStateOf(false) }
     var paymentDocumentationExpanded by remember { mutableStateOf(false) }
+    
+    // State for map bottom sheet
+    var showMapBottomSheet by remember { mutableStateOf(false) }
+    
+    var showPostponeDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(applicationId) {
         viewModel.loadApplicationDetails(applicationId)
         viewModel.loadReadonlyData(applicationId)
     }
+    
+    // Auto-expand sections when validation errors occur
+    LaunchedEffect(uiState.desludgingVehicleIdError, uiState.pumpingPointTypeError) {
+        if (uiState.desludgingVehicleIdError != null || uiState.pumpingPointTypeError != null) {
+            vehicleDetailsExpanded = true
+        }
+    }
 
-    val saveResult by viewModel.saveResult.collectAsStateWithLifecycle(null)
+    LaunchedEffect(Unit) {
+        viewModel.saveResult.collect { result ->
+            // CRITICAL: Check if we're on a valid destination before popping
+            val currentRoute = navController.currentDestination?.route
+            android.util.Log.d("NavigationGuard", "EmptyingService save result - current route: $currentRoute, result: $result")
+            
+            if (currentRoute != null && navController.previousBackStackEntry != null) {
+                val message = when (result) {
+                    is EmptyingServiceFormViewModel.SaveResult.Success -> result.message
+                    is EmptyingServiceFormViewModel.SaveResult.Error -> result.message
+                }
 
-    LaunchedEffect(saveResult) {
-        saveResult?.let { result ->
-            val message = when (result) {
-                is EmptyingServiceFormViewModel.SaveResult.Success -> result.message
-                is EmptyingServiceFormViewModel.SaveResult.Error -> result.message
-            }
-
-            navController.previousBackStackEntry
-                ?.savedStateHandle
-                ?.set("snackbar_message", message)
-
-            // If this was a successful form submission, trigger list refresh on previous screen
-            if (result is EmptyingServiceFormViewModel.SaveResult.Success && result.shouldRefreshList) {
                 navController.previousBackStackEntry
                     ?.savedStateHandle
-                    ?.set("should_refresh_list", true)
-            }
+                    ?.set("snackbar_message", message)
 
-            // Add small delay to ensure the savedStateHandle is properly set before navigation
-            kotlinx.coroutines.delay(100)
-            navController.popBackStack()
+                // If this was a successful form submission, trigger list refresh on previous screen
+                if (result is EmptyingServiceFormViewModel.SaveResult.Success && result.shouldRefreshList) {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("should_refresh_list", true)
+                }
+
+                // Add small delay to ensure the savedStateHandle is properly set before navigation
+                kotlinx.coroutines.delay(100)
+                
+                android.util.Log.d("NavigationGuard", "EmptyingService executing popBackStack")
+                navController.popBackStack()
+            } else {
+                android.util.Log.d("NavigationGuard", "EmptyingService popBackStack skipped - invalid state")
+            }
         }
     }
 
@@ -111,10 +152,32 @@ fun EmptyingServiceFormScreen(
                     }
                 },
                 actions = {
-                    OutlinedButton(
-                        onClick = { navController.navigate("containment_form/$applicationId") }
+                    // Postpone icon button
+                    IconButton(
+                        onClick = { showPostponeDialog = true }
                     ) {
-                        Text("Containment")
+                        Icon(
+                            imageVector = Icons.Filled.EventBusy,
+                            contentDescription = "Postpone",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
+                    // Containment icon button
+                    IconButton(
+                        onClick = { 
+                            navController.navigate("containment_form/$applicationId/${uiState.sanitationCustomerId ?: ""}")
+                        },
+                        enabled = uiState.sanitationCustomerId != null
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Inventory,
+                            contentDescription = "Containment",
+                            tint = if (uiState.sanitationCustomerId != null) 
+                                MaterialTheme.colorScheme.onSurface 
+                            else 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
                     }
                 }
             )
@@ -141,7 +204,8 @@ fun EmptyingServiceFormScreen(
                     onValueChange = { },
                     label = { Text("Application ID") },
                     readOnly = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors()
                 )
             }
 
@@ -152,12 +216,20 @@ fun EmptyingServiceFormScreen(
                     isExpanded = applicantDetailsExpanded,
                     onToggle = { applicantDetailsExpanded = !applicantDetailsExpanded }
                 ) {
+                    // Sanitation Customer ID - disabled field
+                    ReadOnlyTextField(
+                        label = "Sanitation Customer ID",
+                        value = uiState.sanitationCustomerId ?: ""
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     OutlinedTextField(
                         value = uiState.applicantName,
                         onValueChange = { },
                         label = { Text("Applicant Name") },
                         readOnly = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -166,7 +238,24 @@ fun EmptyingServiceFormScreen(
                         onValueChange = { },
                         label = { Text("Applicant Contact") },
                         readOnly = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(),
+                        trailingIcon = {
+                            if (uiState.applicantContact.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.applicantContact}"))
+                                        context.startActivity(intent)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Phone,
+                                        contentDescription = "Call applicant",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -182,7 +271,8 @@ fun EmptyingServiceFormScreen(
                         onValueChange = viewModel::onServiceReceiverNameChange,
                         label = { Text("Service Receiver Name") },
                         enabled = !uiState.isServiceReceiverSameAsApplicant,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -191,7 +281,24 @@ fun EmptyingServiceFormScreen(
                         onValueChange = viewModel::onServiceReceiverContactChange,
                         label = { Text("Service Receiver Contact") },
                         enabled = !uiState.isServiceReceiverSameAsApplicant,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(),
+                        trailingIcon = {
+                            if (uiState.serviceReceiverContact.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.serviceReceiverContact}"))
+                                        context.startActivity(intent)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Phone,
+                                        contentDescription = "Call service receiver",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -203,12 +310,25 @@ fun EmptyingServiceFormScreen(
                     isExpanded = serviceDetailsExpanded,
                     onToggle = { serviceDetailsExpanded = !serviceDetailsExpanded }
                 ) {
+                    // Display emptiedDate in user's preferred format
+                    val displayEmptiedDate = remember(uiState.emptiedDate) {
+                        try {
+                            val apiFormatter = com.innovative.smis.util.helper.DateFormatManager.getApiFormatter()
+                            val displayFormatter = com.innovative.smis.util.helper.DateFormatManager.getDisplayFormatter(context)
+                            val date = apiFormatter.parse(uiState.emptiedDate)
+                            date?.let { displayFormatter.format(it) } ?: uiState.emptiedDate
+                        } catch (e: Exception) {
+                            uiState.emptiedDate
+                        }
+                    }
+                    
                     OutlinedTextField(
-                        value = uiState.emptiedDate,
+                        value = displayEmptiedDate,
                         onValueChange = { },
                         label = { Text("Emptied Date") },
                         readOnly = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -216,7 +336,8 @@ fun EmptyingServiceFormScreen(
                         label = "Start Time",
                         value = uiState.startTime,
                         onValueChange = viewModel::onStartTimeChange,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        error = uiState.startTimeError
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -224,15 +345,18 @@ fun EmptyingServiceFormScreen(
                         label = "End Time",
                         value = uiState.endTime,
                         onValueChange = viewModel::onEndTimeChange,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        error = uiState.endTimeError,
+                        minTime = uiState.startTime.takeIf { it.isNotEmpty() }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = uiState.noOfTrips,
-                        onValueChange = viewModel::onNoOfTripsChange,
-                        label = { Text("No of Trips") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    RadioButtonGroupField(
+                        label = "Additional Trip Required",
+                        options = listOf("Yes", "No"),
+                        selectedValue = uiState.additionalTripRequired.replaceFirstChar { it.uppercase() },
+                        onValueSelected = { value -> viewModel.onAdditionalTripRequiredChange(value.lowercase()) },
+                        error = null,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -247,10 +371,11 @@ fun EmptyingServiceFormScreen(
                 ) {
                     // Desludging Vehicle ID - Dropdown from API
                     DropdownField(
-                        label = "Desludging Vehicle ID",
+                        label = "Desludging Vehicle ID *",
                         selectedValue = uiState.selectedVehicleLicensePlate,
                         options = uiState.vehicleOptions.map { it.type },
                         onValueSelected = viewModel::onDesludgingVehicleIdChange,
+                        error = uiState.desludgingVehicleIdError,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -279,39 +404,39 @@ fun EmptyingServiceFormScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Pumping Point Presence - Radio buttons
                     RadioButtonGroupField(
-                        label = "Is there a pumping point",
-                        options = listOf("Yes", "No"),
-                        selectedValue = uiState.pumpingPointPresence,
-                        onValueSelected = viewModel::onPumpingPointPresenceChange,
-                        error = null,
+                        label = "Pumping Point Type *",
+                        options = listOf("Cover", "Tube", "Pierce"),
+                        selectedValue = uiState.pumpingPointType,
+                        onValueSelected = viewModel::onPumpingPointTypeChange,
+                        error = uiState.pumpingPointTypeError,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Pumping Point Type - Show only when "Yes" is selected
-                    if (uiState.pumpingPointPresence == "Yes") {
-                        RadioButtonGroupField(
-                            label = "Pumping Point Type",
-                            options = listOf("Cover", "Tube", "Pierce"),
-                            selectedValue = uiState.pumpingPointType,
-                            onValueSelected = viewModel::onPumpingPointTypeChange,
-                            error = null,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    // Additional Repairing in Emptying - Dropdown from API
-                    DropdownField(
+                    // Additional Repairing in Emptying - Multi-select Checkboxes
+                    MultiSelectCheckboxGroup(
                         label = "Additional Repairing in Emptying",
-                        selectedValue = uiState.additionalRepairingInEmptying,
-                        options = uiState.additionalRepairingOptions.values.toList(),
-                        onValueSelected = viewModel::onAdditionalRepairingChange,
+                        options = uiState.additionalRepairingOptions,
+                        selectedKeys = uiState.additionalRepairingKeys,
+                        onSelectionChange = viewModel::onAdditionalRepairingChange,
                         enabled = !uiState.isAdditionalRepairingReadonly,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    
+                    // Show "Other Additional Repairing" field if "Others" is selected
+                    if (uiState.additionalRepairingKeys.any { key ->
+                        val value = uiState.additionalRepairingOptions[key] ?: ""
+                        value.contains("Others", ignoreCase = true)
+                    }) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = uiState.otherAdditionalRepairing,
+                            onValueChange = viewModel::onOtherAdditionalRepairingChange,
+                            label = { Text("Other Additional Repairing") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
 
@@ -322,29 +447,33 @@ fun EmptyingServiceFormScreen(
                     isExpanded = paymentDocumentationExpanded,
                     onToggle = { paymentDocumentationExpanded = !paymentDocumentationExpanded }
                 ) {
-                    CheckboxField(
+                    ReadOnlyTextField(
                         label = "Free Under PBC",
-                        checked = uiState.freeUnderPBC,
-                        onCheckedChange = if (uiState.isFreeUnderPBCReadonly) { {} } else viewModel::onFreeUnderPBCChange,
-                        enabled = !uiState.isFreeUnderPBCReadonly
+                        value = if (uiState.freeUnderPBC) "Yes" else "No"
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-
-
-                    OutlinedTextField(
-                        value = uiState.regularCost,
-                        onValueChange = viewModel::onRegularCostChange,
-                        label = { Text("Regular Cost") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // Regular Cost - readonly when loaded from API
+                    if (uiState.isRegularCostReadonly) {
+                        ReadOnlyTextField(
+                            label = "Amount of Regular Cost",
+                            value = uiState.regularCost
+                        )
+                    } else {
+                        OutlinedTextField(
+                            value = uiState.regularCost,
+                            onValueChange = viewModel::onRegularCostChange,
+                            label = { Text("Amount of Regular Cost") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedTextField(
                         value = uiState.extraCost,
                         onValueChange = viewModel::onExtraCostChange,
-                        label = { Text("Extra Cost") },
+                        label = { Text("Amount of Extra Cost") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         readOnly = uiState.isExtraCostReadonly,
                         enabled = !uiState.isExtraCostReadonly,
@@ -352,22 +481,25 @@ fun EmptyingServiceFormScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = uiState.receiptNumber,
-                        onValueChange = viewModel::onReceiptNumberChange,
-                        label = { Text("Receipt Number") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Only show Receipt Number and Receipt Image when Additional Trip Required is "no"
+                    if (uiState.additionalTripRequired == "no") {
+                        OutlinedTextField(
+                            value = uiState.receiptNumber,
+                            onValueChange = viewModel::onReceiptNumberChange,
+                            label = { Text("Receipt Number") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Image Upload Components
-                    ImagePickerComponent(
-                        label = "Receipt Image",
-                        selectedImageUri = if (uiState.receiptImage.isNotBlank()) Uri.parse(uiState.receiptImage) else null,
-                        onImageSelected = { uri -> viewModel.onReceiptImageSelected(uri?.toString()) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                        // Image Upload Components
+                        ImagePickerComponent(
+                            label = "Receipt Image",
+                            selectedImageUri = if (uiState.receiptImage.isNotBlank()) Uri.parse(uiState.receiptImage) else null,
+                            onImageSelected = { uri -> viewModel.onReceiptImageSelected(uri?.toString()) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     ImagePickerComponent(
                         label = "Picture of Emptying",
@@ -384,37 +516,57 @@ fun EmptyingServiceFormScreen(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Only show location fields if building point geometry doesn't exist
+                    if (!uiState.buildingPointGeomExist) {
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Location capture
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.latitude?.toString() ?: "",
-                            onValueChange = { },
-                            label = { Text("Latitude") },
-                            readOnly = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = uiState.longitude?.toString() ?: "",
-                            onValueChange = { },
-                            label = { Text("Longitude") },
-                            readOnly = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
+                        // Location capture
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.latitude?.toString() ?: "",
+                                onValueChange = { },
+                                label = { Text("Latitude") },
+                                readOnly = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = uiState.longitude?.toString() ?: "",
+                                onValueChange = { },
+                                label = { Text("Longitude") },
+                                readOnly = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = viewModel::captureLocation,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Capture Location")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = viewModel::captureLocation,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Capture GPS")
+                            }
+                            
+                            OutlinedButton(
+                                onClick = { 
+                                    showMapBottomSheet = true
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Map, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Update Map")
+                            }
+                        }
                     }
                 }
             }
@@ -452,6 +604,51 @@ fun EmptyingServiceFormScreen(
                 }
             }
         }
+        
+        
+        // Postpone Dialog
+        if (showPostponeDialog) {
+            PostponeDialog(
+                applicationId = applicationId,
+                currentDate = uiState.emptiedDate, // Already in API format (yyyy-MM-dd)
+                onDismiss = { showPostponeDialog = false },
+                onPostpone = { postponeData ->
+                    // postponeData contains dates already in API format (yyyy-MM-dd)
+                    viewModel.postponeApplication(
+                        postponeFrom = postponeData.postponeFrom,
+                        postponeUntil = postponeData.postponeUntil,
+                        reason = postponeData.reason,
+                        remark = postponeData.remark,
+                        onSuccess = {
+                            showPostponeDialog = false
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("snackbar_message", "Application postponed successfully")
+                            navController.popBackStack()
+                        },
+                        onError = { errorMessage ->
+                            showPostponeDialog = false
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("snackbar_message", errorMessage)
+                            navController.popBackStack()
+                        }
+                    )
+                }
+            )
+        }
+        
+        // Map Bottom Sheet
+        if (showMapBottomSheet) {
+            EmptyingServiceMapBottomSheet(
+                initialLatitude = uiState.latitude,
+                initialLongitude = uiState.longitude,
+                onDismiss = { showMapBottomSheet = false },
+                onLocationSelected = { lat, lng ->
+                    viewModel.updateLocation(lat, lng)
+                }
+            )
+        }
     }
 }
 
@@ -461,10 +658,15 @@ private fun TimePickerField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    minTime: String? = null // Minimum selectable time (HH:mm format)
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
+    var validationError by remember { mutableStateOf<String?>(null) }
     val calendar = Calendar.getInstance()
+    val timeFormat12Hour = SimpleDateFormat("hh:mm a", Locale.getDefault()) // 12-hour with AM/PM
+    val timeFormat24Hour = SimpleDateFormat("HH:mm", Locale.getDefault()) // 24-hour for validation
 
     // Parse current time if value is not empty
     if (value.isNotEmpty()) {
@@ -482,17 +684,45 @@ private fun TimePickerField(
     val timePickerState = rememberTimePickerState(
         initialHour = calendar.get(Calendar.HOUR_OF_DAY),
         initialMinute = calendar.get(Calendar.MINUTE),
-        is24Hour = true
+        is24Hour = false // ✅ 12-hour format with AM/PM
     )
 
+    // Convert 24-hour format to 12-hour format for display
+    val displayValue = if (value.isNotEmpty()) {
+        try {
+            val parts = value.split(":")
+            if (parts.size == 2) {
+                val hour24 = parts[0].toInt()
+                val minute = parts[1].toInt()
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, hour24)
+                    set(Calendar.MINUTE, minute)
+                }
+                timeFormat12Hour.format(cal.time)
+            } else value
+        } catch (e: Exception) {
+            value
+        }
+    } else value
+
     OutlinedTextField(
-        value = value,
+        value = displayValue,
         onValueChange = { },
         label = { Text(label) },
         readOnly = true,
+        isError = error != null,
         trailingIcon = {
             IconButton(onClick = { showTimePicker = true }) {
                 Icon(Icons.Default.Schedule, contentDescription = "Select time")
+            }
+        },
+        supportingText = {
+            error?.let { errorMessage ->
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         },
         modifier = modifier.clickable { showTimePicker = true }
@@ -501,32 +731,49 @@ private fun TimePickerField(
     if (showTimePicker) {
         Dialog(onDismissRequest = { showTimePicker = false }) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 6.dp,
-                modifier = Modifier.wrapContentSize()
+                modifier = Modifier
+                    .fillMaxWidth(0.95f) // ✅ Use 95% of screen width for spacious AM/PM display
+                    .wrapContentHeight()
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(16.dp), // ✅ Reduced padding from 24dp to 16dp
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Select $label",
                         style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 12.dp) // ✅ Reduced from 16dp to 12dp
                     )
 
                     TimePicker(
                         state = timePickerState,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp) // ✅ Minimal horizontal padding
                     )
+
+                    // Show validation error if present
+                    if (validationError != null) {
+                        Text(
+                            text = validationError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         TextButton(
-                            onClick = { showTimePicker = false },
+                            onClick = {
+                                showTimePicker = false
+                                validationError = null
+                            },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Cancel")
@@ -534,10 +781,26 @@ private fun TimePickerField(
 
                         Button(
                             onClick = {
-                                val hour = timePickerState.hour.toString().padStart(2, '0')
+                                // Store time in 24-hour format for backend
+                                val hour24 = timePickerState.hour.toString().padStart(2, '0')
                                 val minute = timePickerState.minute.toString().padStart(2, '0')
-                                onValueChange("$hour:$minute")
-                                showTimePicker = false
+                                val selectedTime24Hour = "$hour24:$minute"
+                                
+                                // Validate against minimum time if provided (compare 24-hour format)
+                                if (minTime != null && selectedTime24Hour < minTime) {
+                                    // Convert minTime to 12-hour format for error message
+                                    val minTimeParts = minTime.split(":")
+                                    val minCal = Calendar.getInstance().apply {
+                                        set(Calendar.HOUR_OF_DAY, minTimeParts[0].toInt())
+                                        set(Calendar.MINUTE, minTimeParts[1].toInt())
+                                    }
+                                    val minTime12Hour = timeFormat12Hour.format(minCal.time)
+                                    validationError = "Time must be after $minTime12Hour"
+                                } else {
+                                    onValueChange(selectedTime24Hour)
+                                    showTimePicker = false
+                                    validationError = null
+                                }
                             },
                             modifier = Modifier.weight(1f)
                         ) {
@@ -561,8 +824,8 @@ fun CollapsibleSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -570,7 +833,7 @@ fun CollapsibleSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.Gray.copy(alpha = 0.1f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     .clickable { onToggle() }
                     .padding(16.dp)
             ) {
@@ -582,11 +845,13 @@ fun CollapsibleSection(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand"
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -596,7 +861,7 @@ fun CollapsibleSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(16.dp),
                     content = content
                 )
@@ -604,3 +869,4 @@ fun CollapsibleSection(
         }
     }
 }
+

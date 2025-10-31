@@ -1,8 +1,13 @@
 package com.innovative.smis.ui.features.taskmanagement
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -42,7 +47,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskManagementScreen(navController: NavController) {
+fun TaskManagementScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     val viewModel: TaskManagementViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -178,7 +183,10 @@ private fun TaskStatusFilter(
 }
 
 @Composable
-private fun ApplicationTaskCard(todoItem: TodoItem, context: Context) {
+private fun ApplicationTaskCard(
+    todoItem: TodoItem, 
+    context: Context
+) {
     var expanded by remember { mutableStateOf(false) }
     val rotationAngle by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rotation")
     val statusText = todoItem.status ?: "Unknown"

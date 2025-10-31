@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.emptyingscheduling
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -10,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -185,6 +188,15 @@ fun EmptyingSchedulingFormScreen(
                         onExpandedChange = { customerDetailsExpanded = it }
                     ) {
                         OutlinedTextField(
+                            value = uiState.sanitationCustomerId ?: "",
+                            onValueChange = { },
+                            label = { Text(StringResources.getString(StringResources.SANITATION_CUSTOMER_ID, languageCode)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = false,
+                            colors = disabledTextFieldColors()
+                        )
+                        
+                        OutlinedTextField(
                             value = uiState.sanitationCustomerName ?: "",
                             onValueChange = { },
                             label = { Text(StringResources.getString(StringResources.CUSTOMER_NAME, languageCode)) },
@@ -200,22 +212,42 @@ fun EmptyingSchedulingFormScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth(),
                             enabled = false,
-                            colors = disabledTextFieldColors()
+                            colors = disabledTextFieldColors(),
+                            trailingIcon = {
+                                if (!uiState.sanitationCustomerContact.isNullOrEmpty()) {
+                                    IconButton(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.sanitationCustomerContact}"))
+                                            context.startActivity(intent)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Phone,
+                                            contentDescription = "Call customer",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         )
                         
-                        CheckboxWithLabel(
-                            label = "Applicant is same as customer",
-                            checked = uiState.isApplicantSameAsCustomer,
-                            onCheckedChange = viewModel::onApplicantSameAsCustomerChange
-                        )
+                        // Only show checkbox if NOT "On-Demand"
+                        val isOnDemand = uiState.applicationType?.equals("On-Demand", ignoreCase = true) == true
+                        if (!isOnDemand) {
+                            CheckboxWithLabel(
+                                label = "Applicant is same as customer",
+                                checked = uiState.isApplicantSameAsCustomer,
+                                onCheckedChange = viewModel::onApplicantSameAsCustomerChange
+                            )
+                        }
                         
                         OutlinedTextField(
                             value = uiState.applicantName,
                             onValueChange = viewModel::onApplicantNameChange,
                             label = { Text("Applicant Name") },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !uiState.isApplicantSameAsCustomer,
-                            colors = if (uiState.isApplicantSameAsCustomer) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors()
+                            enabled = isOnDemand || !uiState.isApplicantSameAsCustomer,
+                            colors = if (!isOnDemand && uiState.isApplicantSameAsCustomer) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors()
                         )
                         
                         OutlinedTextField(
@@ -224,8 +256,24 @@ fun EmptyingSchedulingFormScreen(
                             label = { Text("Applicant Contact") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !uiState.isApplicantSameAsCustomer,
-                            colors = if (uiState.isApplicantSameAsCustomer) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors()
+                            enabled = isOnDemand || !uiState.isApplicantSameAsCustomer,
+                            colors = if (!isOnDemand && uiState.isApplicantSameAsCustomer) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors(),
+                            trailingIcon = {
+                                if (uiState.applicantContact.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.applicantContact}"))
+                                            context.startActivity(intent)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Phone,
+                                            contentDescription = "Call applicant",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         )
                     }
                 }
@@ -236,8 +284,22 @@ fun EmptyingSchedulingFormScreen(
                         isExpanded = emptyingDetailsExpanded,
                         onExpandedChange = { emptyingDetailsExpanded = it }
                     ) {
-                        // Dynamic dropdown for Purpose of Emptying Request
-                        if (uiState.isLoadingDropdowns) {
+                        // Purpose of Emptying Request - Read-only if already has value, else dropdown
+                        if (uiState.isPurposeOfEmptyingReadonly && !uiState.purposeOfEmptying.isNullOrBlank()) {
+                            // Show read-only field with existing value (displays ALL options including "Scheduled")
+                            val displayValue = uiState.emptyingReasons[uiState.purposeOfEmptying] 
+                                ?: uiState.purposeOfEmptying
+                            
+                            OutlinedTextField(
+                                value = displayValue ?: "Not specified",
+                                onValueChange = {},
+                                label = { Text("Purpose of Emptying Request") },
+                                readOnly = true,
+                                enabled = false,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = disabledTextFieldColors()
+                            )
+                        } else if (uiState.isLoadingDropdowns) {
                             OutlinedTextField(
                                 value = "Loading...",
                                 onValueChange = {},
@@ -246,22 +308,31 @@ fun EmptyingSchedulingFormScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                         } else {
+                            // For new applications: Filter out "Scheduled" and "Additional emptying to period service"
+                            val filteredReasons = uiState.emptyingReasons.filterValues { value ->
+                                !value.contains("Additional emptying to period service", ignoreCase = true) &&
+                                !value.equals("Scheduled", ignoreCase = true)
+                            }
+                            
                             DropdownMenuField(
                                 label = "Purpose of Emptying Request",
-                                selectedValue = uiState.purposeOfEmptying,
-                                options = uiState.emptyingReasons,
+                                selectedValue = uiState.purposeOfEmptying ?: "", // ✅ Convert null to "" only when passing to dropdown
+                                options = filteredReasons,
                                 onValueSelected = viewModel::onPurposeOfEmptyingChange,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = "Select purpose" // ✅ Show placeholder when nothing is selected
                             )
                         }
                         
                         // Show "Others" input field if "Others, specify" is selected
-                        if (uiState.emptyingReasons.any { it.value.contains("Others", ignoreCase = true) } &&
+                        if (!uiState.isPurposeOfEmptyingReadonly && 
+                            !uiState.purposeOfEmptying.isNullOrBlank() &&
+                            uiState.emptyingReasons.any { it.value.contains("Others", ignoreCase = true) } &&
                             uiState.emptyingReasons.entries.find { it.value.contains("Others", ignoreCase = true) }?.key == uiState.purposeOfEmptying) {
                             OutlinedTextField(
                                 value = uiState.purposeOfEmptyingOther,
                                 onValueChange = viewModel::onPurposeOfEmptyingOtherChange,
-                                label = { Text("Please specify other reason") },
+                                label = { Text("Please Specify other reason") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -292,36 +363,100 @@ fun EmptyingSchedulingFormScreen(
                                     colors = disabledTextFieldColors()
                                 )
                             } else {
-                                // Show Date Picker when lastEmptiedYear is null
-                                DatePickerField(
-                                    label = "Last Emptied Date",
-                                    selectedDate = uiState.lastEmptiedDate,
-                                    onDateSelected = viewModel::onLastEmptiedDateChange
-                                )
-                                
-                                // Also show reason field if no date is selected
-                                OutlinedTextField(
-                                    value = uiState.reasonForNoEmptiedDate,
-                                    onValueChange = viewModel::onReasonForNoEmptiedDateChange,
-                                    label = { Text("Reason for no Emptied Date (if applicable)") },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                // Either/Or: Show Last Emptied Date OR Reason field
+                                if (uiState.lastEmptiedDate.isBlank()) {
+                                    // Show Date Picker when no date is selected
+                                    val lastEmptiedDateMillis = if (uiState.lastEmptiedDate.isNotBlank()) {
+                                        com.innovative.smis.util.helper.DateFormatManager
+                                            .parseDisplayDate(context, uiState.lastEmptiedDate)
+                                    } else null
+                                    
+                                    DatePickerField(
+                                        label = "Last Emptied Date *",
+                                        selectedDate = lastEmptiedDateMillis,
+                                        onDateSelected = { millis ->
+                                            val formattedDate = millis?.let {
+                                                com.innovative.smis.util.helper.DateFormatManager
+                                                    .formatTimestampForDisplay(context, it)
+                                            } ?: ""
+                                            viewModel.onLastEmptiedDateChange(formattedDate)
+                                        },
+                                        isFutureDateAllowed = false // Restrict to past dates only
+                                    )
+                                    
+                                    // Reason dropdown when no date is selected
+                                    if (uiState.isLoadingDropdowns) {
+                                        OutlinedTextField(
+                                            value = "Loading...",
+                                            onValueChange = {},
+                                            label = { Text("Reason for no Emptied Date *") },
+                                            readOnly = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    } else {
+                                        DropdownMenuField(
+                                            label = "Reason for no Emptied Date *",
+                                            selectedValue = uiState.reasonForNoEmptiedDate,
+                                            options = uiState.emptiedNoDateReasons,
+                                            onValueSelected = viewModel::onReasonForNoEmptiedDateChange,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                } else {
+                                    // Show selected date with clear button
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        OutlinedTextField(
+                                            value = uiState.lastEmptiedDate,
+                                            onValueChange = { },
+                                            label = { Text("Last Emptied Date *") },
+                                            modifier = Modifier.weight(1f),
+                                            readOnly = true
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        OutlinedButton(
+                                            onClick = { viewModel.onLastEmptiedDateChange("") },
+                                            modifier = Modifier.align(Alignment.CenterVertically)
+                                        ) {
+                                            Text("Clear")
+                                        }
+                                    }
+                                }
                             }
                         }
                         
                         if (uiState.everEmptied == false) {
-                            OutlinedTextField(
-                                value = uiState.reasonForNoEmptiedDate,
-                                onValueChange = viewModel::onReasonForNoEmptiedDateChange,
-                                label = { Text("Reason if not emptied before") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            if (uiState.isLoadingDropdowns) {
+                                OutlinedTextField(
+                                    value = "Loading...",
+                                    onValueChange = {},
+                                    label = { Text("Reason if not emptied before") },
+                                    readOnly = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                DropdownMenuField(
+                                    label = "Reason if not emptied before",
+                                    selectedValue = uiState.notEmptiedBeforeReason,
+                                    options = uiState.notEmptiedReasons,
+                                    onValueSelected = viewModel::onNotEmptiedBeforeReasonChange,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            
+                            // Show "Others" input field if "Others, specify" is selected
+                            if (uiState.notEmptiedReasons.any { it.value.contains("Others", ignoreCase = true) } &&
+                                uiState.notEmptiedReasons.entries.find { it.value.contains("Others", ignoreCase = true) }?.key == uiState.notEmptiedBeforeReason) {
+                                OutlinedTextField(
+                                    value = uiState.notEmptiedReasonOther,
+                                    onValueChange = viewModel::onNotEmptiedReasonOtherChange,
+                                    label = { Text("Please Specify other reason") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
-                        
-                        ReadOnlyTextField(
-                            label = "Free Service Under PBC",
-                            value = if (uiState.freeServiceUnderPBC == true) "Yes" else "No"
-                        )
                     }
                 }
 
@@ -334,7 +469,7 @@ fun EmptyingSchedulingFormScreen(
                         OutlinedTextField(
                             value = uiState.sizeOfStorageTankM3 ?: "",
                             onValueChange = viewModel::onSizeOfContainmentChange,
-                            label = { Text("Size of Storage Tank (m³)") },
+                            label = { Text("Storage Tank Size (m³)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -342,17 +477,30 @@ fun EmptyingSchedulingFormScreen(
                         OutlinedTextField(
                             value = uiState.constructionYear?.toString() ?: "",
                             onValueChange = { value -> 
-                                value.toIntOrNull()?.let { year -> viewModel.onConstructionYearChange(year) }
+                                // Allow user to type freely, expansion happens in ViewModel
+                                if (value.isEmpty()) {
+                                    viewModel.onConstructionYearChange(null)
+                                } else {
+                                    value.toIntOrNull()?.let { year -> 
+                                        viewModel.onConstructionYearChange(year)
+                                    }
+                                }
                             },
-                            label = { Text("Construction Year") },
+                            label = { Text("Construction Year of Storage Tank") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
                         
-                        YesNoRadioGroup(
-                            label = "Accessibility",
-                            selectedOption = uiState.accessibility,
-                            onOptionSelected = viewModel::onAccessibilityChange
+                        DropdownMenuField(
+                            label = "Accessible to Desludging Vehicle",
+                            selectedValue = uiState.accessibility ?: "",
+                            options = mapOf(
+                                "Accessible" to "Accessible",
+                                "Not Accessible" to "Not Accessible"
+                            ),
+                            onValueSelected = viewModel::onAccessibilityChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = "-- Accessibility --"
                         )
                         
                         RadioGroup(
@@ -406,6 +554,16 @@ fun EmptyingSchedulingFormScreen(
                         isExpanded = paymentVisitDetailsExpanded,
                         onExpandedChange = { paymentVisitDetailsExpanded = it }
                     ) {
+                        ReadOnlyTextField(
+                            label = "Free Service Under PBC",
+                            value = if (uiState.freeServiceUnderPBC == true) "Yes" else "No"
+                        )
+                        
+                        ReadOnlyTextField(
+                            label = "Amount of Regular Payment",
+                            value = uiState.amountOfRegularPayment
+                        )
+                        
                         YesNoRadioGroup(
                             label = StringResources.getString(StringResources.EXTRA_PAYMENT_REQUIRED, languageCode),
                             selectedOption = uiState.extraPaymentRequired,
@@ -435,38 +593,44 @@ fun EmptyingSchedulingFormScreen(
                     Spacer(Modifier.height(24.dp))
                 }
                 item {
-                    Button(
-                        onClick = { viewModel.saveForm() },
-                        enabled = !uiState.isSubmitting,
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (uiState.isSubmitting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(StringResources.getString(StringResources.SUBMITTING, languageCode))
-                        } else {
-                            Text(StringResources.getString(StringResources.SUBMIT_FORM, languageCode))
+                        // Save Draft Button
+                        OutlinedButton(
+                            onClick = { viewModel.saveDraft() },
+                            enabled = !uiState.isSubmitting,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (uiState.isSubmitting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(StringResources.getString(StringResources.SAVING, languageCode))
+                            } else {
+                                Text("Draft")
+                            }
                         }
-                    }
-                    
-                    // Save Draft Button
-                    OutlinedButton(
-                        onClick = { viewModel.saveDraft() },
-                        enabled = !uiState.isSubmitting,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (uiState.isSubmitting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(StringResources.getString(StringResources.SAVING, languageCode))
-                        } else {
-                            Text(StringResources.getString(StringResources.SAVE_AS_DRAFT, languageCode))
+                        
+                        // Submit Button
+                        Button(
+                            onClick = { viewModel.saveForm() },
+                            enabled = !uiState.isSubmitting,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (uiState.isSubmitting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(StringResources.getString(StringResources.SUBMITTING, languageCode))
+                            } else {
+                                Text("Submit")
+                            }
                         }
                     }
                 }
@@ -487,7 +651,7 @@ fun ExpandableSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
@@ -495,10 +659,10 @@ fun ExpandableSection(
         )
     ) {
         Column {
-            // Header section with grey background
+            // Header section with background
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(
                     modifier = Modifier
@@ -521,7 +685,7 @@ fun ExpandableSection(
                 }
             }
             
-            // Content section with white background
+            // Content section
             if (isExpanded) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
@@ -561,81 +725,13 @@ fun CheckboxWithLabel(label: String, checked: Boolean, onCheckedChange: (Boolean
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DatePickerField(
-    label: String,
-    selectedDate: Long?,
-    onDateSelected: (Long?) -> Unit,
-    isFutureDateAllowed: Boolean = true,
-    enabled: Boolean = true
-) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    val formatter = SimpleDateFormat("MMM dd, yy", Locale.getDefault())
-    val dateText = selectedDate?.let { formatter.format(Date(it)) } ?: ""
-
-    OutlinedTextField(
-        value = dateText,
-        onValueChange = {},
-        label = { Text(label) },
-        readOnly = true,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
-        trailingIcon = {
-            IconButton(
-                onClick = { showDatePicker = true },
-                enabled = enabled
-            ) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Select Date")
-            }
-        },
-        colors = if (!enabled) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors()
-    )
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDate,
-            selectableDates = remember(isFutureDateAllowed) {
-                object : SelectableDates {
-                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                        return if (isFutureDateAllowed) {
-                            utcTimeMillis >= Calendar.getInstance().apply {
-                                set(Calendar.HOUR_OF_DAY, 0)
-                                set(Calendar.MINUTE, 0)
-                                set(Calendar.SECOND, 0)
-                                set(Calendar.MILLISECOND, 0)
-                            }.timeInMillis
-                        } else {
-                            true
-                        }
-                    }
-                }
-            }
-        )
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDateSelected(datePickerState.selectedDateMillis)
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun DropdownMenuField(
     label: String,
     selectedValue: String,
     options: Map<String, String>,
     onValueSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    placeholder: String = ""
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedDisplayText = options[selectedValue] ?: ""
@@ -650,6 +746,9 @@ fun DropdownMenuField(
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
+            placeholder = if (selectedDisplayText.isEmpty() && placeholder.isNotEmpty()) {
+                { Text(placeholder) }
+            } else null,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },

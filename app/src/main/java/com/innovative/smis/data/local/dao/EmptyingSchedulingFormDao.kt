@@ -29,11 +29,6 @@ interface EmptyingSchedulingFormDao {
     @Query("SELECT * FROM emptying_scheduling_forms WHERE applicationId = :applicationId ORDER BY updatedAt DESC LIMIT 1")
     suspend fun getFormByApplicationId(applicationId: Int): EmptyingSchedulingFormEntity?
 
-    /**
-     * Retrieves a form by its unique ID
-     */
-    @Query("SELECT * FROM emptying_scheduling_forms WHERE id = :formId")
-    suspend fun getFormById(formId: String): EmptyingSchedulingFormEntity?
 
     /**
      * Get all forms for an application (useful for versioning/history)
@@ -63,10 +58,10 @@ interface EmptyingSchedulingFormDao {
             lastSyncAttempt = :lastAttempt,
             errorMessage = :error,
             updatedAt = :updatedAt
-        WHERE id = :formId
+        WHERE applicationId = :applicationId
     """)
     suspend fun updateSyncStatus(
-        formId: String, 
+        applicationId: Int, 
         status: String, 
         attempts: Int, 
         lastAttempt: Long, 
@@ -77,14 +72,14 @@ interface EmptyingSchedulingFormDao {
     /**
      * Mark form as successfully synced
      */
-    @Query("UPDATE emptying_scheduling_forms SET syncStatus = 'SYNCED', errorMessage = NULL, updatedAt = :updatedAt WHERE id = :formId")
-    suspend fun markAsSynced(formId: String, updatedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE emptying_scheduling_forms SET syncStatus = 'SYNCED', errorMessage = NULL, updatedAt = :updatedAt WHERE applicationId = :applicationId")
+    suspend fun markAsSynced(applicationId: Int, updatedAt: Long = System.currentTimeMillis())
 
     /**
      * Mark form as pending sync (when user submits)
      */
-    @Query("UPDATE emptying_scheduling_forms SET syncStatus = 'PENDING', updatedAt = :updatedAt WHERE id = :formId")
-    suspend fun markAsPending(formId: String, updatedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE emptying_scheduling_forms SET syncStatus = 'PENDING', updatedAt = :updatedAt WHERE applicationId = :applicationId")
+    suspend fun markAsPending(applicationId: Int, updatedAt: Long = System.currentTimeMillis())
 
     /**
      * Get count of unsynced forms
@@ -95,8 +90,8 @@ interface EmptyingSchedulingFormDao {
     /**
      * Delete a specific form
      */
-    @Query("DELETE FROM emptying_scheduling_forms WHERE id = :formId")
-    suspend fun deleteForm(formId: String)
+    @Query("DELETE FROM emptying_scheduling_forms WHERE applicationId = :applicationId")
+    suspend fun deleteForm(applicationId: Int)
 
     /**
      * Delete all forms for an application
@@ -109,13 +104,7 @@ interface EmptyingSchedulingFormDao {
      */
     @Query("""
         DELETE FROM emptying_scheduling_forms 
-        WHERE id NOT IN (
-            SELECT id FROM emptying_scheduling_forms 
-            WHERE syncStatus = 'SYNCED' 
-            GROUP BY applicationId 
-            HAVING updatedAt = MAX(updatedAt)
-        ) 
-        AND syncStatus = 'SYNCED'
+        WHERE syncStatus = 'SYNCED'
         AND updatedAt < :cutoffTime
     """)
     suspend fun cleanupOldSyncedForms(cutoffTime: Long)

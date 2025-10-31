@@ -49,9 +49,9 @@ interface EmptyingSchedulingApiService {
     suspend fun getSanitationCustomerDetails(@Path("id") applicationId: Int): Response<SanitationCustomerResponse>
 
     /**
-     * Get emptying reasons for Purpose of Emptying Request dropdown
+     * Get emptying reasons for Proposed Emptying Request dropdown
      */
-    @GET("emptying-scheduling/show-emptying-reason")
+    @GET("emptying-scheduling/show-emptying-purpose")
     suspend fun getEmptyingReasons(): Response<SimpleDropdownResponse>
 
     /**
@@ -59,6 +59,18 @@ interface EmptyingSchedulingApiService {
      */
     @GET("emptying-scheduling/show-issue-with-containment")
     suspend fun getContainmentIssues(): Response<SimpleDropdownResponse>
+
+    /**
+     * Get reasons for no emptied date dropdown
+     */
+    @GET("emptying-scheduling/show-emptied-nodate-reason")
+    suspend fun getEmptiedNoDateReasons(): Response<SimpleDropdownResponse>
+
+    /**
+     * Get reasons if not emptied before dropdown
+     */
+    @GET("emptying-scheduling/show-notemptied-reason")
+    suspend fun getNotEmptiedReasons(): Response<SimpleDropdownResponse>
 
     /**
      * Updates the details for a specific emptying scheduling application.

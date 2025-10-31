@@ -64,8 +64,8 @@ val appModule = module {
     // Cache Management
     single { com.innovative.smis.data.local.cache.OfflineCacheManager(get()) }
 
-    // Workflow Repository for new eto_id based API calls
-    single { WorkflowRepository(get(), get()) }
+    // Workflow Repository for new eto_id based API calls  
+    single { WorkflowRepository(get(), get(), get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { MapViewModel(get()) }
     viewModel { DashboardViewModel(get<TodoListRepository>(), get<PreferenceHelper>()) }
@@ -80,9 +80,11 @@ val appModule = module {
     viewModel { com.innovative.smis.ui.features.sitepreparation.SitePreparationViewModel(get<WorkflowRepository>()) }
     viewModel { com.innovative.smis.ui.features.sitepreparation.SitePreparationFormViewModel(get<SitePreparationRepository>()) }
     viewModel { com.innovative.smis.ui.features.emptyingservice.EmptyingServiceViewModel(get<WorkflowRepository>()) }
-    viewModel { com.innovative.smis.ui.features.emptyingservice.EmptyingServiceFormViewModel(get()) }
+    viewModel { com.innovative.smis.ui.features.emptyingservice.EmptyingServiceFormViewModel(get(), get()) }
     viewModel { com.innovative.smis.ui.features.buildingsurvey.ComprehensiveSurveyViewModel() }
-    viewModel { com.innovative.smis.ui.features.desludgingvehicle.DesludgingVehicleViewModel(get()) }
+    viewModel { com.innovative.smis.ui.features.desludgingvehicle.DesludgingVehicleViewModel(get(), get()) }
+    viewModel { com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingListViewModel(get(), get()) }
+    viewModel { com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingFormViewModel(get()) }
 }
 
 val databaseModule = module {
@@ -112,6 +114,7 @@ val databaseModule = module {
     single<SitePreparationFormDao> { get<SMISDatabase>().sitePreparationFormDao() }
     single<EmptyingServiceFormDao> { get<SMISDatabase>().emptyingServiceFormDao() }
     single<ContainmentFormDao> { get<SMISDatabase>().containmentFormDao() }
+    single<com.innovative.smis.data.local.dao.AdditionalRepairingFormDao> { get<SMISDatabase>().additionalRepairingFormDao() }
 
     // Offline Map DAOs
     single { get<SMISDatabase>().offlineMapTileDao() }
@@ -181,6 +184,8 @@ val repositoryModule = module {
     single {
         SitePreparationRepository(
             apiService = get<SitePreparationApiService>(),
+            containmentApiService = get<ContainmentApiService>(),
+            postponeApiService = get<com.innovative.smis.data.api.PostponeApiService>(),
             formDao = get<SitePreparationFormDao>(),
             syncQueueDao = get<SyncQueueDao>(),
             todoItemDao = get<TodoItemDao>(),
@@ -192,6 +197,12 @@ val repositoryModule = module {
         com.innovative.smis.data.repository.DesludgingVehicleRepository(get())
     }
 
+    single<AdditionalRepairingRepository> {
+        AdditionalRepairingRepositoryImpl(
+            api = get<LaravelApiService>(),
+            dao = get<com.innovative.smis.data.local.dao.AdditionalRepairingFormDao>()
+        )
+    }
 
 }
 
@@ -204,8 +215,9 @@ val networkModule = module {
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .addInterceptor(get<AuthInterceptor>())
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .build()
     }
     single { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }

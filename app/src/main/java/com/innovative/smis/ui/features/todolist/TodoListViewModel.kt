@@ -8,6 +8,7 @@ import com.innovative.smis.data.model.response.TodoFilter
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.data.repository.TodoListRepository
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.DateFormatManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -79,8 +80,8 @@ class TodoListViewModel(
                 } else {
                     currentState.selectedStatus
                 },
-                dateFrom = currentState.startDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) },
-                dateTo = currentState.endDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) },
+                dateFrom = currentState.startDate?.let { DateFormatManager.formatTimestampForApi(it) },
+                dateTo = currentState.endDate?.let { DateFormatManager.formatTimestampForApi(it) },
                 isToday = currentState.selectedStatus.equals("Today", true)
             )
 
