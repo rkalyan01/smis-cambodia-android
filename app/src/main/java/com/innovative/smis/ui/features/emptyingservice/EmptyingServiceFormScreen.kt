@@ -20,10 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.innovative.smis.R
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
@@ -38,7 +40,9 @@ import com.innovative.smis.ui.components.RadioButtonGroupField
 import com.innovative.smis.ui.components.PostponeDialog
 import com.innovative.smis.ui.components.PostponeData
 import com.innovative.smis.ui.components.ReadOnlyTextField
+import com.innovative.smis.ui.components.PhoneNumberField
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -61,6 +65,7 @@ import android.Manifest
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.google.android.gms.maps.CameraUpdateFactory
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +78,8 @@ fun EmptyingServiceFormScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     // State for expandable sections
     var applicantDetailsExpanded by remember { mutableStateOf(false) }
@@ -88,6 +95,32 @@ fun EmptyingServiceFormScreen(
     LaunchedEffect(applicationId) {
         viewModel.loadApplicationDetails(applicationId)
         viewModel.loadReadonlyData(applicationId)
+    }
+    
+    // Auto-scroll to first error field when validation fails
+    LaunchedEffect(uiState.firstErrorField) {
+        uiState.firstErrorField?.let { errorField ->
+            // Map error fields to their approximate item index in the LazyColumn
+            // Note: Indices may vary based on collapsible sections
+            val scrollToIndex = when (errorField) {
+                "desludging_vehicle" -> 3 // Vehicle & Sludge Details section
+                "pumping_point_type" -> 3 // Same section as vehicle
+                else -> 0
+            }
+            
+            // Auto-expand the relevant section
+            when (errorField) {
+                "desludging_vehicle", "pumping_point_type" -> vehicleDetailsExpanded = true
+            }
+            
+            // Scroll to the item
+            coroutineScope.launch {
+                listState.animateScrollToItem(scrollToIndex)
+            }
+            
+            // Clear the error field indicator after scrolling
+            viewModel.clearFirstErrorField()
+        }
     }
     
     // Auto-expand sections when validation errors occur
@@ -133,8 +166,8 @@ fun EmptyingServiceFormScreen(
 
     LoadingDialog(
         isLoading = uiState.isLoading,
-        title = "Loading Application Details",
-        message = "Please wait while we load the application information..."
+        title = stringResource(R.string.title_loading_application),
+        message = stringResource(R.string.message_loading_application)
     )
 
     Scaffold(
@@ -142,13 +175,13 @@ fun EmptyingServiceFormScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Emptying Service Form",
+                        stringResource(R.string.form_emptying_service_title),
                         style = MaterialTheme.typography.titleMedium
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
@@ -158,7 +191,7 @@ fun EmptyingServiceFormScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.EventBusy,
-                            contentDescription = "Postpone",
+                            contentDescription = stringResource(R.string.cd_postpone),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -172,7 +205,7 @@ fun EmptyingServiceFormScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Inventory,
-                            contentDescription = "Containment",
+                            contentDescription = stringResource(R.string.cd_containment),
                             tint = if (uiState.sanitationCustomerId != null) 
                                 MaterialTheme.colorScheme.onSurface 
                             else 
@@ -184,6 +217,7 @@ fun EmptyingServiceFormScreen(
         }
     ) { paddingValues ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -202,7 +236,7 @@ fun EmptyingServiceFormScreen(
                 OutlinedTextField(
                     value = applicationId.toString(),
                     onValueChange = { },
-                    label = { Text("Application ID") },
+                    label = { Text(stringResource(R.string.label_application_id)) },
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors()
@@ -212,13 +246,13 @@ fun EmptyingServiceFormScreen(
             // Applicant Details Section
             item {
                 CollapsibleSection(
-                    title = "Applicant Details",
+                    title = stringResource(R.string.section_applicant_details),
                     isExpanded = applicantDetailsExpanded,
                     onToggle = { applicantDetailsExpanded = !applicantDetailsExpanded }
                 ) {
                     // Sanitation Customer ID - disabled field
                     ReadOnlyTextField(
-                        label = "Sanitation Customer ID",
+                        label = stringResource(R.string.label_sanitation_customer_id),
                         value = uiState.sanitationCustomerId ?: ""
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -226,7 +260,7 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = uiState.applicantName,
                         onValueChange = { },
-                        label = { Text("Applicant Name") },
+                        label = { Text(stringResource(R.string.label_applicant_name)) },
                         readOnly = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors()
@@ -234,9 +268,9 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedTextField(
-                        value = uiState.applicantContact,
+                        value = PhoneNumberFormatter.formatForDisplay(uiState.applicantContact),
                         onValueChange = { },
-                        label = { Text("Applicant Contact") },
+                        label = { Text(stringResource(R.string.label_applicant_contact)) },
                         readOnly = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(),
@@ -244,13 +278,14 @@ fun EmptyingServiceFormScreen(
                             if (uiState.applicantContact.isNotEmpty()) {
                                 IconButton(
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.applicantContact}"))
+                                        val formattedNumber = PhoneNumberFormatter.formatForDialing(uiState.applicantContact)
+                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
                                         context.startActivity(intent)
                                     }
                                 ) {
                                     Icon(
                                         Icons.Default.Phone,
-                                        contentDescription = "Call applicant",
+                                        contentDescription = stringResource(R.string.cd_call_applicant),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -260,7 +295,7 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     CheckboxField(
-                        label = "Service Receiver Same as Applicant",
+                        label = stringResource(R.string.label_service_receiver_same_as_applicant),
                         checked = uiState.isServiceReceiverSameAsApplicant,
                         onCheckedChange = viewModel::onServiceReceiverSameAsApplicantChange
                     )
@@ -269,36 +304,20 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = uiState.serviceReceiverName,
                         onValueChange = viewModel::onServiceReceiverNameChange,
-                        label = { Text("Service Receiver Name") },
+                        label = { Text(stringResource(R.string.label_service_receiver_name)) },
                         enabled = !uiState.isServiceReceiverSameAsApplicant,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
+                    PhoneNumberField(
                         value = uiState.serviceReceiverContact,
                         onValueChange = viewModel::onServiceReceiverContactChange,
-                        label = { Text("Service Receiver Contact") },
+                        label = stringResource(R.string.label_service_receiver_contact),
+                        modifier = Modifier,
                         enabled = !uiState.isServiceReceiverSameAsApplicant,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(),
-                        trailingIcon = {
-                            if (uiState.serviceReceiverContact.isNotEmpty()) {
-                                IconButton(
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.serviceReceiverContact}"))
-                                        context.startActivity(intent)
-                                    }
-                                ) {
-                                    Icon(
-                                        Icons.Default.Phone,
-                                        contentDescription = "Call service receiver",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
+                        isRequired = false
                     )
                 }
             }
@@ -306,7 +325,7 @@ fun EmptyingServiceFormScreen(
             // Service Details Section
             item {
                 CollapsibleSection(
-                    title = "Service Details",
+                    title = stringResource(R.string.section_service_details),
                     isExpanded = serviceDetailsExpanded,
                     onToggle = { serviceDetailsExpanded = !serviceDetailsExpanded }
                 ) {
@@ -325,7 +344,7 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = displayEmptiedDate,
                         onValueChange = { },
-                        label = { Text("Emptied Date") },
+                        label = { Text(stringResource(R.string.label_emptied_date)) },
                         readOnly = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors()
@@ -333,7 +352,7 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     TimePickerField(
-                        label = "Start Time",
+                        label = stringResource(R.string.label_start_time),
                         value = uiState.startTime,
                         onValueChange = viewModel::onStartTimeChange,
                         modifier = Modifier.fillMaxWidth(),
@@ -342,7 +361,7 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     TimePickerField(
-                        label = "End Time",
+                        label = stringResource(R.string.label_end_time),
                         value = uiState.endTime,
                         onValueChange = viewModel::onEndTimeChange,
                         modifier = Modifier.fillMaxWidth(),
@@ -352,7 +371,7 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     RadioButtonGroupField(
-                        label = "Additional Trip Required",
+                        label = stringResource(R.string.label_additional_trip_required),
                         options = listOf("Yes", "No"),
                         selectedValue = uiState.additionalTripRequired.replaceFirstChar { it.uppercase() },
                         onValueSelected = { value -> viewModel.onAdditionalTripRequiredChange(value.lowercase()) },
@@ -365,13 +384,13 @@ fun EmptyingServiceFormScreen(
             // Vehicle & Sludge Details Section
             item {
                 CollapsibleSection(
-                    title = "Vehicle & Sludge Details",
+                    title = stringResource(R.string.section_vehicle_sludge_details),
                     isExpanded = vehicleDetailsExpanded,
                     onToggle = { vehicleDetailsExpanded = !vehicleDetailsExpanded }
                 ) {
-                    // Desludging Vehicle ID - Dropdown from API
+                    // Desludging Vehicle ID - Dropdown from API (Required field)
                     DropdownField(
-                        label = "Desludging Vehicle ID *",
+                        label = stringResource(R.string.label_desludging_vehicle_id) + " *",
                         selectedValue = uiState.selectedVehicleLicensePlate,
                         options = uiState.vehicleOptions.map { it.type },
                         onValueSelected = viewModel::onDesludgingVehicleIdChange,
@@ -382,7 +401,7 @@ fun EmptyingServiceFormScreen(
 
                     // Sludge Type - Radio buttons
                     RadioButtonGroupField(
-                        label = "Sludge Type",
+                        label = stringResource(R.string.label_sludge_type),
                         options = listOf("Mixed", "Not Mixed"),
                         selectedValue = uiState.sludgeType,
                         onValueSelected = viewModel::onSludgeTypeChange,
@@ -394,7 +413,7 @@ fun EmptyingServiceFormScreen(
                     // Type of Sludge - Show only when "Mixed" is selected
                     if (uiState.sludgeType == "Mixed") {
                         RadioButtonGroupField(
-                            label = "Type of Sludge",
+                            label = stringResource(R.string.label_type_of_sludge),
                             options = listOf("Processing food", "Oil and fat (restaurant)", "Content of fuel"),
                             selectedValue = uiState.typeOfSludge,
                             onValueSelected = viewModel::onTypeOfSludgeChange,
@@ -405,7 +424,7 @@ fun EmptyingServiceFormScreen(
                     }
 
                     RadioButtonGroupField(
-                        label = "Pumping Point Type *",
+                        label = stringResource(R.string.label_pumping_point_type) + " *",
                         options = listOf("Cover", "Tube", "Pierce"),
                         selectedValue = uiState.pumpingPointType,
                         onValueSelected = viewModel::onPumpingPointTypeChange,
@@ -416,7 +435,7 @@ fun EmptyingServiceFormScreen(
 
                     // Additional Repairing in Emptying - Multi-select Checkboxes
                     MultiSelectCheckboxGroup(
-                        label = "Additional Repairing in Emptying",
+                        label = stringResource(R.string.label_additional_repairing_in_emptying),
                         options = uiState.additionalRepairingOptions,
                         selectedKeys = uiState.additionalRepairingKeys,
                         onSelectionChange = viewModel::onAdditionalRepairingChange,
@@ -433,7 +452,7 @@ fun EmptyingServiceFormScreen(
                         OutlinedTextField(
                             value = uiState.otherAdditionalRepairing,
                             onValueChange = viewModel::onOtherAdditionalRepairingChange,
-                            label = { Text("Other Additional Repairing") },
+                            label = { Text(stringResource(R.string.label_other_additional_repairing)) },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -443,12 +462,12 @@ fun EmptyingServiceFormScreen(
             // Payment & Documentation Section
             item {
                 CollapsibleSection(
-                    title = "Payment & Documentation",
+                    title = stringResource(R.string.section_payment_documentation),
                     isExpanded = paymentDocumentationExpanded,
                     onToggle = { paymentDocumentationExpanded = !paymentDocumentationExpanded }
                 ) {
                     ReadOnlyTextField(
-                        label = "Free Under PBC",
+                        label = stringResource(R.string.label_free_under_pbc),
                         value = if (uiState.freeUnderPBC) "Yes" else "No"
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -456,14 +475,14 @@ fun EmptyingServiceFormScreen(
                     // Regular Cost - readonly when loaded from API
                     if (uiState.isRegularCostReadonly) {
                         ReadOnlyTextField(
-                            label = "Amount of Regular Cost",
+                            label = stringResource(R.string.label_amount_regular_cost),
                             value = uiState.regularCost
                         )
                     } else {
                         OutlinedTextField(
                             value = uiState.regularCost,
                             onValueChange = viewModel::onRegularCostChange,
-                            label = { Text("Amount of Regular Cost") },
+                            label = { Text(stringResource(R.string.label_amount_of_regular_cost)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -473,7 +492,7 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = uiState.extraCost,
                         onValueChange = viewModel::onExtraCostChange,
-                        label = { Text("Amount of Extra Cost") },
+                        label = { Text(stringResource(R.string.label_amount_of_extra_cost)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         readOnly = uiState.isExtraCostReadonly,
                         enabled = !uiState.isExtraCostReadonly,
@@ -486,14 +505,14 @@ fun EmptyingServiceFormScreen(
                         OutlinedTextField(
                             value = uiState.receiptNumber,
                             onValueChange = viewModel::onReceiptNumberChange,
-                            label = { Text("Receipt Number") },
+                            label = { Text(stringResource(R.string.label_receipt_number)) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Image Upload Components
                         ImagePickerComponent(
-                            label = "Receipt Image",
+                            label = stringResource(R.string.label_receipt_image),
                             selectedImageUri = if (uiState.receiptImage.isNotBlank()) Uri.parse(uiState.receiptImage) else null,
                             onImageSelected = { uri -> viewModel.onReceiptImageSelected(uri?.toString()) },
                             modifier = Modifier.fillMaxWidth()
@@ -502,7 +521,7 @@ fun EmptyingServiceFormScreen(
                     }
 
                     ImagePickerComponent(
-                        label = "Picture of Emptying",
+                        label = stringResource(R.string.label_picture_of_emptying),
                         selectedImageUri = if (uiState.pictureOfEmptying.isNotBlank()) Uri.parse(uiState.pictureOfEmptying) else null,
                         onImageSelected = { uri -> viewModel.onEmptyingImageSelected(uri?.toString()) },
                         modifier = Modifier.fillMaxWidth()
@@ -512,7 +531,7 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = uiState.comments,
                         onValueChange = viewModel::onCommentsChange,
-                        label = { Text("Comments") },
+                        label = { Text(stringResource(R.string.label_comments)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
                     )
@@ -529,14 +548,14 @@ fun EmptyingServiceFormScreen(
                             OutlinedTextField(
                                 value = uiState.latitude?.toString() ?: "",
                                 onValueChange = { },
-                                label = { Text("Latitude") },
+                                label = { Text(stringResource(R.string.label_latitude)) },
                                 readOnly = true,
                                 modifier = Modifier.weight(1f)
                             )
                             OutlinedTextField(
                                 value = uiState.longitude?.toString() ?: "",
                                 onValueChange = { },
-                                label = { Text("Longitude") },
+                                label = { Text(stringResource(R.string.label_longitude)) },
                                 readOnly = true,
                                 modifier = Modifier.weight(1f)
                             )
@@ -553,7 +572,7 @@ fun EmptyingServiceFormScreen(
                             ) {
                                 Icon(Icons.Default.LocationOn, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Capture GPS")
+                                Text(stringResource(R.string.button_capture_gps))
                             }
                             
                             OutlinedButton(
@@ -564,7 +583,7 @@ fun EmptyingServiceFormScreen(
                             ) {
                                 Icon(Icons.Default.Map, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Update Map")
+                                Text(stringResource(R.string.button_update_map))
                             }
                         }
                     }
@@ -584,7 +603,7 @@ fun EmptyingServiceFormScreen(
                         modifier = Modifier.weight(1f),
                         enabled = !uiState.isSubmitting
                     ) {
-                        Text("Save Draft")
+                        Text(stringResource(R.string.button_save_draft))
                     }
 
                     Button(
@@ -598,7 +617,7 @@ fun EmptyingServiceFormScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text("Update")
+                            Text(stringResource(R.string.button_update))
                         }
                     }
                 }
@@ -776,7 +795,7 @@ private fun TimePickerField(
                             },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.action_cancel))
                         }
 
                         Button(
@@ -804,7 +823,7 @@ private fun TimePickerField(
                             },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("OK")
+                            Text(stringResource(R.string.action_ok))
                         }
                     }
                 }

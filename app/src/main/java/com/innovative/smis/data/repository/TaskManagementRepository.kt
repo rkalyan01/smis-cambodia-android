@@ -13,7 +13,11 @@ class TaskManagementRepository(
     private val preferenceHelper: PreferenceHelper
 ) {
 
-    fun getTaskManagementApplications(status: String = ""): Flow<Resource<List<TodoItem>>> = flow {
+    fun getTaskManagementApplications(
+        status: String = "",
+        urgency: String? = null,
+        applicationType: String? = null
+    ): Flow<Resource<List<TodoItem>>> = flow {
         emit(Resource.Loading())
         try {
             val etoId = preferenceHelper.getEtoId()
@@ -23,7 +27,13 @@ class TaskManagementRepository(
             }
             
             // Call API with specific status parameter using TodoListApiService
-            val response = todoListApiService.getFilteredApplications(status, etoId.toString())
+            // For "Urgent" filter: urgency=yes, applicationType=On-Demand
+            val response = todoListApiService.getFilteredApplications(
+                status = if (status.isEmpty()) null else status,
+                etoId = etoId.toString(),
+                urgency = urgency,
+                applicationType = applicationType
+            )
             
             if (response.isSuccessful && response.body()?.success == true) {
                 val applications = response.body()?.data ?: emptyList()

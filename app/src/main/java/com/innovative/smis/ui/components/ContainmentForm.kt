@@ -11,7 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.innovative.smis.R
 
 @Composable
 fun ContainmentFormSheet(
@@ -37,9 +39,9 @@ fun ContainmentFormSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Containment Details", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.section_containment_details), style = MaterialTheme.typography.headlineSmall)
                 IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close))
                 }
             }
         }
@@ -47,7 +49,7 @@ fun ContainmentFormSheet(
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                label = { Text("Type of Containment") },
+                label = { Text(stringResource(R.string.label_type_of_containment)) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -55,7 +57,7 @@ fun ContainmentFormSheet(
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                label = { Text("Storage Tank Size (m³)") },
+                label = { Text(stringResource(R.string.label_storage_tank_size)) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -66,11 +68,11 @@ fun ContainmentFormSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onClose) {
-                    Text("Close")
+                    Text(stringResource(R.string.button_close))
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = onSave) {
-                    Text("Save")
+                    Text(stringResource(R.string.button_save))
                 }
             }
         }

@@ -290,12 +290,14 @@ class EmptyingServiceFormViewModel(
             // Validate required fields
             var hasError = false
             var errorState = currentState
+            var firstError: String? = null
             
             // Validate Desludging Vehicle ID (mandatory field)
             if (currentState.desludgingVehicleId.isEmpty()) {
                 errorState = errorState.copy(
                     desludgingVehicleIdError = "Desludging Vehicle is required"
                 )
+                if (firstError == null) firstError = "desludging_vehicle"
                 hasError = true
             } else {
                 errorState = errorState.copy(desludgingVehicleIdError = null)
@@ -306,15 +308,19 @@ class EmptyingServiceFormViewModel(
                 errorState = errorState.copy(
                     pumpingPointTypeError = "Pumping Point Type is required"
                 )
+                if (firstError == null) firstError = "pumping_point_type"
                 hasError = true
             } else {
                 errorState = errorState.copy(pumpingPointTypeError = null)
             }
             
-            // If there are errors, update state and return
+            // If there are errors, update state with first error field for auto-scroll
             if (hasError) {
                 _uiState.update { 
-                    errorState.copy(isSubmitting = false) 
+                    errorState.copy(
+                        isSubmitting = false,
+                        firstErrorField = firstError
+                    ) 
                 }
                 return@launch
             }
@@ -378,8 +384,8 @@ class EmptyingServiceFormViewModel(
                     extra_payment = currentState.extraCost,
                     receipt_number = currentState.receiptNumber,
                     comments = currentState.comments,
-                    receipt_image = currentState.receiptImage,
-                    picture_of_emptying = currentState.pictureOfEmptying,
+                    receipt_image_base64 = currentState.receiptImage,
+                    picture_of_emptying_base64 = currentState.pictureOfEmptying,
                     eto_id = etoId,
                     desludging_vehicle_id = currentState.desludgingVehicleId,
                     lng = currentState.longitude,
@@ -694,6 +700,10 @@ class EmptyingServiceFormViewModel(
                 else -> {}
             }
         }
+    }
+
+    fun clearFirstErrorField() {
+        _uiState.update { it.copy(firstErrorField = null) }
     }
 
     sealed class SaveResult {

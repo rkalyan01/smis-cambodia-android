@@ -28,9 +28,12 @@ import com.innovative.smis.util.constants.ScreenName
 import com.innovative.smis.util.helper.PreferenceHelper
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 data class DrawerItem(
@@ -48,14 +51,14 @@ fun AppNavigationDrawer(
     topLevelNavController: NavController,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
     gesturesEnabled: Boolean = true,
-    content: @Composable (onMenuClick: () -> Unit) -> Unit
+    isScreenReady: Boolean = true, // 🔧 NEW: Gate gestures on screen readiness
+    isActionInProgress: AtomicBoolean, // Add lock to parameters
+    onMenuClick: () -> Unit, // ✅ Receive the stable lambda as a parameter
+    content: @Composable () -> Unit // ✅ Changed signature - no longer provides onMenuClick
 ) {
     val context = LocalContext.current
     val preferenceHelper = PreferenceHelper(context)
     val scope = rememberCoroutineScope()
-
-    // Simple click debouncing to prevent accidental double-clicks
-    var lastMenuClickTime by remember { mutableLongStateOf(0L) }
 
     // Load user info and permissions immediately (synchronous, fast)
     // This prevents black screen by ensuring data is always available
@@ -135,63 +138,42 @@ fun AppNavigationDrawer(
         }
     }
 
-    // Define drawer items with permission requirements - use derivedStateOf for performance
-    val drawerItems by remember(languageCode) {
-        derivedStateOf {
-            try {
-                android.util.Log.d("NavigationDrawer", "Building drawer items with languageCode: '$languageCode'")
-                if (languageCode.isNotEmpty()) {
-                    listOf(
-                        DrawerItem(
-                            id = "dashboard",
-                            title = StringResources.getString(StringResources.DASHBOARD, languageCode),
-                            icon = Icons.Default.Dashboard,
-                            route = ScreenName.Dashboard
-                        ),
-                        DrawerItem(
-                            id = "emptying_scheduling",
-                            title = StringResources.getString(StringResources.EMPTYING_SCHEDULING, languageCode),
-                            icon = Icons.Default.Schedule,
-                            route = "emptying_scheduling",
-                            requiredPermission = "Emptying Scheduling"
-                        ),
-                        DrawerItem(
-                            id = "site_preparation",
-                            title = StringResources.getString(StringResources.SITE_PREPARATION, languageCode),
-                            icon = Icons.Default.Construction,
-                            route = "site_preparation",
-                            requiredPermission = "Site Preparation"
-                        ),
-                        DrawerItem(
-                            id = "emptying_service",
-                            title = StringResources.getString(StringResources.EMPTYING_SERVICE, languageCode),
-                            icon = Icons.Default.CleaningServices,
-                            route = "emptying_service",
-                            requiredPermission = "Emptying Service"
-                        ),
-                        DrawerItem(
-                            id = "todo_list",
-                            title = StringResources.getString(StringResources.TODO_LIST, languageCode),
-                            icon = Icons.AutoMirrored.Filled.List,
-                            route = ScreenName.TodoList
-                        ),
-                        DrawerItem(
-                            id = "desludging_vehicle",
-                            title = StringResources.getString(StringResources.DESLUDGING_VEHICLES, languageCode),
-                            icon = Icons.Default.LocalShipping,
-                            route = ScreenName.DesludgingVehicle
-                        )
-                    )
-                } else {
-                    android.util.Log.w("NavigationDrawer", "Language code is empty, returning empty drawer items")
-                    emptyList()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("NavigationDrawer", "Error building drawer items: ${e.message}", e)
-                emptyList()
-            }
-        }
-    }
+    // Define drawer items with permission requirements
+    // Use Compose stringResource() to get properly localized strings from XML
+    val drawerItems = listOf(
+        DrawerItem(
+            id = "dashboard",
+            title = stringResource(com.innovative.smis.R.string.nav_dashboard),
+            icon = Icons.Default.Dashboard,
+            route = ScreenName.Dashboard
+        ),
+        DrawerItem(
+            id = "site_preparation",
+            title = stringResource(com.innovative.smis.R.string.nav_site_preparation),
+            icon = Icons.Default.Construction,
+            route = "site_preparation",
+            requiredPermission = "Site Preparation"
+        ),
+        DrawerItem(
+            id = "emptying_service",
+            title = stringResource(com.innovative.smis.R.string.nav_emptying_service),
+            icon = Icons.Default.Build,
+            route = "emptying_service",
+            requiredPermission = "Emptying Service"
+        ),
+        DrawerItem(
+            id = "todo_list",
+            title = stringResource(com.innovative.smis.R.string.nav_todo_list),
+            icon = Icons.AutoMirrored.Filled.List,
+            route = ScreenName.TaskManagement
+        ),
+        DrawerItem(
+            id = "desludging_vehicle",
+            title = stringResource(com.innovative.smis.R.string.nav_desludging_vehicles),
+            icon = Icons.Default.LocalShipping,
+            route = ScreenName.DesludgingVehicle
+        )
+    )
 
     // Filter items based on permissions - use derivedStateOf for better performance
     val visibleItems by remember(drawerItems, userPermissions) {
@@ -202,9 +184,20 @@ fun AppNavigationDrawer(
         }
     }
 
+    // 🔧 FIX: Monitor drawer animation state and snap to closed if needed
+    LaunchedEffect(drawerState.currentValue) {
+        android.util.Log.d("NavigationDrawer", "🎨 Drawer state: ${drawerState.currentValue}, isAnimationRunning: ${drawerState.isAnimationRunning}, isScreenReady: $isScreenReady")
+        
+        // If drawer starts opening while screen not ready, snap it closed immediately
+        if (!isScreenReady && drawerState.currentValue != DrawerValue.Closed) {
+            android.util.Log.w("NavigationDrawer", "⚠️ Drawer opened before screen ready - snapping to closed!")
+            drawerState.snapTo(DrawerValue.Closed)
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = gesturesEnabled,
+        gesturesEnabled = gesturesEnabled && isScreenReady, // 🔧 FIX: Only enable gestures when screen is ready
         scrimColor = Color.Black.copy(alpha = 0.1f), // Very subtle overlay to prevent black screen effect
         drawerContent = {
             ModalDrawerSheet(
@@ -215,52 +208,79 @@ fun AppNavigationDrawer(
                     userName = userName ?: "User",
                     userEmail = userEmail ?: "",
                     currentLanguage = currentLanguage ?: "English",
-                    languageCode = languageCode,
                     drawerItems = visibleItems,
                     onItemClick = { route ->
-                        scope.launch {
-                            try {
-                                // CRITICAL: Wait for drawer to fully close before navigating
-                                drawerState.close()
-                                navController.navigate(route) {
-                                    launchSingleTop = true
-                                    restoreState = true
+                        android.util.Log.d("NavigationDrawer", "📍 Drawer item clicked: $route, currentRoute: ${navController.currentDestination?.route}")
+                        if (isActionInProgress.compareAndSet(false, true)) {
+                            scope.launch {
+                                try {
+                                    // CRITICAL: Wait for drawer to fully close before navigating
+                                    if (drawerState.isOpen) {
+                                        drawerState.close()
+                                    }
+                                    // This ensures the animation completes before the next screen is built
+                                    snapshotFlow { drawerState.isClosed }.first { it }
+                                    
+                                    android.util.Log.d("NavigationDrawer", "🧭 Navigating to: $route")
+                                    navController.navigate(route) {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("NavigationDrawer", "Navigation error: ${e.message}")
+                                } finally {
+                                    isActionInProgress.set(false) // Release lock
                                 }
-                            } catch (e: Exception) {
-                                android.util.Log.e("NavigationDrawer", "Navigation error: ${e.message}")
                             }
                         }
                     },
                     onSettingsClick = {
-                        scope.launch {
-                            try {
-                                // CRITICAL: Wait for drawer to fully close before navigating
-                                drawerState.close()
-                                navController.navigate(ScreenName.Settings) {
-                                    launchSingleTop = true
+                        if (isActionInProgress.compareAndSet(false, true)) {
+                            scope.launch {
+                                try {
+                                    // CRITICAL: Wait for drawer to fully close before navigating
+                                    if (drawerState.isOpen) {
+                                        drawerState.close()
+                                    }
+                                    // This ensures the animation completes before the next screen is built
+                                    snapshotFlow { drawerState.isClosed }.first { it }
+                                    
+                                    navController.navigate(ScreenName.Settings) {
+                                        launchSingleTop = true
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("NavigationDrawer", "Settings navigation error: ${e.message}")
+                                } finally {
+                                    isActionInProgress.set(false) // Release lock
                                 }
-                            } catch (e: Exception) {
-                                android.util.Log.e("NavigationDrawer", "Settings navigation error: ${e.message}")
                             }
                         }
                     },
                     onLogoutClick = {
-                        scope.launch {
-                            try {
-                                // CRITICAL: Wait for drawer to fully close before navigating
-                                drawerState.close()
-                                // Clear authentication data
-                                withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                    preferenceHelper.setBoolean(PrefConstant.IS_LOGIN, false)
-                                    preferenceHelper.setString(PrefConstant.AUTH_TOKEN, "")
-                                    preferenceHelper.setString(PrefConstant.USER_PERMISSIONS, "")
+                        if (isActionInProgress.compareAndSet(false, true)) {
+                            scope.launch {
+                                try {
+                                    // CRITICAL: Wait for drawer to fully close before navigating
+                                    if (drawerState.isOpen) {
+                                        drawerState.close()
+                                    }
+                                    snapshotFlow { drawerState.isClosed }.first { it }
+                                    
+                                    // Clear authentication data
+                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        preferenceHelper.setBoolean(PrefConstant.IS_LOGIN, false)
+                                        preferenceHelper.setString(PrefConstant.AUTH_TOKEN, "")
+                                        preferenceHelper.setString(PrefConstant.USER_PERMISSIONS, "")
+                                    }
+                                    topLevelNavController.navigate(ScreenName.Login) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("NavigationDrawer", "Logout navigation error: ${e.message}")
+                                } finally {
+                                    isActionInProgress.set(false) // Release lock
                                 }
-                                topLevelNavController.navigate(ScreenName.Login) {
-                                    popUpTo(0) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            } catch (e: Exception) {
-                                android.util.Log.e("NavigationDrawer", "Logout navigation error: ${e.message}")
                             }
                         }
                     }
@@ -268,26 +288,8 @@ fun AppNavigationDrawer(
             }
         },
         content = {
-            content {
-                val currentTime = System.currentTimeMillis()
-                
-                // Simple debounce - prevent rapid clicks within 300ms
-                if (currentTime - lastMenuClickTime < 300) {
-                    return@content
-                }
-                
-                lastMenuClickTime = currentTime
-                
-                scope.launch {
-                    try {
-                        if (drawerState.isClosed) {
-                            drawerState.open()
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e("NavigationDrawer", "Error opening drawer: ${e.message}")
-                    }
-                }
-            }
+            // ✅ Just render the content (the NavHost) - onMenuClick is now passed as a parameter
+            content()
         }
     )
 }
@@ -297,7 +299,6 @@ private fun DrawerContent(
     userName: String,
     userEmail: String,
     currentLanguage: String,
-    languageCode: String,
     drawerItems: List<DrawerItem>,
     onItemClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
@@ -371,7 +372,7 @@ private fun DrawerContent(
             DrawerMenuItem(
                 item = DrawerItem(
                     id = "settings",
-                    title = StringResources.getString(StringResources.SETTINGS, languageCode),
+                    title = stringResource(com.innovative.smis.R.string.nav_settings),
                     icon = Icons.Default.Settings,
                     route = ScreenName.Settings
                 ),
@@ -382,7 +383,7 @@ private fun DrawerContent(
             DrawerMenuItem(
                 item = DrawerItem(
                     id = "logout",
-                    title = StringResources.getString(StringResources.LOGOUT, languageCode),
+                    title = stringResource(com.innovative.smis.R.string.nav_logout),
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                     route = ""
                 ),

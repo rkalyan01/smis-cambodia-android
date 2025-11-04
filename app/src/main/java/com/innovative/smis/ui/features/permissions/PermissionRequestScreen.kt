@@ -23,15 +23,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.res.stringResource
+import com.innovative.smis.R
 import com.innovative.smis.util.constants.PrefConstant
 import com.innovative.smis.util.helper.PreferenceHelper
-import com.innovative.smis.util.localization.LocalizationManager
-import com.innovative.smis.util.localization.StringResources
 
 data class PermissionInfo(
     val permission: String,
-    val title: String,
-    val description: String,
+    val titleRes: Int,
+    val descriptionRes: Int,
     val icon: ImageVector,
     val isRequired: Boolean = true
 )
@@ -43,8 +43,6 @@ fun PermissionRequestScreen(
 ) {
     val context = LocalContext.current
     val preferenceHelper = PreferenceHelper(context)
-    val currentLanguage = remember { LocalizationManager.getCurrentLanguage(context) }
-    val languageCode = remember(currentLanguage) { LocalizationManager.getLanguageCode(currentLanguage) }
     
     // Build permission list based on Android version
     val requiredPermissions = remember {
@@ -53,8 +51,8 @@ fun PermissionRequestScreen(
             add(
                 PermissionInfo(
                     permission = Manifest.permission.CAMERA,
-                    title = StringResources.getString(StringResources.CAMERA_ACCESS, languageCode),
-                    description = StringResources.getString(StringResources.TAKE_PHOTOS_DESCRIPTION, languageCode),
+                    titleRes = R.string.permission_camera_access,
+                    descriptionRes = R.string.permission_camera_description,
                     icon = Icons.Default.PhotoCamera,
                     isRequired = true
                 )
@@ -66,8 +64,8 @@ fun PermissionRequestScreen(
                 add(
                     PermissionInfo(
                         permission = Manifest.permission.READ_MEDIA_IMAGES,
-                        title = StringResources.getString(StringResources.PHOTO_GALLERY_ACCESS, languageCode),
-                        description = StringResources.getString(StringResources.SELECT_PHOTOS_DESCRIPTION, languageCode),
+                        titleRes = R.string.permission_photo_gallery,
+                        descriptionRes = R.string.permission_photo_gallery_description,
                         icon = Icons.Default.PhotoLibrary,
                         isRequired = true
                     )
@@ -77,8 +75,8 @@ fun PermissionRequestScreen(
                 add(
                     PermissionInfo(
                         permission = Manifest.permission.READ_EXTERNAL_STORAGE,
-                        title = StringResources.getString(StringResources.PHOTO_GALLERY_ACCESS, languageCode),
-                        description = StringResources.getString(StringResources.SELECT_PHOTOS_DESCRIPTION, languageCode),
+                        titleRes = R.string.permission_photo_gallery,
+                        descriptionRes = R.string.permission_photo_gallery_description,
                         icon = Icons.Default.PhotoLibrary,
                         isRequired = true
                     )
@@ -89,8 +87,8 @@ fun PermissionRequestScreen(
             add(
                 PermissionInfo(
                     permission = Manifest.permission.ACCESS_FINE_LOCATION,
-                    title = StringResources.getString(StringResources.LOCATION_ACCESS, languageCode),
-                    description = StringResources.getString(StringResources.LOCATION_ACCESS_DESCRIPTION, languageCode),
+                    titleRes = R.string.permission_location,
+                    descriptionRes = R.string.permission_location_description,
                     icon = Icons.Default.LocationOn,
                     isRequired = true
                 )
@@ -149,7 +147,7 @@ fun PermissionRequestScreen(
         // App Logo/Icon placeholder
         Icon(
             imageVector = Icons.Default.Business,
-            contentDescription = "SMIS Logo",
+            contentDescription = stringResource(R.string.cd_app_logo),
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -157,7 +155,7 @@ fun PermissionRequestScreen(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Welcome to SMIS",
+            text = stringResource(R.string.permission_welcome_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -166,7 +164,7 @@ fun PermissionRequestScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Sewer Management Information System",
+            text = stringResource(R.string.permission_app_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -175,7 +173,7 @@ fun PermissionRequestScreen(
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "To provide the best experience, SMIS needs access to the following:",
+            text = stringResource(R.string.permission_intro_message),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -220,7 +218,7 @@ fun PermissionRequestScreen(
             enabled = allRequiredGranted || permissionStates.values.any { !it }
         ) {
             Text(
-                if (allRequiredGranted) "Continue to App" else "Grant All Permissions"
+                if (allRequiredGranted) stringResource(R.string.action_continue_to_app) else stringResource(R.string.action_grant_all_permissions)
             )
         }
         
@@ -274,13 +272,13 @@ private fun PermissionCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = permissionInfo.title,
+                    text = stringResource(permissionInfo.titleRes),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
                 
                 Text(
-                    text = permissionInfo.description,
+                    text = stringResource(permissionInfo.descriptionRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

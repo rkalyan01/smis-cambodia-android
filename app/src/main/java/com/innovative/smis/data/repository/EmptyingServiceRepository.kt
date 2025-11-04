@@ -104,8 +104,8 @@ class EmptyingServiceRepository(
                 desludging_vehicle_id = request.desludging_vehicle_id?.takeIf { it.isNotBlank() } ?: "1",
                 additional_repairing_id = singleAdditionalRepairing, // Use only first selected value
                 presence_of_pumping_point = mappedPumpingPointPresence, // Use mapped database enum value
-                receipt_image = request.receipt_image?.let { convertUriToBase64(it) },
-                picture_of_emptying = request.picture_of_emptying?.let { convertUriToBase64(it) }
+                receipt_image_base64 = request.receipt_image_base64?.let { convertUriToBase64(it) },
+                picture_of_emptying_base64 = request.picture_of_emptying_base64?.let { convertUriToBase64(it) }
             )
             
             android.util.Log.d("EmptyingRepo", "Processed request desludging_vehicle_id: '${processedRequest.desludging_vehicle_id}'")
@@ -113,12 +113,12 @@ class EmptyingServiceRepository(
             android.util.Log.d("EmptyingRepo", "Processed request sludge_type_b: '${processedRequest.sludge_type_b}'")
 
             // ✅ STEP 1: POST /api/emptyings/create/{application_id}
-            // Send all fields EXCEPT extra_payment, receipt_number, comments, receipt_image
+            // Send all fields EXCEPT extra_payment, receipt_number, comments, receipt_image_base64
             val createRequest = processedRequest.copy(
                 extra_payment = null,
                 receipt_number = null,
                 comments = null,
-                receipt_image = null
+                receipt_image_base64 = null
             )
             
             android.util.Log.d("EmptyingRepo", "STEP 1: Creating emptying record (without payment details)")
@@ -149,43 +149,25 @@ class EmptyingServiceRepository(
             
             android.util.Log.d("EmptyingRepo", "STEP 1 successful. Emptying ID: $emptyingId")
 
-            // ✅ STEP 2: POST /api/emptyings/{emptying_id} with X-HTTP-Method-Override: PUT
-            // Send only extra_payment, receipt_number, comments, receipt_image
-            // Using POST with X-HTTP-Method-Override header for Laravel multipart compatibility
-            android.util.Log.d("EmptyingRepo", "STEP 2: Updating payment with POST + X-HTTP-Method-Override: PUT")
+            // ✅ STEP 2: PUT /api/emptyings/{emptying_id}
+            // Send ONLY payment details with base64-encoded receipt image
+            // Note: picture_of_emptying was already sent in STEP 1
+            android.util.Log.d("EmptyingRepo", "STEP 2: Updating payment with JSON + base64 image")
             android.util.Log.d("EmptyingRepo", "STEP 2 - extra_payment: '${processedRequest.extra_payment}'")
             android.util.Log.d("EmptyingRepo", "STEP 2 - receipt_number: '${processedRequest.receipt_number}'")
-            android.util.Log.d("EmptyingRepo", "STEP 2 - has receipt_image: ${processedRequest.receipt_image != null}")
+            android.util.Log.d("EmptyingRepo", "STEP 2 - has receipt_image: ${processedRequest.receipt_image_base64 != null}")
             
-            val extraPaymentBody = processedRequest.extra_payment?.let { 
-                okhttp3.RequestBody.create("text/plain".toMediaTypeOrNull(), it) 
-            }
-            val receiptNumberBody = processedRequest.receipt_number?.let { 
-                okhttp3.RequestBody.create("text/plain".toMediaTypeOrNull(), it) 
-            }
-            val commentsBody = processedRequest.comments?.let { 
-                okhttp3.RequestBody.create("text/plain".toMediaTypeOrNull(), it) 
-            }
-            val receiptImagePart = processedRequest.receipt_image?.let { base64Image ->
-                // Convert base64 to multipart
-                val imageBytes = android.util.Base64.decode(
-                    base64Image.substringAfter("base64,"), 
-                    android.util.Base64.NO_WRAP
-                )
-                val requestFile = okhttp3.RequestBody.create(
-                    "image/jpeg".toMediaTypeOrNull(), 
-                    imageBytes
-                )
-                okhttp3.MultipartBody.Part.createFormData("receipt_image", "receipt.jpg", requestFile)
-            }
+            val paymentUpdateRequest = com.innovative.smis.data.api.request.EmptyingPaymentUpdateRequest(
+                extra_payment = processedRequest.extra_payment,
+                receipt_number = processedRequest.receipt_number,
+                comments = processedRequest.comments,
+                receipt_image_base64 = processedRequest.receipt_image_base64,
+                picture_of_emptying_base64 = null // Already sent in STEP 1
+            )
             
             val updateResponse = apiService.updateEmptyingPaymentDetails(
                 emptyingId = emptyingId,
-                method = "PUT",
-                extraPayment = extraPaymentBody,
-                receiptNumber = receiptNumberBody,
-                comments = commentsBody,
-                receiptImage = receiptImagePart
+                request = paymentUpdateRequest
             )
 
             if (updateResponse.isSuccessful) {

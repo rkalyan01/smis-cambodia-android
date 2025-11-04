@@ -30,12 +30,12 @@ class PreferenceHelper(context: Context) {
     }
 
     var selectedLanguage: String
-        get() = sharedPreferences.getString(KEY_LANGUAGE, Languages.ENGLISH) ?: Languages.ENGLISH
+        get() = sharedPreferences.getString(KEY_LANGUAGE, Languages.KHMER) ?: Languages.KHMER
         set(value) = sharedPreferences.edit().putString(KEY_LANGUAGE, value).apply()
 
     var themeMode: ThemeMode
         get() {
-            val mode = sharedPreferences.getString(KEY_THEME_MODE, ThemeMode.AUTO.name) ?: ThemeMode.AUTO.name
+            val mode = sharedPreferences.getString(KEY_THEME_MODE, ThemeMode.LIGHT.name) ?: ThemeMode.LIGHT.name
             return ThemeMode.valueOf(mode)
         }
         set(value) = sharedPreferences.edit().putString(KEY_THEME_MODE, value.name).apply()

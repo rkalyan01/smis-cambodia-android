@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import com.innovative.smis.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -58,7 +60,7 @@ fun ComprehensiveSurveyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Building Survey") },
+                title = { Text(stringResource(R.string.screen_building_survey)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -270,13 +272,13 @@ private fun BuildingInformationSection(
         
         Spacer(modifier = Modifier.height(12.dp))
         
-        SurveyTextFieldWithError(
+        PhoneNumberField(
             value = state.respondentContact,
             onValueChange = { onStateChange(state.copy(respondentContact = it)) },
             label = "Respondent Contact *",
-            error = state.validationErrors["respondentContact"],
-            keyboardType = KeyboardType.Phone,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier,
+            enabled = true,
+            isRequired = true
         )
         
         Spacer(modifier = Modifier.height(12.dp))
@@ -331,13 +333,13 @@ private fun BuildingInformationSection(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            SurveyTextFieldWithError(
+            PhoneNumberField(
                 value = state.ownerContact,
                 onValueChange = { onStateChange(state.copy(ownerContact = it)) },
                 label = "Owner Contact *",
-                error = state.validationErrors["ownerContact"],
-                keyboardType = KeyboardType.Phone,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier,
+                enabled = true,
+                isRequired = true
             )
         }
         
@@ -775,7 +777,7 @@ private fun SurveyNavigationButtons(
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Previous")
+                Text(stringResource(R.string.button_previous))
             }
         } else {
             Spacer(modifier = Modifier.weight(1f))
@@ -787,7 +789,7 @@ private fun SurveyNavigationButtons(
                 enabled = state.isCurrentSectionValid(),
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Next")
+                Text(stringResource(R.string.button_next))
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
             }
@@ -803,7 +805,7 @@ private fun SurveyNavigationButtons(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Submit Survey")
+                    Text(stringResource(R.string.button_submit_survey))
                 }
             }
         }

@@ -35,13 +35,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -97,9 +100,9 @@ fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit
                 TextButton(onClick = {
                     showDatePicker = false
                     viewModel.setDateFilter(dateRangePickerState.selectedStartDateMillis, dateRangePickerState.selectedEndDateMillis)
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.action_ok)) }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) } }
         ) {
             DateRangePicker(state = dateRangePickerState, modifier = Modifier.weight(1f))
         }
@@ -111,7 +114,7 @@ fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Emptying Service", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.screen_emptying_service), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -212,8 +215,8 @@ private fun ApplicationTaskCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Application ID #${todoItem.applicationId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(todoItem.applicantName ?: "Name not provided", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.label_application_id_hash, todoItem.applicationId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(todoItem.applicantName ?: stringResource(R.string.message_name_not_provided), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.width(8.dp))
                 StatusBadge(text = statusText, color = statusColor)
@@ -226,13 +229,13 @@ private fun ApplicationTaskCard(
                 ) {
                     InfoRow(
                         icon = Icons.Outlined.DateRange,
-                        label = "Proposed Date",
+                        label = stringResource(R.string.label_proposed_date),
                         text = todoItem.proposedEmptyingDate ?: "Not scheduled"
                     )
                     todoItem.applicationDatetime?.let { date ->
                         InfoRow(
                             icon = Icons.Default.CalendarToday,
-                            label = "Applied On",
+                            label = stringResource(R.string.label_applied_on),
                             text = date
                         )
                     }
@@ -255,7 +258,7 @@ private fun ApplicationTaskCard(
                     IconButton(
                         onClick = {
                             todoItem.applicantContact?.let { contact ->
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contact"))
+                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(contact)}"))
                                 context.startActivity(intent)
                             }
                         },
@@ -350,7 +353,7 @@ fun LoadingState() {
     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator()
-            Text("Loading tasks...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.message_loading_tasks), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -358,7 +361,7 @@ fun LoadingState() {
 @Composable
 fun IdleState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Pull to refresh or use the menu to load tasks.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.message_pull_to_refresh), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -373,9 +376,9 @@ fun EmptyState(filter: String) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(Icons.Filled.Assignment, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
-            Text("No Applications Found", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.message_no_applications_found), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                text = "There are no applications matching the current filter criteria.",
+                text = stringResource(R.string.message_no_applications_filter_criteria),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

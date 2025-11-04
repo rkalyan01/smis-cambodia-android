@@ -11,10 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.innovative.smis.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,7 +121,7 @@ fun LogoutBottomSheet(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("Sync and Logout")
+                        Text(stringResource(R.string.action_sync_and_logout))
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -131,7 +133,7 @@ fun LogoutBottomSheet(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Logout Without Syncing")
+                        Text(stringResource(R.string.action_logout_without_syncing))
                     }
                 } else {
                     Button(
@@ -141,7 +143,7 @@ fun LogoutBottomSheet(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Logout")
+                        Text(stringResource(R.string.action_logout))
                     }
                 }
                 
@@ -151,7 +153,7 @@ fun LogoutBottomSheet(
                     onClick = onCancel,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))

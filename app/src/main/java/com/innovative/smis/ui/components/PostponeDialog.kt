@@ -10,9 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.innovative.smis.R
 import com.innovative.smis.util.helper.DateFormatManager
 import java.text.SimpleDateFormat
 import java.util.*
@@ -75,14 +77,14 @@ fun PostponeDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Postpone Application",
+                        text = stringResource(R.string.dialog_postpone_title),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(onClick = onDismiss) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.cd_close),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -94,7 +96,7 @@ fun PostponeDialog(
                 OutlinedTextField(
                     value = displayCurrentDate,
                     onValueChange = {},
-                    label = { Text("Postpone From (Current Date)") },
+                    label = { Text(stringResource(R.string.label_postpone_from)) },
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -117,7 +119,7 @@ fun PostponeDialog(
                         value = reason,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Reason") },
+                        label = { Text(stringResource(R.string.label_reason)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = reasonExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -146,7 +148,7 @@ fun PostponeDialog(
                 OutlinedTextField(
                     value = remark,
                     onValueChange = { remark = it },
-                    label = { Text("Remark") },
+                    label = { Text(stringResource(R.string.label_remark)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 5,
@@ -165,14 +167,14 @@ fun PostponeDialog(
                         }
                     } else "",
                     onValueChange = {},
-                    label = { Text("Postpone Until (New Date)") },
+                    label = { Text(stringResource(R.string.label_postpone_until)) },
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
                         IconButton(onClick = { showDatePicker = true }) {
                             Icon(
                                 Icons.Default.CalendarMonth,
-                                contentDescription = "Select Date",
+                                contentDescription = stringResource(R.string.cd_select_date),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -192,7 +194,7 @@ fun PostponeDialog(
                         modifier = Modifier.weight(1f),
                         enabled = !isLoading
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                     
                     Button(
@@ -217,7 +219,7 @@ fun PostponeDialog(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text("Postpone")
+                            Text(stringResource(R.string.button_postpone))
                         }
                     }
                 }
@@ -255,12 +257,12 @@ fun PostponeDialog(
                     }
                     showDatePicker = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         ) {

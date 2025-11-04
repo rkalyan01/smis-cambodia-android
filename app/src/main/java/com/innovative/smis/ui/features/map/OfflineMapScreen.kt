@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.compose.*
@@ -44,7 +46,7 @@ fun OfflineMapScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(StringResources.getString(StringResources.OFFLINE_MAP, languageCode)) },
+                title = { Text(stringResource(R.string.offline_map)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White
@@ -270,22 +272,22 @@ fun DownloadAreaDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Download Map Area") },
+        title = { Text(stringResource(R.string.title_download_map_area)) },
         text = {
             Column {
-                Text("Download map tiles for offline use")
+                Text(stringResource(R.string.message_download_map_tiles))
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 OutlinedTextField(
                     value = areaName,
                     onValueChange = { areaName = it },
-                    label = { Text("Area Name") },
+                    label = { Text(stringResource(R.string.label_area_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text("Zoom Levels (15-18 recommended):")
+                Text(stringResource(R.string.label_zoom_levels_recommended))
                 Row {
                     for (zoom in 12..20) {
                         FilterChip(
@@ -314,12 +316,12 @@ fun DownloadAreaDialog(
                     onDownload(bounds, selectedZoomLevels)
                 }
             ) {
-                Text("Download")
+                Text(stringResource(R.string.button_download))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -333,7 +335,7 @@ fun CacheStatsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Offline Cache Statistics") },
+        title = { Text(stringResource(R.string.title_offline_cache_statistics)) },
         text = {
             LazyColumn {
                 stats?.let { cacheStats ->
@@ -347,7 +349,7 @@ fun CacheStatsDialog(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        Text("Available Map Types:", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.label_available_map_types), fontWeight = FontWeight.Bold)
                         cacheStats.availableTileTypes.forEach { type ->
                             Text("• $type", fontSize = 14.sp)
                         }
@@ -362,12 +364,12 @@ fun CacheStatsDialog(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Clear Cache")
+                Text(stringResource(R.string.button_clear_cache))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.action_close))
             }
         }
     )

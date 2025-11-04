@@ -15,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.innovative.smis.BuildConfig
+import com.innovative.smis.R
 import com.innovative.smis.util.constants.Languages
 import com.innovative.smis.util.helper.PreferenceHelper
 import com.innovative.smis.util.localization.LocalizationManager
@@ -30,21 +33,29 @@ import org.koin.androidx.compose.koinViewModel
 fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     val viewModel: SettingsViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val shouldRestartActivity by viewModel.shouldRestartActivity.collectAsState()
     val context = LocalContext.current
-    val languageCode = LocalizationManager.getCurrentLanguage(context)
 
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showDateFormatDialog by remember { mutableStateOf(false) }
+    
+    // Restart activity when language changes
+    LaunchedEffect(shouldRestartActivity) {
+        if (shouldRestartActivity) {
+            viewModel.activityRestarted()
+            (context as? android.app.Activity)?.recreate()
+        }
+    }
 
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = StringResources.getString(StringResources.SETTINGS, languageCode)) },
+                title = { Text(text = stringResource(R.string.nav_settings)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = StringResources.getString(StringResources.BACK, languageCode))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -64,15 +75,15 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
         ) {
             item {
                 SettingsSectionHeader(
-                    title = StringResources.getString(StringResources.APP_SETTINGS, languageCode)
+                    title = stringResource(R.string.settings_app_section)
                 )
             }
 
             item {
                 SettingsItem(
                     icon = Icons.Default.Language,
-                    title = StringResources.getString(StringResources.LANGUAGE, languageCode),
-                    subtitle = Languages.getLanguageByCode(uiState.selectedLanguage)?.nativeName ?: StringResources.getString(StringResources.ENGLISH, languageCode),
+                    title = stringResource(R.string.settings_language),
+                    subtitle = Languages.getLanguageByCode(uiState.selectedLanguage)?.nativeName ?: stringResource(R.string.language_english),
                     onClick = { showLanguageDialog = true }
                 )
             }
@@ -80,11 +91,11 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
             item {
                 SettingsItem(
                     icon = Icons.Default.DarkMode,
-                    title = StringResources.getString(StringResources.THEME, languageCode),
+                    title = stringResource(R.string.settings_theme),
                     subtitle = when (uiState.themeMode) {
-                        PreferenceHelper.ThemeMode.LIGHT -> StringResources.getString(StringResources.LIGHT, languageCode)
-                        PreferenceHelper.ThemeMode.DARK -> StringResources.getString(StringResources.DARK, languageCode)
-                        PreferenceHelper.ThemeMode.AUTO -> StringResources.getString(StringResources.AUTO, languageCode)
+                        PreferenceHelper.ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+                        PreferenceHelper.ThemeMode.DARK -> stringResource(R.string.theme_dark)
+                        PreferenceHelper.ThemeMode.AUTO -> stringResource(R.string.theme_auto)
                     },
                     onClick = { showThemeDialog = true }
                 )
@@ -93,7 +104,7 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
             item {
                 SettingsItem(
                     icon = Icons.Default.CalendarMonth,
-                    title = "Date Format",
+                    title = stringResource(R.string.settings_date_format),
                     subtitle = uiState.dateFormat.displayName,
                     onClick = { showDateFormatDialog = true }
                 )
@@ -101,15 +112,15 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
 
             item {
                 SettingsSectionHeader(
-                    title = StringResources.getString(StringResources.OFFLINE_MODE, languageCode)
+                    title = stringResource(R.string.settings_offline_section)
                 )
             }
 
             item {
                 SettingsSwitchItem(
                     icon = Icons.Default.CloudOff,
-                    title = StringResources.getString(StringResources.OFFLINE_MODE, languageCode),
-                    subtitle = StringResources.getString(StringResources.WORK_WITHOUT_INTERNET, languageCode),
+                    title = stringResource(R.string.settings_offline_mode),
+                    subtitle = stringResource(R.string.settings_work_without_internet),
                     isChecked = uiState.isOfflineModeEnabled,
                     onCheckedChange = { enabled: Boolean -> viewModel.setOfflineMode(enabled) }
                 )
@@ -118,8 +129,8 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
             item {
                 SettingsSwitchItem(
                     icon = Icons.Default.Sync,
-                    title = StringResources.getString(StringResources.AUTO_SYNC, languageCode),
-                    subtitle = StringResources.getString(StringResources.SYNC_WHEN_ONLINE, languageCode),
+                    title = stringResource(R.string.settings_auto_sync),
+                    subtitle = stringResource(R.string.settings_sync_when_online),
                     isChecked = uiState.isAutoSyncEnabled,
                     onCheckedChange = { enabled: Boolean -> viewModel.setAutoSync(enabled) }
                 )
@@ -128,13 +139,13 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
             item {
                 SettingsItem(
                     icon = Icons.Default.SyncProblem,
-                    title = StringResources.getString(StringResources.TEST_SYNC, languageCode),
+                    title = stringResource(R.string.settings_test_sync),
                     subtitle = if (uiState.isSyncing) {
-                        StringResources.getString(StringResources.SYNCING, languageCode)
+                        stringResource(R.string.status_syncing)
                     } else if (!uiState.syncResult.isNullOrEmpty()) {
                         uiState.syncResult!!
                     } else {
-                        StringResources.getString(StringResources.TAP_TO_TEST_MANUAL_SYNC, languageCode)
+                        stringResource(R.string.settings_tap_to_test_sync)
                     },
                     onClick = { 
                         if (!uiState.isSyncing) {
@@ -146,18 +157,18 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
 
             item {
                 SettingsSectionHeader(
-                    title = StringResources.getString(StringResources.DATA_MANAGEMENT, languageCode)
+                    title = stringResource(R.string.settings_data_section)
                 )
             }
 
             item {
                 SettingsItem(
                     icon = Icons.Default.Storage,
-                    title = StringResources.getString(StringResources.DATABASE_SIZE, languageCode),
+                    title = stringResource(R.string.settings_database_size),
                     subtitle = if (uiState.databaseSizeMB > 0) {
-                        "${String.format("%.2f", uiState.databaseSizeMB)} ${StringResources.getString(StringResources.MEGABYTES, languageCode)}"
+                        "${String.format("%.2f", uiState.databaseSizeMB)} ${stringResource(R.string.unit_megabytes)}"
                     } else {
-                        StringResources.getString(StringResources.CALCULATING, languageCode)
+                        stringResource(R.string.status_calculating)
                     },
                     onClick = { /* Read-only item */ }
                 )
@@ -166,13 +177,13 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
             item {
                 SettingsItem(
                     icon = Icons.Default.DeleteSweep,
-                    title = StringResources.getString(StringResources.CLEAR_CACHE, languageCode),
+                    title = stringResource(R.string.settings_clear_cache),
                     subtitle = if (uiState.isClearingCache) {
-                        StringResources.getString(StringResources.CLEARING, languageCode)
+                        stringResource(R.string.status_clearing)
                     } else if (uiState.cacheCleared) {
-                        StringResources.getString(StringResources.CACHE_CLEARED, languageCode)
+                        stringResource(R.string.message_cache_cleared)
                     } else {
-                        StringResources.getString(StringResources.CLEAR_CACHED_DATA_DESCRIPTION, languageCode)
+                        stringResource(R.string.settings_clear_cache_description)
                     },
                     onClick = { 
                         if (!uiState.isClearingCache) {
@@ -184,15 +195,15 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
 
             item {
                 SettingsSectionHeader(
-                    title = StringResources.getString(StringResources.ABOUT, languageCode)
+                    title = stringResource(R.string.settings_about_section)
                 )
             }
 
             item {
                 SettingsItem(
                     icon = Icons.Default.Info,
-                    title = StringResources.getString(StringResources.VERSION, languageCode),
-                    subtitle = "SMIS v1.0",
+                    title = stringResource(R.string.settings_version),
+                    subtitle = "SMIS v${BuildConfig.VERSION_NAME}",
                     onClick = { }
                 )
             }
@@ -204,8 +215,8 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
             item {
                 SettingsItem(
                     icon = Icons.Default.Logout,
-                    title = StringResources.getString(StringResources.LOGOUT, languageCode),
-                    subtitle = if (languageCode == "km") "ចាកចេញពីគណនី" else "Sign out of your account",
+                    title = stringResource(R.string.nav_logout),
+                    subtitle = stringResource(R.string.message_logout_subtitle),
                     onClick = { viewModel.logout() },
                     textColor = MaterialTheme.colorScheme.error
                 )
@@ -228,7 +239,6 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
     if (showLanguageDialog) {
         LanguageSelectionDialog(
             currentLanguage = uiState.selectedLanguage,
-            languageCode = languageCode,
             onLanguageSelected = { language: String ->
                 viewModel.setLanguage(language)
                 showLanguageDialog = false
@@ -240,7 +250,6 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
     if (showThemeDialog) {
         ThemeSelectionDialog(
             currentTheme = uiState.themeMode,
-            languageCode = languageCode,
             onThemeSelected = { theme: PreferenceHelper.ThemeMode ->
                 viewModel.setThemeMode(theme)
                 showThemeDialog = false
@@ -252,7 +261,6 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
     if (showDateFormatDialog) {
         DateFormatSelectionDialog(
             currentDateFormat = uiState.dateFormat,
-            languageCode = languageCode,
             onDateFormatSelected = { format: PreferenceHelper.DateFormat ->
                 viewModel.setDateFormat(format)
                 showDateFormatDialog = false
@@ -326,22 +334,21 @@ fun SettingsItem(
 @Composable
 fun LanguageSelectionDialog(
     currentLanguage: String,
-    languageCode: String,
     onLanguageSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(StringResources.getString(StringResources.SELECT_LANGUAGE, languageCode)) },
+        title = { Text(stringResource(R.string.dialog_select_language)) },
         text = {
             Column {
-                LanguageOption(StringResources.getString(StringResources.ENGLISH, languageCode), Languages.ENGLISH, currentLanguage, onLanguageSelected)
-                LanguageOption(StringResources.getString(StringResources.KHMER, languageCode), Languages.KHMER, currentLanguage, onLanguageSelected)
+                LanguageOption(stringResource(R.string.language_english), Languages.ENGLISH, currentLanguage, onLanguageSelected)
+                LanguageOption(stringResource(R.string.language_khmer), Languages.KHMER, currentLanguage, onLanguageSelected)
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(StringResources.getString(StringResources.CLOSE, languageCode))
+                Text(stringResource(R.string.action_close))
             }
         }
     )
@@ -377,29 +384,28 @@ fun LanguageOption(
 @Composable
 fun ThemeSelectionDialog(
     currentTheme: PreferenceHelper.ThemeMode,
-    languageCode: String,
     onThemeSelected: (PreferenceHelper.ThemeMode) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(StringResources.getString(StringResources.THEME, languageCode)) },
+        title = { Text(stringResource(R.string.settings_theme)) },
         text = {
             Column {
                 ThemeOption(
-                    StringResources.getString(StringResources.LIGHT, languageCode),
+                    stringResource(R.string.theme_light),
                     PreferenceHelper.ThemeMode.LIGHT,
                     currentTheme,
                     onThemeSelected
                 )
                 ThemeOption(
-                    StringResources.getString(StringResources.DARK, languageCode),
+                    stringResource(R.string.theme_dark),
                     PreferenceHelper.ThemeMode.DARK,
                     currentTheme,
                     onThemeSelected
                 )
                 ThemeOption(
-                    StringResources.getString(StringResources.AUTO, languageCode),
+                    stringResource(R.string.theme_auto),
                     PreferenceHelper.ThemeMode.AUTO,
                     currentTheme,
                     onThemeSelected
@@ -408,7 +414,7 @@ fun ThemeSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(StringResources.getString(StringResources.CLOSE, languageCode))
+                Text(stringResource(R.string.action_close))
             }
         }
     )
@@ -444,13 +450,12 @@ fun ThemeOption(
 @Composable
 fun DateFormatSelectionDialog(
     currentDateFormat: PreferenceHelper.DateFormat,
-    languageCode: String,
     onDateFormatSelected: (PreferenceHelper.DateFormat) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Date Format") },
+        title = { Text(stringResource(R.string.setting_date_format)) },
         text = {
             Column {
                 DateFormatOption(
@@ -472,7 +477,7 @@ fun DateFormatSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(StringResources.getString(StringResources.CLOSE, languageCode))
+                Text(stringResource(R.string.action_close))
             }
         }
     )

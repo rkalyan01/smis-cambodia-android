@@ -24,21 +24,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.ui.components.CheckboxWithLabel
 import com.innovative.smis.ui.components.DatePickerField
+import com.innovative.smis.ui.components.PhoneNumberField
 import com.innovative.smis.ui.components.RadioGroup
 import com.innovative.smis.ui.components.ReadOnlyTextField
 import com.innovative.smis.ui.components.SectionHeader
 import com.innovative.smis.ui.components.YesNoRadioGroup
 import com.innovative.smis.ui.components.disabledTextFieldColors
 import com.innovative.smis.util.common.Resource
-import com.innovative.smis.util.localization.LocalizationManager
-import com.innovative.smis.util.localization.StringResources
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -87,8 +89,6 @@ fun EmptyingSchedulingFormScreen(
     }
 
     val context = LocalContext.current
-    val currentLanguage = remember { LocalizationManager.getCurrentLanguage(context) }
-    val languageCode = remember(currentLanguage) { LocalizationManager.getLanguageCode(currentLanguage) }
 
     LaunchedEffect(applicationId) {
         if (applicationId != null) {
@@ -101,16 +101,16 @@ fun EmptyingSchedulingFormScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(StringResources.getString(StringResources.EMPTYING_SCHEDULING, languageCode),style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.nav_emptying_scheduling),style = MaterialTheme.typography.titleMedium)
                         // Sync status indicator
                         when (val loadingState = uiState.loadingState) {
                             is Resource.Success -> {
                                 val syncStatus = loadingState.data?.syncStatus ?: ""
                                 val statusText = when (syncStatus) {
-                                    "DRAFT" -> StringResources.getString(StringResources.DRAFT, languageCode)
-                                    "PENDING" -> StringResources.getString(StringResources.SYNCING, languageCode)
-                                    "FAILED" -> StringResources.getString(StringResources.SYNC_FAILED, languageCode)
-                                    "SYNCED" -> StringResources.getString(StringResources.SYNCED, languageCode)
+                                    "DRAFT" -> stringResource(R.string.status_draft)
+                                    "PENDING" -> stringResource(R.string.status_syncing)
+                                    "FAILED" -> stringResource(R.string.status_sync_failed)
+                                    "SYNCED" -> stringResource(R.string.status_synced)
                                     else -> ""
                                 }
                                 if (statusText.isNotEmpty()) {
@@ -146,7 +146,7 @@ fun EmptyingSchedulingFormScreen(
         if (loadingState is Resource.Loading && loadingState.data == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
-                Text("Loading details...", modifier = Modifier.padding(top = 60.dp))
+                Text(stringResource(R.string.message_loading_details), modifier = Modifier.padding(top = 60.dp))
             }
         } else if (loadingState is Resource.Error && loadingState.data == null) {
             Column(
@@ -154,10 +154,10 @@ fun EmptyingSchedulingFormScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Error: ${loadingState.message}")
+                Text(stringResource(R.string.message_error_format, loadingState.message ?: ""))
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = { applicationId?.let { viewModel.loadApplicationDetails(it) } }) {
-                    Text("Retry")
+                    Text(stringResource(R.string.action_retry))
                 }
             }
         } else {
@@ -176,21 +176,21 @@ fun EmptyingSchedulingFormScreen(
             ) {
                 item { 
                     ReadOnlyTextField(
-                        label = StringResources.getString(StringResources.APPLICATION_ID, languageCode), 
+                        label = stringResource(R.string.label_application_id), 
                         value = applicationId?.toString() ?: ""
                     ) 
                 }
                 
                 item {
                     ExpandableSection(
-                        title = "Customer Details",
+                        title = stringResource(R.string.section_customer_details),
                         isExpanded = customerDetailsExpanded,
                         onExpandedChange = { customerDetailsExpanded = it }
                     ) {
                         OutlinedTextField(
                             value = uiState.sanitationCustomerId ?: "",
                             onValueChange = { },
-                            label = { Text(StringResources.getString(StringResources.SANITATION_CUSTOMER_ID, languageCode)) },
+                            label = { Text(stringResource(R.string.label_sanitation_customer_id)) },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = false,
                             colors = disabledTextFieldColors()
@@ -199,16 +199,16 @@ fun EmptyingSchedulingFormScreen(
                         OutlinedTextField(
                             value = uiState.sanitationCustomerName ?: "",
                             onValueChange = { },
-                            label = { Text(StringResources.getString(StringResources.CUSTOMER_NAME, languageCode)) },
+                            label = { Text(stringResource(R.string.label_customer_name)) },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = false,
                             colors = disabledTextFieldColors()
                         )
                         
                         OutlinedTextField(
-                            value = uiState.sanitationCustomerContact ?: "",
+                            value = PhoneNumberFormatter.formatForDisplay(uiState.sanitationCustomerContact),
                             onValueChange = { },
-                            label = { Text(StringResources.getString(StringResources.CUSTOMER_PHONE, languageCode)) },
+                            label = { Text(stringResource(R.string.label_customer_phone)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth(),
                             enabled = false,
@@ -217,7 +217,8 @@ fun EmptyingSchedulingFormScreen(
                                 if (!uiState.sanitationCustomerContact.isNullOrEmpty()) {
                                     IconButton(
                                         onClick = {
-                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.sanitationCustomerContact}"))
+                                            val formattedNumber = PhoneNumberFormatter.formatForDialing(uiState.sanitationCustomerContact)
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
                                             context.startActivity(intent)
                                         }
                                     ) {
@@ -235,7 +236,7 @@ fun EmptyingSchedulingFormScreen(
                         val isOnDemand = uiState.applicationType?.equals("On-Demand", ignoreCase = true) == true
                         if (!isOnDemand) {
                             CheckboxWithLabel(
-                                label = "Applicant is same as customer",
+                                label = stringResource(R.string.checkbox_applicant_same_as_customer),
                                 checked = uiState.isApplicantSameAsCustomer,
                                 onCheckedChange = viewModel::onApplicantSameAsCustomerChange
                             )
@@ -244,43 +245,38 @@ fun EmptyingSchedulingFormScreen(
                         OutlinedTextField(
                             value = uiState.applicantName,
                             onValueChange = viewModel::onApplicantNameChange,
-                            label = { Text("Applicant Name") },
+                            label = { Text(stringResource(R.string.label_applicant_name)) },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = isOnDemand || !uiState.isApplicantSameAsCustomer,
                             colors = if (!isOnDemand && uiState.isApplicantSameAsCustomer) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors()
                         )
                         
-                        OutlinedTextField(
-                            value = uiState.applicantContact,
-                            onValueChange = viewModel::onApplicantContactChange,
-                            label = { Text("Applicant Contact") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = isOnDemand || !uiState.isApplicantSameAsCustomer,
-                            colors = if (!isOnDemand && uiState.isApplicantSameAsCustomer) disabledTextFieldColors() else OutlinedTextFieldDefaults.colors(),
-                            trailingIcon = {
-                                if (uiState.applicantContact.isNotEmpty()) {
-                                    IconButton(
-                                        onClick = {
-                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.applicantContact}"))
-                                            context.startActivity(intent)
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Phone,
-                                            contentDescription = "Call applicant",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                            }
-                        )
+                        if (isOnDemand || !uiState.isApplicantSameAsCustomer) {
+                            PhoneNumberField(
+                                value = uiState.applicantContact,
+                                onValueChange = viewModel::onApplicantContactChange,
+                                label = stringResource(R.string.label_applicant_contact),
+                                modifier = Modifier,
+                                enabled = true,
+                                isRequired = false
+                            )
+                        } else {
+                            // Disabled state - show OutlinedTextField with disabled colors
+                            OutlinedTextField(
+                                value = uiState.applicantContact,
+                                onValueChange = {},
+                                label = { Text(stringResource(R.string.label_applicant_contact)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = false,
+                                colors = disabledTextFieldColors()
+                            )
+                        }
                     }
                 }
 
                 item {
                     ExpandableSection(
-                        title = "Emptying Details",
+                        title = stringResource(R.string.section_emptying_details),
                         isExpanded = emptyingDetailsExpanded,
                         onExpandedChange = { emptyingDetailsExpanded = it }
                     ) {
@@ -293,7 +289,7 @@ fun EmptyingSchedulingFormScreen(
                             OutlinedTextField(
                                 value = displayValue ?: "Not specified",
                                 onValueChange = {},
-                                label = { Text("Purpose of Emptying Request") },
+                                label = { Text(stringResource(R.string.label_purpose_of_emptying)) },
                                 readOnly = true,
                                 enabled = false,
                                 modifier = Modifier.fillMaxWidth(),
@@ -303,7 +299,7 @@ fun EmptyingSchedulingFormScreen(
                             OutlinedTextField(
                                 value = "Loading...",
                                 onValueChange = {},
-                                label = { Text("Purpose of Emptying Request") },
+                                label = { Text(stringResource(R.string.label_purpose_of_emptying)) },
                                 readOnly = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -315,7 +311,7 @@ fun EmptyingSchedulingFormScreen(
                             }
                             
                             DropdownMenuField(
-                                label = "Purpose of Emptying Request",
+                                label = stringResource(R.string.label_purpose_of_emptying_request),
                                 selectedValue = uiState.purposeOfEmptying ?: "", // ✅ Convert null to "" only when passing to dropdown
                                 options = filteredReasons,
                                 onValueSelected = viewModel::onPurposeOfEmptyingChange,
@@ -332,19 +328,19 @@ fun EmptyingSchedulingFormScreen(
                             OutlinedTextField(
                                 value = uiState.purposeOfEmptyingOther,
                                 onValueChange = viewModel::onPurposeOfEmptyingOtherChange,
-                                label = { Text("Please Specify other reason") },
+                                label = { Text(stringResource(R.string.label_please_specify_other_reason)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                         
                         DatePickerField(
-                            label = "Propose Emptying Date",
+                            label = stringResource(R.string.label_propose_emptying_date),
                             selectedDate = uiState.proposeEmptyingDate,
                             onDateSelected = viewModel::onProposeEmptyingDateChange
                         )
                         
                         YesNoRadioGroup(
-                            label = "Ever Emptied Before?",
+                            label = stringResource(R.string.label_ever_emptied_before),
                             selectedOption = uiState.everEmptied,
                             onOptionSelected = viewModel::onEverEmptiedChange
                         )
@@ -357,7 +353,7 @@ fun EmptyingSchedulingFormScreen(
                                 OutlinedTextField(
                                     value = lastEmptiedDisplayText,
                                     onValueChange = { },
-                                    label = { Text("Last Emptied Date") },
+                                    label = { Text(stringResource(R.string.label_last_emptied_date)) },
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = false,
                                     colors = disabledTextFieldColors()
@@ -372,7 +368,7 @@ fun EmptyingSchedulingFormScreen(
                                     } else null
                                     
                                     DatePickerField(
-                                        label = "Last Emptied Date *",
+                                        label = stringResource(R.string.label_last_emptied_date_required),
                                         selectedDate = lastEmptiedDateMillis,
                                         onDateSelected = { millis ->
                                             val formattedDate = millis?.let {
@@ -389,13 +385,13 @@ fun EmptyingSchedulingFormScreen(
                                         OutlinedTextField(
                                             value = "Loading...",
                                             onValueChange = {},
-                                            label = { Text("Reason for no Emptied Date *") },
+                                            label = { Text(stringResource(R.string.label_reason_no_emptied_date)) },
                                             readOnly = true,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     } else {
                                         DropdownMenuField(
-                                            label = "Reason for no Emptied Date *",
+                                            label = stringResource(R.string.label_reason_no_emptied_date),
                                             selectedValue = uiState.reasonForNoEmptiedDate,
                                             options = uiState.emptiedNoDateReasons,
                                             onValueSelected = viewModel::onReasonForNoEmptiedDateChange,
@@ -411,7 +407,7 @@ fun EmptyingSchedulingFormScreen(
                                         OutlinedTextField(
                                             value = uiState.lastEmptiedDate,
                                             onValueChange = { },
-                                            label = { Text("Last Emptied Date *") },
+                                            label = { Text(stringResource(R.string.label_last_emptied_date_required)) },
                                             modifier = Modifier.weight(1f),
                                             readOnly = true
                                         )
@@ -420,7 +416,7 @@ fun EmptyingSchedulingFormScreen(
                                             onClick = { viewModel.onLastEmptiedDateChange("") },
                                             modifier = Modifier.align(Alignment.CenterVertically)
                                         ) {
-                                            Text("Clear")
+                                            Text(stringResource(R.string.action_clear))
                                         }
                                     }
                                 }
@@ -432,13 +428,13 @@ fun EmptyingSchedulingFormScreen(
                                 OutlinedTextField(
                                     value = "Loading...",
                                     onValueChange = {},
-                                    label = { Text("Reason if not emptied before") },
+                                    label = { Text(stringResource(R.string.label_reason_not_emptied_before)) },
                                     readOnly = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             } else {
                                 DropdownMenuField(
-                                    label = "Reason if not emptied before",
+                                    label = stringResource(R.string.label_reason_if_not_emptied),
                                     selectedValue = uiState.notEmptiedBeforeReason,
                                     options = uiState.notEmptiedReasons,
                                     onValueSelected = viewModel::onNotEmptiedBeforeReasonChange,
@@ -452,7 +448,7 @@ fun EmptyingSchedulingFormScreen(
                                 OutlinedTextField(
                                     value = uiState.notEmptiedReasonOther,
                                     onValueChange = viewModel::onNotEmptiedReasonOtherChange,
-                                    label = { Text("Please Specify other reason") },
+                                    label = { Text(stringResource(R.string.label_please_specify_other_reason)) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -462,14 +458,14 @@ fun EmptyingSchedulingFormScreen(
 
                 item {
                     ExpandableSection(
-                        title = "Containment Details",
+                        title = stringResource(R.string.section_containment_details),
                         isExpanded = containmentDetailsExpanded,
                         onExpandedChange = { containmentDetailsExpanded = it }
                     ) {
                         OutlinedTextField(
                             value = uiState.sizeOfStorageTankM3 ?: "",
                             onValueChange = viewModel::onSizeOfContainmentChange,
-                            label = { Text("Storage Tank Size (m³)") },
+                            label = { Text(stringResource(R.string.label_storage_tank_size)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -486,13 +482,13 @@ fun EmptyingSchedulingFormScreen(
                                     }
                                 }
                             },
-                            label = { Text("Construction Year of Storage Tank") },
+                            label = { Text(stringResource(R.string.label_construction_year_storage_tank)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
                         
                         DropdownMenuField(
-                            label = "Accessible to Desludging Vehicle",
+                            label = stringResource(R.string.label_accessible_desludging_vehicle),
                             selectedValue = uiState.accessibility ?: "",
                             options = mapOf(
                                 "Accessible" to "Accessible",
@@ -504,14 +500,17 @@ fun EmptyingSchedulingFormScreen(
                         )
                         
                         RadioGroup(
-                            title = "Location of Containment",
-                            options = listOf("Around the house", "Ground floor"),
+                            title = stringResource(R.string.label_location_of_containment),
+                            options = listOf(
+                                stringResource(R.string.option_around_house), 
+                                stringResource(R.string.option_ground_floor)
+                            ),
                             selectedOption = uiState.locationOfContainment ?: "",
                             onOptionSelected = viewModel::onLocationOfContainmentChange
                         )
                         
                         YesNoRadioGroup(
-                            label = "Presence of Pumping Point",
+                            label = stringResource(R.string.label_presence_pumping_point),
                             selectedOption = uiState.pumpingPointPresence,
                             onOptionSelected = viewModel::onPumpingPointPresenceChange
                         )
@@ -521,13 +520,13 @@ fun EmptyingSchedulingFormScreen(
                             OutlinedTextField(
                                 value = "Loading...",
                                 onValueChange = {},
-                                label = { Text("Experience issues with containment?") },
+                                label = { Text(stringResource(R.string.label_experience_containment_issues)) },
                                 readOnly = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         } else {
                             DropdownMenuField(
-                                label = "Experience issues with containment?",
+                                label = stringResource(R.string.label_experience_issues_containment),
                                 selectedValue = uiState.containmentIssues,
                                 options = uiState.containmentIssuesList,
                                 onValueSelected = viewModel::onContainmentIssuesChange,
@@ -541,7 +540,7 @@ fun EmptyingSchedulingFormScreen(
                             OutlinedTextField(
                                 value = uiState.containmentIssuesOther,
                                 onValueChange = viewModel::onContainmentIssuesOtherChange,
-                                label = { Text("Please specify other issue") },
+                                label = { Text(stringResource(R.string.label_please_specify_other_issue)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -550,22 +549,22 @@ fun EmptyingSchedulingFormScreen(
 
                 item {
                     ExpandableSection(
-                        title = "Payment & Visit Details",
+                        title = stringResource(R.string.section_payment_visit_details),
                         isExpanded = paymentVisitDetailsExpanded,
                         onExpandedChange = { paymentVisitDetailsExpanded = it }
                     ) {
                         ReadOnlyTextField(
-                            label = "Free Service Under PBC",
+                            label = stringResource(R.string.label_free_service_under_pbc),
                             value = if (uiState.freeServiceUnderPBC == true) "Yes" else "No"
                         )
                         
                         ReadOnlyTextField(
-                            label = "Amount of Regular Payment",
+                            label = stringResource(R.string.label_amount_regular_payment),
                             value = uiState.amountOfRegularPayment
                         )
                         
                         YesNoRadioGroup(
-                            label = StringResources.getString(StringResources.EXTRA_PAYMENT_REQUIRED, languageCode),
+                            label = stringResource(R.string.label_extra_payment_required),
                             selectedOption = uiState.extraPaymentRequired,
                             onOptionSelected = viewModel::onExtraPaymentRequiredChange
                         )
@@ -574,14 +573,14 @@ fun EmptyingSchedulingFormScreen(
                             OutlinedTextField(
                                 value = uiState.extraPaymentAmount,
                                 onValueChange = viewModel::onExtraPaymentAmountChange,
-                                label = { Text("Amount of Extra Payment (Estimation)") },
+                                label = { Text(stringResource(R.string.label_amount_extra_payment_estimation)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                         
                         YesNoRadioGroup(
-                            label = StringResources.getString(StringResources.SITE_VISIT_REQUIRED, languageCode),
+                            label = stringResource(R.string.label_site_visit_required),
                             selectedOption = uiState.siteVisitRequired,
                             onOptionSelected = viewModel::onSiteVisitRequiredChange
                         )
@@ -609,9 +608,9 @@ fun EmptyingSchedulingFormScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(StringResources.getString(StringResources.SAVING, languageCode))
+                                Text(stringResource(R.string.action_saving))
                             } else {
-                                Text("Draft")
+                                Text(stringResource(R.string.button_draft))
                             }
                         }
                         
@@ -627,9 +626,9 @@ fun EmptyingSchedulingFormScreen(
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(StringResources.getString(StringResources.SUBMITTING, languageCode))
+                                Text(stringResource(R.string.action_submitting))
                             } else {
-                                Text("Submit")
+                                Text(stringResource(R.string.button_submit))
                             }
                         }
                     }

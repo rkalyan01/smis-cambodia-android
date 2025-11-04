@@ -89,15 +89,15 @@ val appModule = module {
 
 val databaseModule = module {
     single {
-        // ✅ PERFORMANCE: Allow database queries on main thread during startup to prevent ANRs
-        // and enable WAL mode for better concurrent access
+        // ✅ PERFORMANCE: Enable WAL mode for better concurrent access
+        // NOTE: .allowMainThreadQueries() REMOVED to prevent main thread blocking and "Skipped frames" errors
         Room.databaseBuilder(
             androidContext(),
             SMISDatabase::class.java,
             SMISDatabase.DATABASE_NAME
         )
             .fallbackToDestructiveMigration(true)
-            .allowMainThreadQueries() // Allows critical startup queries on main thread
+            // .allowMainThreadQueries() // ⛔️ REMOVED: Causes main thread blocking
             .setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING) // Better performance
             .build()
     }

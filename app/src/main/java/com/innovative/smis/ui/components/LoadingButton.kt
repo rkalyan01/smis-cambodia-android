@@ -5,7 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.innovative.smis.R
 
 @Composable
 fun LoadingButton(
@@ -30,7 +32,7 @@ fun LoadingButton(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Loading...")
+                Text(stringResource(R.string.message_loading))
             }
         } else {
             Text(text)

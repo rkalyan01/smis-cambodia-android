@@ -74,6 +74,7 @@ data class EmptyingServiceFormUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isSubmitting: Boolean = false,
+    val firstErrorField: String? = null, // Tracks which field has the first validation error for auto-scroll
     
     // Readonly Fields (from API)
     val isApplicantNameReadonly: Boolean = false,

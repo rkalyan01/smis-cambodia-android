@@ -2,22 +2,27 @@
 <resources>
     <!-- App Name -->
     <string name="app_name">SMIS BETA</string>
-
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_map">Map</string>
     <string name="nav_tasks">Tasks</string>
     <string name="nav_survey">Survey</string>
     <string name="nav_settings">Settings</string>
-
+    <string name="nav_logout">Logout</string>
+    <string name="nav_desludging_vehicles">Desludging Vehicles</string>
     <!-- Dashboard -->
     <string name="dashboard_title">Dashboard</string>
     <string name="dashboard_total_tasks">Total Tasks</string>
     <string name="dashboard_pending">Pending</string>
     <string name="dashboard_in_progress">In Progress</string>
     <string name="dashboard_completed">Completed</string>
-
-    <!-- Tasks -->
+    <string name="dashboard_welcome">Welcome</string>
+    <!-- Tasks / Todo List -->
+    <string name="tasks_title">Tasks</string>
+    <string name="tasks_emptying_scheduling">Emptying Scheduling</string>
+    <string name="tasks_site_preparation">Site Preparation</string>
+    <string name="tasks_emptying_service">Emptying Service</string>
+    <string name="tasks_additional_repairing">Additional Repairing</string>
     <string name="task_status_pending">Pending</string>
     <string name="task_status_in_progress">In Progress</string>
     <string name="task_status_completed">Completed</string>
@@ -26,12 +31,12 @@
     <string name="task_priority_medium">Medium</string>
     <string name="task_priority_high">High</string>
     <string name="task_priority_urgent">Urgent</string>
-
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_app_section">App Settings</string>
     <string name="settings_language">Language</string>
     <string name="settings_theme">Theme</string>
+    <string name="settings_date_format">Date Format</string>
     <string name="settings_offline_section">Offline Settings</string>
     <string name="settings_offline_mode">Offline Mode</string>
     <string name="settings_auto_sync">Auto Sync</string>
@@ -41,12 +46,10 @@
     <string name="settings_clear_cache">Clear Cache</string>
     <string name="settings_about_section">About</string>
     <string name="settings_version">Version</string>
-
     <!-- Theme Options -->
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_auto">Auto</string>
-
     <!-- Common Actions -->
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
@@ -56,26 +59,483 @@
     <string name="action_done">Done</string>
     <string name="action_retry">Retry</string>
     <string name="action_sync">Sync</string>
-
+    <string name="action_ok">OK</string>
+    <string name="action_yes">Yes</string>
+    <string name="action_no">No</string>
+    <string name="action_select">Select</string>
+    <string name="action_next">Next</string>
+    <string name="action_submit">Submit</string>
+    <string name="action_update">Update</string>
+    <string name="action_postpone">Postpone</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
     <!-- Messages -->
     <string name="message_loading">Loading...</string>
     <string name="message_error">Error occurred</string>
     <string name="message_no_internet">No internet connection</string>
     <string name="message_sync_success">Sync completed successfully</string>
     <string name="message_sync_failed">Sync failed</string>
-
+    <string name="message_saving">Saving...</string>
+    <string name="message_submitting">Submitting...</string>
+    <string name="message_saved_successfully">Saved successfully!</string>
+    <string name="message_submitted_successfully">Form submitted successfully!</string>
+    <string name="message_draft_saved">Draft saved successfully!</string>
+    <string name="message_postponed_successfully">Application postponed successfully</string>
+    <string name="message_please_wait">Please wait while we load the application information...</string>
+    <string name="title_loading_application">Loading Application Details</string>
+    <string name="message_loading_application">Please wait while we load the application information...</string>
     <!-- Offline -->
     <string name="offline_mode">Offline Mode</string>
     <string name="offline_cached_maps">Using Cached Maps</string>
     <string name="offline_sync_pending">%d items pending sync</string>
-
     <!-- Map -->
     <string name="map_download_area">Download Area</string>
     <string name="map_cache_stats">Cache Statistics</string>
     <string name="map_offline_available">Offline maps available</string>
-
-    <!-- Form Labels - Emptying Workflow -->
+    <!-- Form Section Headers -->
+    <string name="section_applicant_information">Applicant Information</string>
+    <string name="section_applicant_details">Applicant Details</string>
+    <string name="section_additional_services">Additional Services</string>
+    <string name="section_payment_information">Payment Information</string>
+    <string name="section_receiver_information">Receiver Information</string>
+    <string name="section_scheduling_information">Scheduling Information</string>
+    <string name="section_service_details">Service Details</string>
+    <string name="section_vehicle_sludge_details">Vehicle &amp; Sludge Details</string>
+    <string name="section_payment_documentation">Payment &amp; Documentation</string>
+    <string name="section_application_details">Application Details</string>
+    <string name="section_trip_entries">Trip Entries</string>
+    <string name="section_payment_details">Payment Details</string>
+    <!-- Form Labels - Common -->
+    <string name="label_application_id">Application ID</string>
+    <string name="label_sanitation_customer_id">Sanitation Customer ID</string>
+    <string name="label_applicant_name">Applicant Name</string>
+    <string name="label_applicant_contact">Applicant Contact</string>
+    <string name="label_service_receiver_name">Service Receiver Name</string>
+    <string name="label_service_receiver_contact">Service Receiver Contact</string>
+    <string name="label_comments">Comments</string>
+    <string name="label_latitude">Latitude</string>
+    <string name="label_longitude">Longitude</string>
+    <!-- Workflow Progress -->
+    <string name="label_progress">Progress:</string>
+    <string name="workflow_progress_format">%d/%d</string>
+    <string name="workflow_stage_scheduling">Scheduling</string>
+    <string name="workflow_stage_site_preparation">Site Preparation</string>
+    <string name="workflow_stage_emptying_service">Emptying Service</string>
+    <string name="workflow_stage_completed">Completed</string>
+    <string name="workflow_stage_cancelled">Cancelled</string>
+    <!-- Site Preparation Form -->
+    <string name="form_site_preparation_title">Site Preparation Form</string>
+    <string name="label_free_service_under_pbc">Free Service Under PBC</string>
+    <string name="label_additional_repairing">Additional repairing</string>
+    <string name="label_other_additional_repairing">Other Additional Repairing</string>
+    <string name="label_extra_payment_required">Extra payment required</string>
+    <string name="label_amount_extra_payment">Amount of Extra Payment</string>
+    <string name="label_receiver_same_as_applicant">Receiver is same as applicant</string>
+    <string name="label_propose_emptying_date">Propose Emptying Date</string>
+    <string name="label_need_reschedule">need reschedule?</string>
+    <string name="label_new_proposed_emptying_date">New Proposed Emptying Date</string>
+    <string name="button_save_draft">Draft</string>
+    <string name="cd_call_applicant">Call applicant</string>
+    <string name="cd_call_service_receiver">Call service receiver</string>
+    <string name="cd_postpone">Postpone</string>
+    <string name="cd_containment">Containment</string>
+    <!-- Emptying Service Form -->
+    <string name="form_emptying_service_title">Emptying Service Form</string>
+    <string name="label_emptied_date">Emptied Date</string>
+    <string name="label_start_time">Start Time</string>
+    <string name="label_end_time">End Time</string>
+    <string name="label_additional_trip_required">Additional Trip Required</string>
+    <string name="label_desludging_vehicle_id">Desludging Vehicle ID *</string>
+    <string name="label_sludge_type">Sludge Type</string>
+    <string name="label_type_of_sludge">Type of Sludge</string>
+    <string name="label_pumping_point_type">Pumping Point Type *</string>
+    <string name="label_presence_pumping_point">Presence of Pumping Point</string>
+    <string name="label_location_of_containment">Location of Containment</string>
+    <string name="option_around_house">Around the house</string>
+    <string name="option_ground_floor">Ground floor</string>
+    <string name="label_additional_repairing_in_emptying">Additional Repairing in Emptying</string>
+    <string name="label_other_additional_repairing_emptying">Other Additional Repairing</string>
+    <string name="label_free_under_pbc">Free Under PBC</string>
+    <string name="label_amount_regular_cost">Amount of Regular Cost</string>
+    <string name="label_amount_extra_cost">Amount of Extra Cost</string>
+    <string name="label_receipt_number">Receipt Number</string>
+    <string name="label_receipt_image">Receipt Image</string>
+    <string name="label_picture_of_emptying">Picture of Emptying</string>
+    <string name="label_service_receiver_same_as_applicant">Service Receiver Same as Applicant</string>
+    <string name="button_capture_gps">Capture GPS</string>
+    <string name="button_update_map">Update Map</string>
+    <string name="option_mixed">Mixed</string>
+    <string name="option_not_mixed">Not Mixed</string>
+    <string name="option_yes">Yes</string>
+    <string name="option_no">No</string>
+    <string name="option_processing_food">Processing food</string>
+    <string name="option_oil_and_fat">Oil and fat (restaurant)</string>
+    <string name="option_content_of_fuel">Content of fuel</string>
+    <string name="option_cover">Cover</string>
+    <string name="option_tube">Tube</string>
+    <string name="option_pierce">Pierce</string>
+    <!-- Additional Repairing Form -->
+    <string name="form_additional_trips_title">Additional Trips</string>
+    <string name="label_trip_number">Trip %d</string>
+    <string name="label_amount_regular_payment">Amount of Regular Payment</string>
+    <string name="label_total_amount_regular_payment">Total Amount of Regular Payment</string>
+    <string name="label_total_extra_payment">Total Extra Payment</string>
+    <string name="button_submitting_trip">Submitting Trip...</string>
+    <string name="button_loading_payment_details">Loading Payment Details...</string>
+    <string name="button_submitting_payment">Submitting Payment...</string>
+    <string name="status_completed">Completed!</string>
+    <!-- Emptying Scheduling Form -->
+    <string name="form_emptying_scheduling_title">Emptying Scheduling Form</string>
+    <string name="label_applicant_is_same_as_customer">Applicant is same as customer</string>
+    <string name="label_purpose_of_emptying_request">Purpose of Emptying Request</string>
+    <string name="label_customer_name">Customer Name</string>
+    <string name="label_customer_contact">Customer Contact</string>
+    <string name="cd_call_customer">Call customer</string>
+    <!-- Containment Form -->
+    <string name="form_containment_title">Containment Form</string>
+    <string name="label_type_of_toilet">Type of Toilet</string>
+    <string name="label_toilet_connection">Toilet Connection</string>
+    <string name="label_type_of_containment">Type of Containment</string>
+    <string name="label_size_of_containment">Size of Containment (m³)</string>
+    <string name="label_emptied_status">Emptied Status</string>
+    <string name="label_sewer_code">Sewer Code</string>
+    <string name="button_submit_containment">Submit Containment</string>
+    <!-- Time Picker -->
+    <string name="time_picker_select_time">Select %s</string>
+    <string name="time_picker_select">Select Time</string>
+    <string name="validation_time_must_be_after">Time must be after %s</string>
+    <string name="cd_select_time">Select time</string>
+    <!-- Date Picker -->
+    <string name="cd_select_date">Select date</string>
+    <!-- Postpone Dialog -->
+    <string name="dialog_postpone_title">Postpone Application</string>
+    <string name="dialog_postpone_message">Select a new date to postpone this application:</string>
+    <string name="label_postpone_date">Postpone Date</string>
+    <string name="button_confirm_postpone">Confirm Postpone</string>
+    <!-- Loading States -->
+    <string name="loading_title_application_details">Loading Application Details</string>
+    <!-- Error Messages -->
+    <string name="error_prefix">Error: %s</string>
+    <string name="error_failed_to_submit">Failed to submit</string>
+    <string name="error_failed_to_save_draft">Failed to save draft</string>
+    <!-- Validation Messages -->
+    <string name="validation_required">This field is required</string>
+    <string name="validation_invalid_phone">Invalid phone number</string>
+    <string name="validation_phone_too_long">Phone number cannot exceed 13 digits</string>
+    <string name="validation_cambodian_phone_format">Please enter a valid Cambodian phone number (e.g., 012345678 or +85512345678)</string>
+    <string name="validation_invalid_email">Invalid email address</string>
+    <string name="validation_invalid_number">Please enter a valid number</string>
+    <string name="validation_invalid_date">Invalid date format</string>
+    <string name="validation_min_length">Minimum %d characters required</string>
+    <string name="validation_max_length">Maximum %d characters allowed</string>
+    <!-- Dropdown Options -->
+    <string name="dropdown_select">Select...</string>
+    <string name="dropdown_please_select">Please select an option</string>
+    <string name="dropdown_other">Other</string>
+    <string name="dropdown_loading">Loading...</string>
+    <!-- Content Descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_expand">Expand</string>
+    <string name="cd_collapse">Collapse</string>
+    <string name="cd_schedule">Schedule</string>
+    <string name="cd_camera">Camera</string>
+    <string name="cd_gallery">Gallery</string>
+    <string name="cd_add_photo">Add photo</string>
+    <string name="cd_remove_image">Remove image</string>
+    <string name="cd_selected_image">Selected image</string>
+    <string name="cd_menu">Menu</string>
+    <string name="cd_open_menu">Open menu</string>
+    <string name="cd_refresh">Refresh</string>
+    <string name="cd_my_location">My Location</string>
+    <string name="cd_location_pin">Location Pin</string>
+    <string name="cd_navigate_back">Navigate back</string>
+    <string name="cd_smis_logo">SMIS Logo</string>
+    <string name="cd_warning">Warning</string>
+    <string name="cd_error">Error</string>
+    <string name="cd_dropdown">Dropdown</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_granted">Granted</string>
+    <string name="cd_offline">Offline</string>
+    <string name="cd_switch_map_type">Switch Map Type</string>
+    <string name="cd_navigate_to_data_region">Navigate to Data Region</string>
+    <string name="cd_cache_stats">Cache Stats</string>
+    <!-- Building Survey Section Headers -->
+    <string name="section_building_location">A. Building Location Information</string>
+    <string name="section_building_info">B. Building Information</string>
+    <string name="section_toilet_containment">C. Toilet and Containment Information</string>
+    <string name="section_water_source">D. Water Source Information</string>
+    <string name="section_customer_details">Customer Details</string>
+    <string name="section_containment_accessibility">Containment Accessibility</string>
+    <string name="section_containment_details">Containment Details</string>
+    <string name="section_emptying_details">Emptying Details</string>
+    <string name="section_sanitation_system">Sanitation System</string>
+    <string name="section_payment_visit_details">Payment &amp; Visit Details</string>
+    <string name="section_ever_emptied">Ever Emptied</string>
+    <string name="section_location_containment">Location of Containment</string>
+    <string name="section_technology">Technology</string>
+    <string name="section_vacutug_accessible">Vacutug Accessible</string>
+    <string name="section_gender_respondent">Gender of Respondent</string>
+    <string name="section_extra_payment_required">Extra Payment Required?</string>
+    <string name="section_site_visit_required">Site Visit Required?</string>
+    <!-- Building Survey Form Labels -->
+    <string name="label_bin">BIN (Building Identification Number)</string>
+    <string name="label_bin_no_shared">BIN No (If shared latrine/building,if shared)</string>
+    <string name="label_building_photo">Building Photo *</string>
+    <string name="label_building_use">Building Use</string>
+    <string name="label_functional_use">Functional Use</string>
+    <string name="label_construction_date">Construction Date</string>
+    <string name="label_construction_year">Construction Year</string>
+    <string name="label_construction_year_tank">Construction Year of Storage Tank</string>
+    <string name="label_contact">Contact</string>
+    <string name="label_defecation_place">Defecation Place</string>
+    <string name="label_floor_count">Floor Count *</string>
+    <string name="label_is_respondent_owner">Is Respondent Owner? *</string>
+    <string name="label_is_connection_shared">Is Connection Shared</string>
+    <string name="label_main_connection_bin">Main Connection BIN</string>
+    <string name="label_other_connection">Other Connection *</string>
+    <string name="label_other_tank_type">Other Tank Type *</string>
+    <string name="label_outlet_storage_tank">Outlet of Storage Tank *</string>
+    <string name="label_owner_contact">Owner Contact *</string>
+    <string name="label_owner_gender">Owner Gender *</string>
+    <string name="label_owner_name_english">Owner Name (English) *</string>
+    <string name="label_owner_name_khmer">Owner Name (Khmer) *</string>
+    <string name="label_name_respondent">Name of Respondent (English)</string>
+    <string name="label_households_served">Households Served *</string>
+    <string name="label_applied_on">Applied On</string>
+    <string name="label_ever_emptied_before">Ever Emptied Before?</string>
+    <string name="label_ever_emptied_tank">Ever Emptied the Storage Tank (Yes/No)</string>
+    <string name="label_experience_issues">Experience issues with containment?</string>
+    <string name="label_experience_issues_containment">Experience Issues with Containment</string>
+    <string name="label_accessible_desludging_vehicle">Accessible to Desludging Vehicle</string>
+    <string name="label_accessible_desludging_vehicle_yesno">Accessible to Desludging Vehicle (Yes/No)</string>
+    <string name="label_last_emptied_date">Last Emptied Date</string>
+    <string name="label_last_emptied_date_required">Last Emptied Date *</string>
+    <string name="label_last_emptied_year">Last Emptied Year</string>
+    <string name="label_reason_no_emptied_date">Reason for no Emptied Date *</string>
+    <string name="label_reason_no_emptied_date_optional">Reason for No Emptied Date</string>
+    <string name="label_reason_not_emptied">Reason for Not Being Emptied Before</string>
+    <string name="label_reason_if_not_emptied">Reason if not emptied before</string>
+    <string name="label_village_optional">Village (Optional)</string>
+    <string name="label_respondent_contact">Respondent Contact</string>
+    <string name="label_owner_name">Owner Name</string>
+    <string name="label_owner_contact_simple">Owner Contact</string>
+    <string name="label_no_floors">No. of Floors</string>
+    <string name="label_household_served">Household Served</string>
+    <string name="label_population_served">Population Served</string>
+    <string name="label_floor_area">Floor Area (m²)</string>
+    <string name="label_no_toilets">No. of Toilets</string>
+    <string name="label_toilet_count">Toilet Count</string>
+    <string name="label_no_tanks">No. of Tanks</string>
+    <string name="label_size_tank">Size of Tank (m³)</string>
+    <string name="label_storage_tank_size">Storage Tank Size (m³)</string>
+    <string name="label_distance_well">Distance from Well (m)</string>
+    <string name="label_containment_location">Containment Location</string>
+    <string name="label_distance_house_containment">Distance House to Containment (m)</string>
+    <string name="label_water_customer_id">Water Customer ID</string>
+    <string name="label_meter_serial_number">Meter Serial Number</string>
+    <string name="label_sanitation_customer_name">Sanitation Customer Name</string>
+    <string name="label_sanitation_customer_address">Sanitation Customer Address</string>
+    <string name="label_sanitation_customer_contact">Sanitation Customer Contact</string>
+    <string name="label_area_name">Area Name</string>
+    <string name="label_other_storage_tank_connection">Other Storage Tank Connection</string>
+    <string name="label_other_type_storage_tank">Other Type of Storage Tank</string>
+    <string name="label_amount_extra_payment_estimation">Amount of Extra Payment (Estimation)</string>
+    <!-- Map & Location -->
+    <string name="map_title">Map</string>
+    <string name="map_type">Map Type</string>
+    <string name="map_layer_options">Layer Options</string>
+    <string name="map_overlays">Overlays</string>
+    <string name="map_available_types">Available Map Types:</string>
+    <string name="map_building_layer_local">Building Layer (Local)</string>
+    <string name="map_road_networks">Road Networks</string>
+    <string name="map_sangkat_boundaries">Sangkat Boundaries</string>
+    <string name="map_containments">Containments</string>
+    <string name="map_download_map_area">Download Map Area</string>
+    <string name="map_download_tiles">Download map tiles for offline use</string>
+    <string name="map_offline_cache_stats">Offline Cache Statistics</string>
+    <string name="button_download">Download</string>
+    <!-- Task Management -->
+    <string name="title_task_management">Task Management</string>
+    <string name="title_manage_additional_trips">Manage Additional Trips</string>
+    <string name="status_emptied">Emptied</string>
+    <string name="message_no_applications_additional_trips">No applications requiring additional trips</string>
+    <string name="message_submitting_trip">Submitting Trip...</string>
+    <string name="message_loading_payment_details">Loading Payment Details...</string>
+    <string name="label_select_time">Select Time</string>
+    <string name="message_loading_tasks">Loading tasks...</string>
+    <string name="message_no_applications">No Applications Found</string>
+    <string name="message_pull_to_refresh">Pull to refresh or use the menu to load tasks.</string>
+    <string name="message_ready_to_load">Ready to load</string>
+    <string name="message_loading_details">Loading details...</string>
+    <string name="label_application_id_hash">Application ID #%d</string>
+    <!-- Desludging Vehicle -->
+    <string name="title_update_vehicle_status">Update Vehicle Status</string>
+    <string name="status_active">Active</string>
+    <string name="status_inactive">Inactive</string>
+    <string name="status_under_maintenance">Under Maintenance</string>
+    <!-- Postpone Dialog Extra Labels -->
+    <string name="label_postpone_from">Postpone From (Current Date)</string>
+    <string name="label_postpone_until">Postpone Until (New Date)</string>
+    <string name="label_reason">Reason</string>
+    <string name="label_remark">Remark</string>
+    <string name="button_postpone">Postpone</string>
+    <!-- Logout Dialog -->
+    <string name="dialog_logout_title">Logout</string>
+    <string name="button_logout_without_syncing">Logout Without Syncing</string>
+    <string name="dialog_permission_later">Later</string>
+    <!-- Misc Buttons & Actions -->
+    <string name="action_close">Close</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_previous">Previous</string>
+    <string name="button_close">Close</string>
+    <string name="button_save">Save</string>
+    <string name="button_clear">Clear</string>
+    <string name="button_retry">Retry</string>
+    <string name="button_previous">Previous</string>
+    <string name="button_next">Next</string>
+    <!-- Data Screen -->
+    <string name="data_screen_title">This is the Data Screen</string>
+    <!-- Misc Messages -->
+    <string name="message_please_specify">Please specify</string>
+    <string name="message_please_specify_other_issue">Please specify other issue</string>
+    <string name="message_please_specify_other_reason">Please Specify other reason</string>
+    <!-- Version -->
+    <string name="version_info">SMIS v1.0</string>
+    <!-- Status Filters -->
+    <string name="filter_all">All</string>
+    <string name="filter_today">Today</string>
+    <string name="filter_urgent">Urgent</string>
+    <string name="filter_initiated">Initiated</string>
+    <string name="filter_scheduled">Scheduled</string>
+    <string name="filter_rescheduled">Rescheduled</string>
+    <string name="filter_site_preparation">Site-Preparation</string>
+    <string name="filter_emptied">Emptied</string>
+    <string name="filter_completed">Completed</string>
+    <string name="filter_cancelled">Cancelled</string>
+    <string name="filter_reassigned">Reassigned</string>
+    <string name="filter_pending">Pending</string>
+    <string name="label_filter_by_status">Filter by Status</string>
+    <!-- Additional Repairing -->
+    <string name="screen_additional_trips">Additional Trips</string>
+    <string name="status_ready_to_load">Ready to load</string>
+    <string name="button_draft">Draft</string>
+    <string name="button_submit">Submit</string>
+    <string name="message_submitting_payment">Submitting Payment...</string>
+    <string name="message_completed">Completed</string>
+    
+    <!-- Building Survey -->
+    <string name="screen_building_survey">Building Survey</string>
+    <string name="label_no_of_floors">Number of Floors</string>
+    <string name="label_no_of_toilets">Number of Toilets</string>
+    <string name="label_no_of_tanks">Number of Tanks</string>
+    <string name="label_size_of_tank">Size of Tank</string>
+    <string name="label_distance_from_well">Distance from Well</string>
+    <string name="label_distance_house_to_containment">Distance House to Containment</string>
+    <string name="button_submit_survey">Submit Survey</string>
+    <string name="button_update">Update</string>
+    <string name="message_no_applications_found">No Applications Found</string>
+    <string name="action_sync_and_logout">Sync and Logout</string>
+    <string name="action_logout_without_syncing">Logout Without Syncing</string>
+    <string name="label_construction_year_storage_tank">Construction Year of Storage Tank</string>
+    <string name="screen_task_management">Task Management</string>
+    <string name="label_yes">Yes</string>
+    <string name="label_no">No</string>
+    <string name="label_proposed_date">Proposed Date</string>
+    <string name="message_not_scheduled">Not Scheduled</string>
+    <string name="cd_open_form">Open Form</string>
+    <string name="screen_data_placeholder">Data Screen Placeholder</string>
+    <string name="label_please_specify">Please Specify</string>
+    <string name="label_reason_not_being_emptied_before">Reason Not Being Emptied Before</string>
+    <string name="label_reason_for_no_emptied_date">Reason for No Emptied Date</string>
+    <string name="label_year_of_installation">Year of Installation</string>
+    <string name="section_containments">Containments</string>
+    <string name="message_error_format">Error Format</string>
+    <string name="label_purpose_of_emptying">Purpose of Emptying</string>
+    <string name="label_please_specify_other_reason">Please Specify Other Reason</string>
+    <string name="label_reason_not_emptied_before">Reason Not Emptied Before</string>
+    <string name="label_experience_containment_issues">Experience Containment Issues</string>
+    <string name="label_please_specify_other_issue">Please Specify Other Issue</string>
+    <string name="screen_emptying_scheduling">Emptying Scheduling</string>
+    <string name="label_amount_of_regular_cost">Amount of Regular Cost</string>
+    <string name="label_amount_of_extra_cost">Amount of Extra Cost</string>
+    <string name="screen_emptying_service">Emptying Service</string>
+    <string name="action_logout">Logout</string>
+    <string name="title_layer_options">Layer Options</string>
+    <string name="label_map_type">Map Type</string>
+    <string name="label_overlays">Overlays</string>
+    <string name="label_building_layer_local">Building Layer (Local)</string>
+    <string name="label_sangkat_boundaries">Sangkat Boundaries</string>
+    <string name="label_road_networks">Road Networks</string>
+    <string name="label_sewer_networks">Sewer Networks</string>
+    <string name="title_download_map_area">Download Map Area</string>
+    <string name="message_download_map_tiles">Download map tiles for offline use</string>
+    <string name="label_zoom_levels_recommended">Zoom Levels (Recommended: 13-18)</string>
+    <string name="title_offline_cache_statistics">Offline Cache Statistics</string>
+    <string name="label_available_map_types">Available Map Types</string>
+    <string name="button_clear_cache">Clear Cache</string>
+    <string name="setting_date_format">Date Format</string>
+    <string name="screen_site_preparation_form">Site Preparation Form</string>
+    <string name="label_amount_of_extra_payment">Amount of Extra Payment</string>
+    <string name="checkbox_receiver_same_as_applicant">Receiver same as applicant</string>
+    <string name="button_saving">Saving...</string>
+    <string name="button_submitting">Submitting...</string>
+    <string name="screen_site_preparation">Site Preparation</string>
+    <string name="form_building_details">Building Details</string>
+    <string name="form_building_name">Building Name</string>
+    <string name="form_building_type">Building Type</string>
+    <string name="form_number_of_floors">Number of Floors</string>
+    <string name="form_total_units">Total Units</string>
+    <string name="form_occupied_units">Occupied Units</string>
+    <string name="form_construction_year">Construction Year</string>
+    <string name="form_building_area">Building Area</string>
+    <string name="form_compound_area">Compound Area</string>
+    <string name="form_sanitation_system">Sanitation System</string>
+    <string name="form_toilet_type">Toilet Type</string>
+    <string name="form_tank_location">Tank Location</string>
+    <string name="form_tank_material">Tank Material</string>
+    <string name="form_tank_condition">Tank Condition</string>
+    <string name="form_last_emptied">Last Emptied</string>
+    <string name="form_emptying_frequency">Emptying Frequency</string>
+    <string name="form_access_road">Access Road</string>
+    <string name="form_road_width">Road Width</string>
+    <string name="form_distance_to_tank">Distance to Tank</string>
+    <string name="form_contact_info">Contact Information</string>
+    <string name="form_owner_name">Owner Name</string>
+    <string name="form_phone_number">Phone Number</string>
+    <string name="form_email">Email</string>
+    <string name="form_contact_person">Contact Person</string>
+    <string name="form_alternate_phone">Alternate Phone</string>
+    <string name="form_clear">Clear</string>
+    <string name="form_save_draft">Save Draft</string>
+    <string name="form_submit">Submit</string>
     <string name="form_task_details">Task Details</string>
+    <string name="form_worker_name">Worker Name</string>
+    <string name="form_supervisor">Supervisor</string>
+    <string name="form_team_size">Team Size</string>
+    <string name="form_equipment">Equipment</string>
+    <string name="form_vehicle_number">Vehicle Number</string>
+    <string name="form_truck_capacity">Truck Capacity</string>
+    <string name="form_emptying_type">Emptying Type</string>
+    <string name="form_tank_type">Tank Type</string>
+    <string name="form_tank_capacity">Tank Capacity</string>
+    <string name="form_sludge_level">Sludge Level</string>
+    <string name="form_water_level">Water Level</string>
+    <string name="form_volume_emptied">Volume Emptied</string>
+    <string name="form_sludge_quality">Sludge Quality</string>
+    <string name="form_environmental_conditions">Environmental Conditions</string>
+    <string name="form_weather">Weather</string>
+    <string name="form_temperature">Temperature</string>
+    <string name="form_notes">Notes</string>
+    <string name="form_additional_comments">Additional Comments</string>
+    <string name="nav_todo_list">To-Do List</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="status_unknown">Unknown</string>
+    <string name="message_name_not_provided">Name not provided</string>
+    <string name="action_filter_by_date">Filter by Date</string>
+    <string name="cd_clear_date_filter">Clear date filter</string>
+    <string name="message_pull_to_refresh_tasks">Pull to refresh tasks</string>
+    <string name="message_all_clear">All Clear!</string>
+    <string name="message_no_applications_filter_criteria">No applications match your filter criteria</string>
     <string name="form_location">Location</string>
     <string name="form_address">Address</string>
     <string name="form_coordinates">Coordinates</string>
@@ -86,102 +546,97 @@
     <string name="form_start_time">Start Time</string>
     <string name="form_end_time">End Time</string>
     <string name="form_duration">Duration</string>
-    <string name="form_worker_name">Worker Name</string>
-    <string name="form_supervisor">Supervisor</string>
-    <string name="form_team_size">Team Size</string>
-    <string name="form_equipment">Equipment</string>
-    <string name="form_vehicle_number">Vehicle Number</string>
-    <string name="form_truck_capacity">Truck Capacity (Liters)</string>
-
-    <!-- Emptying Process Form -->
-    <string name="form_emptying_type">Emptying Type</string>
-    <string name="form_tank_type">Tank Type</string>
-    <string name="form_tank_capacity">Tank Capacity (Liters)</string>
-    <string name="form_sludge_level">Sludge Level (%)</string>
-    <string name="form_water_level">Water Level (%)</string>
-    <string name="form_volume_emptied">Volume Emptied (Liters)</string>
-    <string name="form_sludge_quality">Sludge Quality</string>
     <string name="form_access_difficulty">Access Difficulty</string>
-    <string name="form_safety_equipment">Safety Equipment Used</string>
-    <string name="form_environmental_conditions">Environmental Conditions</string>
-    <string name="form_weather">Weather</string>
-    <string name="form_temperature">Temperature (°C)</string>
-    <string name="form_notes">Notes</string>
-    <string name="form_additional_comments">Additional Comments</string>
+    <string name="form_safety_equipment">Safety Equipment</string>
     <string name="form_photos">Photos</string>
     <string name="form_before_photos">Before Photos</string>
     <string name="form_after_photos">After Photos</string>
-
-    <!-- Building Survey Form -->
-    <string name="form_building_details">Building Details</string>
-    <string name="form_building_name">Building Name</string>
-    <string name="form_building_type">Building Type</string>
-    <string name="form_number_of_floors">Number of Floors</string>
-    <string name="form_total_units">Total Units</string>
-    <string name="form_occupied_units">Occupied Units</string>
-    <string name="form_construction_year">Construction Year</string>
-    <string name="form_building_area">Building Area (m²)</string>
-    <string name="form_compound_area">Compound Area (m²)</string>
-
-    <!-- Sanitation System -->
-    <string name="form_sanitation_system">Sanitation System</string>
-    <string name="form_toilet_type">Toilet Type</string>
     <string name="form_septic_tank">Septic Tank</string>
-    <string name="form_tank_location">Tank Location</string>
-    <string name="form_tank_material">Tank Material</string>
-    <string name="form_tank_condition">Tank Condition</string>
-    <string name="form_last_emptied">Last Emptied</string>
-    <string name="form_emptying_frequency">Emptying Frequency</string>
-    <string name="form_access_road">Access Road</string>
-    <string name="form_road_width">Road Width (m)</string>
-    <string name="form_distance_to_tank">Distance to Tank (m)</string>
-
-    <!-- Contact Information -->
-    <string name="form_contact_info">Contact Information</string>
-    <string name="form_owner_name">Owner Name</string>
-    <string name="form_phone_number">Phone Number</string>
-    <string name="form_email">Email</string>
-    <string name="form_contact_person">Contact Person</string>
-    <string name="form_alternate_phone">Alternate Phone</string>
-
-    <!-- Validation Messages -->
-    <string name="validation_required">This field is required</string>
-    <string name="validation_invalid_phone">Invalid phone number</string>
-    <string name="validation_invalid_email">Invalid email address</string>
-    <string name="validation_invalid_number">Please enter a valid number</string>
-    <string name="validation_invalid_date">Invalid date format</string>
-    <string name="validation_min_length">Minimum %d characters required</string>
-    <string name="validation_max_length">Maximum %d characters allowed</string>
-
-    <!-- Form Actions -->
-    <string name="form_submit">Submit</string>
-    <string name="form_save_draft">Save Draft</string>
-    <string name="form_clear">Clear</string>
-    <string name="form_reset">Reset</string>
-    <string name="form_next">Next</string>
-    <string name="form_previous">Previous</string>
-    <string name="form_finish">Finish</string>
-
-    <!-- Dropdown Options -->
-    <string name="dropdown_select">Select...</string>
-    <string name="dropdown_please_select">Please select an option</string>
-    <string name="dropdown_other">Other</string>
-
-    <!-- Building Types -->
     <string name="building_residential">Residential</string>
     <string name="building_commercial">Commercial</string>
     <string name="building_institutional">Institutional</string>
     <string name="building_mixed_use">Mixed Use</string>
-
-    <!-- Tank Types -->
     <string name="tank_septic">Septic Tank</string>
     <string name="tank_holding">Holding Tank</string>
     <string name="tank_pit_latrine">Pit Latrine</string>
     <string name="tank_other">Other</string>
-
-    <!-- Quality Levels -->
     <string name="quality_good">Good</string>
     <string name="quality_fair">Fair</string>
     <string name="quality_poor">Poor</string>
     <string name="quality_very_poor">Very Poor</string>
+    <string name="form_reset">Reset</string>
+    <string name="form_next">Next</string>
+    <string name="form_previous">Previous</string>
+    <string name="form_finish">Finish</string>
+    <string name="checkbox_applicant_same_as_customer">Applicant is same as customer</string>
+    <string name="card_emptying_scheduling">Emptying Scheduling</string>
+    <string name="card_site_preparation">Site Preparation</string>
+    <string name="card_emptying_service">Emptying Service</string>
+    <string name="card_additional_trips">Additional Trips</string>
+    <string name="language_english">English</string>
+    <string name="language_khmer">Khmer</string>
+    <string name="settings_database_size">Database Size</string>
+    <string name="status_syncing">Syncing...</string>
+    <string name="status_calculating">Calculating...</string>
+    <string name="status_clearing">Clearing...</string>
+    <string name="message_cache_cleared">Cache cleared successfully</string>
+    <string name="dialog_select_language">Select Language</string>
+    <string name="settings_work_without_internet">Work without internet connection</string>
+    <string name="settings_sync_when_online">Sync data when online</string>
+    <string name="settings_tap_to_test_sync">Tap to test manual sync</string>
+    <string name="settings_test_sync">Test Sync</string>
+    <string name="settings_clear_cache_description">Clear cached data to free up storage space</string>
+    <string name="unit_megabytes">MB</string>
+    <string name="message_logout_subtitle">Sign out of your account</string>
+    <string name="label_new_building">New Building</string>
+    <string name="action_new_survey">New Survey</string>
+    <string name="cd_toggle_map_layers">Toggle Map Layers</string>
+    <string name="section_application_information">Application Information</string>
+    <string name="label_application_date">Application Date</string>
+    <string name="title_emptying_request_form">Emptying Request Form</string>
+    <string name="permission_camera_access">Camera Access</string>
+    <string name="permission_camera_description">Take photos for building surveys and documentation</string>
+    <string name="permission_photo_gallery">Photo Gallery Access</string>
+    <string name="permission_photo_gallery_description">Select photos from your device</string>
+    <string name="permission_location">Location Access</string>
+    <string name="permission_location_description">Show your current location on the map</string>
+    <string name="action_grant_permissions">Grant Permissions</string>
+    <string name="section_quick_actions">Quick Actions</string>
+    <string name="action_view_all">View All</string>
+    <string name="action_continue_to_app">Continue to App</string>
+    <string name="action_grant_all_permissions">Grant All Permissions</string>
+    <string name="permission_welcome_title">Welcome to SMIS</string>
+    <string name="permission_app_subtitle">Sewer Management Information System</string>
+    <string name="permission_intro_message">To provide the best experience, SMIS needs access to the following:</string>
+    <string name="cd_app_logo">SMIS Logo</string>
+    
+    <!-- Navigation strings -->
+    <string name="nav_site_preparation">Site Preparation</string>
+    <string name="nav_emptying_service">Emptying Service</string>
+    <string name="nav_emptying_scheduling">Emptying Scheduling</string>
+    
+    <!-- Status strings -->
+    <string name="status_draft">Draft</string>
+    <string name="status_sync_failed">Sync Failed</string>
+    <string name="status_synced">Synced</string>
+    
+    <!-- Login screen strings -->
+    <string name="message_welcome_back">Welcome Back</string>
+    <string name="message_sign_in_to_continue">Sign in to continue</string>
+    <string name="label_email">Email</string>
+    <string name="label_password">Password</string>
+    <string name="cd_hide_password">Hide password</string>
+    <string name="cd_show_password">Show password</string>
+    <string name="action_forgot_password">Forgot Password?</string>
+    <string name="action_sign_in">Sign In</string>
+    <string name="label_remember_me">Remember Me</string>
+    
+    <!-- Form action strings -->
+    <string name="action_saving">Saving...</string>
+    <string name="action_submitting">Submitting...</string>
+    <string name="label_customer_phone">Customer Phone</string>
+    <string name="label_site_visit_required">Site Visit Required?</string>
+    
+    <!-- Offline map -->
+    <string name="offline_map">Offline Map</string>
 </resources>

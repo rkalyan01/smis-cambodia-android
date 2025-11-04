@@ -13,11 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import com.innovative.smis.ui.components.*
@@ -72,10 +74,10 @@ fun ContainmentFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(StringResources.getString(StringResources.CONTAINMENT_DETAILS, languageCode)) },
+                title = { Text(stringResource(R.string.section_containment_details)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = StringResources.getString(StringResources.BACK, languageCode))
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 }
             )
@@ -116,7 +118,7 @@ fun ContainmentFormScreen(
                 OutlinedTextField(
                     value = uiState.toiletConnection,
                     onValueChange = { },
-                    label = { Text("Toilet Connection") },
+                    label = { Text(stringResource(R.string.label_toilet_connection)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = false,
                     colors = disabledTextFieldColors()
@@ -152,7 +154,7 @@ fun ContainmentFormScreen(
                     OutlinedTextField(
                         value = uiState.otherTypeOfStorageTank,
                         onValueChange = viewModel::onOtherStorageTypeChange,
-                        label = { Text("Other Type of Storage Tank") },
+                        label = { Text(stringResource(R.string.label_other_type_storage_tank)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -187,7 +189,7 @@ fun ContainmentFormScreen(
                     OutlinedTextField(
                         value = uiState.otherStorageTankConnection,
                         onValueChange = viewModel::onOtherStorageConnectionChange,
-                        label = { Text("Other Storage Tank Connection") },
+                        label = { Text(stringResource(R.string.label_other_storage_tank_connection)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -203,7 +205,7 @@ fun ContainmentFormScreen(
                 OutlinedTextField(
                     value = uiState.sizeOfStorageTankM3,
                     onValueChange = viewModel::onSizeOfStorageTankM3Change,
-                    label = { Text("Storage Tank Size (m³)") },
+                    label = { Text(stringResource(R.string.label_storage_tank_size)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -214,7 +216,7 @@ fun ContainmentFormScreen(
                 OutlinedTextField(
                     value = uiState.constructionYear,
                     onValueChange = viewModel::onConstructionYearChange,
-                    label = { Text("Construction Year of Storage Tank") },
+                    label = { Text(stringResource(R.string.label_construction_year_storage_tank)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -265,7 +267,7 @@ fun ContainmentFormScreen(
                     OutlinedTextField(
                         value = uiState.lastEmptiedYear,
                         onValueChange = viewModel::onLastEmptiedYearChange,
-                        label = { Text("Last Emptied Year") },
+                        label = { Text(stringResource(R.string.label_last_emptied_year)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -288,7 +290,7 @@ fun ContainmentFormScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(StringResources.getString(StringResources.UPDATE, languageCode))
+                    Text(stringResource(R.string.action_update))
                 }
             }
 

@@ -20,12 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -144,7 +146,7 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(StringResources.getString(StringResources.SMIS_MAP, languageCode)) },
+                title = { Text(stringResource(R.string.nav_map)) },
                 navigationIcon = {
                     onMenuClick?.let { menuClick ->
                         IconButton(onClick = menuClick) {
@@ -168,7 +170,7 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = StringResources.getString(StringResources.NEW_SURVEY, languageCode),
+                            contentDescription = stringResource(R.string.action_new_survey),
                             tint = Color.White
                         )
                     }
@@ -183,7 +185,7 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
                 ) {
                     // FAB to open the new layers dialog
                     FloatingActionButton(onClick = { showLayersDialog = true }) {
-                        Icon(Icons.Default.Layers, contentDescription = StringResources.getString(StringResources.TOGGLE_MAP_LAYERS, languageCode))
+                        Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.cd_toggle_map_layers))
                     }
 
                     FloatingActionButton(
@@ -400,7 +402,7 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
                 TextButton(
                     onClick = { viewModel.dismissSurveyAlert() }
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_ok))
                 }
             }
         )
@@ -446,9 +448,9 @@ fun LayerSelectionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Layer Options", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
+                Text(stringResource(R.string.title_layer_options), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
 
-                Text("Map Type", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.label_map_type), style = MaterialTheme.typography.titleMedium)
                 Column {
                     val mapTypes = listOf(
                         "Normal" to MapType.NORMAL,
@@ -477,27 +479,27 @@ fun LayerSelectionDialog(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                Text("Overlays", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.label_overlays), style = MaterialTheme.typography.titleMedium)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Building Layer (Local)")
+                    Text(stringResource(R.string.label_building_layer_local))
                     Switch(checked = isBuildingLayerVisible, onCheckedChange = onBuildingLayerToggle)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Sangkat Boundaries")
+                    Text(stringResource(R.string.label_sangkat_boundaries))
                     Switch(checked = isSangkatLayerVisible, onCheckedChange = onSangkatLayerToggle)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Road Networks")
+                    Text(stringResource(R.string.label_road_networks))
                     Switch(checked = isRoadLayerVisible, onCheckedChange = onRoadLayerToggle)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Sewer Networks")
+                    Text(stringResource(R.string.label_sewer_networks))
                     Switch(checked = isSewerLayerVisible, onCheckedChange = onSewerLayerToggle)
                 }
 
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     TextButton(onClick = onDismiss, modifier = Modifier.padding(top = 12.dp)) {
-                        Text("Close")
+                        Text(stringResource(R.string.action_close))
                     }
                 }
             }

@@ -143,11 +143,7 @@ fun SitePreparationFormEntity.toApiRequest(applicationId: Int): SitePreparationF
             ?.filter { it.isNotEmpty() && it != "Others" }
             ?.joinToString(",")
             ?.takeIf { it.isNotEmpty() } ?: "",
-        otherAdditionalRepairing = if (this@toApiRequest.additionalRepairing?.contains("Others", ignoreCase = true) == true && this@toApiRequest.otherAdditionalRepairing?.isNotEmpty() == true) {
-            this@toApiRequest.otherAdditionalRepairing
-        } else {
-            ""
-        },
+        otherAdditionalRepairing = this@toApiRequest.otherAdditionalRepairing?.takeIf { it.isNotEmpty() } ?: "",
         extraPaymentRequired = if (this.extraPaymentRequired == true) "yes" else if (this.extraPaymentRequired == false) "no" else "yes",
         amountOfExtraPayment = this.amountOfExtraPayment ?: "",
         applicantName = this.applicantName ?: this.sanitationCustomerName ?: "",

@@ -30,7 +30,7 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     data class SettingsUiState(
-        val selectedLanguage: String = Languages.ENGLISH,
+        val selectedLanguage: String = Languages.KHMER,
         val themeMode: PreferenceHelper.ThemeMode = PreferenceHelper.ThemeMode.AUTO,
         val dateFormat: PreferenceHelper.DateFormat = PreferenceHelper.DateFormat.DD_MM_YYYY,
         val isOfflineModeEnabled: Boolean = true,
@@ -60,21 +60,22 @@ class SettingsViewModel(
         )
     }
 
+    private val _shouldRestartActivity = MutableStateFlow(false)
+    val shouldRestartActivity: StateFlow<Boolean> = _shouldRestartActivity.asStateFlow()
+    
     fun setLanguage(languageCode: String) {
         viewModelScope.launch {
             try {
                 preferenceHelper.selectedLanguage = languageCode
-
-                val context = getApplication<Application>().applicationContext
-                LocalizationHelper.setLocale(context, languageCode)
 
                 _uiState.value = _uiState.value.copy(
                     selectedLanguage = languageCode,
                     message = if (languageCode == Languages.KHMER) "ភាសាត្រូវបានផ្លាស់ប្តូរ" else "Language changed successfully"
                 )
 
-                kotlinx.coroutines.delay(2000)
-                _uiState.value = _uiState.value.copy(message = null)
+                // Signal to restart the activity for language change
+                kotlinx.coroutines.delay(500)
+                _shouldRestartActivity.value = true
 
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -83,6 +84,10 @@ class SettingsViewModel(
                 )
             }
         }
+    }
+    
+    fun activityRestarted() {
+        _shouldRestartActivity.value = false
     }
 
     fun setThemeMode(themeMode: PreferenceHelper.ThemeMode) {

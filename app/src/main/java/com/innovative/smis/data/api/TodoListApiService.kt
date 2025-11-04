@@ -45,13 +45,16 @@ interface TodoListApiService {
 
     /**
      * Get applications filtered by multiple criteria
-     * Endpoint: /api/application/show with multiple query parameters
+     * Endpoint: /api/applications/filter with multiple query parameters
+     * For urgent filter: urgency=yes&application_type=On-Demand
      */
     @GET("applications/filter")
     suspend fun getFilteredApplications(
         @Query("application_status") status: String? = null,
         @Query("eto_id") etoId: String? = null,
         @Query("proposed_emptying_date_from") dateFrom: String? = null,
-        @Query("proposed_emptying_date_to") dateTo: String? = null
+        @Query("proposed_emptying_date_to") dateTo: String? = null,
+        @Query("urgency") urgency: String? = null,
+        @Query("application_type") applicationType: String? = null
     ): Response<TodoListResponse>
 }

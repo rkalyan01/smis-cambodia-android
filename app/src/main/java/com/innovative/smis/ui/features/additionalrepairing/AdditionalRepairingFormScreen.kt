@@ -18,10 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.data.model.request.TripEntryUiState
 import com.innovative.smis.ui.components.ImagePickerComponent
 import com.innovative.smis.ui.components.RadioButtonGroupField
@@ -104,7 +106,7 @@ fun AdditionalRepairingFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Additional Trips", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.screen_additional_trips), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -136,13 +138,13 @@ fun AdditionalRepairingFormScreen(
             // Application Details Section
             item {
                 ExpandableSection(
-                    title = "Application Details",
+                    title = stringResource(R.string.section_application_details),
                     isExpanded = applicationDetailsExpanded,
                     onExpandedChange = { applicationDetailsExpanded = it }
                 ) {
                     ReadOnlyTextField(
                         value = uiState.applicationId?.toString() ?: "",
-                        label = "Application ID",
+                        label = stringResource(R.string.label_application_id),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -151,7 +153,7 @@ fun AdditionalRepairingFormScreen(
             // Trip Entries Section
             item {
                 ExpandableSection(
-                    title = "Trip Entries",
+                    title = stringResource(R.string.section_trip_entries),
                     isExpanded = tripDetailsExpanded,
                     onExpandedChange = { tripDetailsExpanded = it }
                 ) {
@@ -174,32 +176,32 @@ fun AdditionalRepairingFormScreen(
             if (uiState.showPaymentSection) {
                 item {
                     ExpandableSection(
-                        title = "Payment Details",
+                        title = stringResource(R.string.section_payment_details),
                         isExpanded = paymentDetailsExpanded,
                         onExpandedChange = { paymentDetailsExpanded = it }
                     ) {
                         ReadOnlyTextField(
                             value = uiState.amountOfRegularPayment,
-                            label = "Total Amount of Regular Payment",
+                            label = stringResource(R.string.label_total_amount_regular_payment),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedTextField(
                             value = uiState.amountOfExtraPayment,
                             onValueChange = viewModel::onExtraPaymentChange,
-                            label = { Text("Total Extra Payment") },
+                            label = { Text(stringResource(R.string.label_total_extra_payment)) },
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         OutlinedTextField(
                             value = uiState.receiptNumber,
                             onValueChange = viewModel::onReceiptNumberChange,
-                            label = { Text("Receipt Number") },
+                            label = { Text(stringResource(R.string.label_receipt_number)) },
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         ImagePickerComponent(
-                            label = "Receipt Image",
+                            label = stringResource(R.string.label_receipt_image),
                             selectedImageUri = uiState.receiptImageUri,
                             onImageSelected = viewModel::onReceiptImageSelected
                         )
@@ -207,7 +209,7 @@ fun AdditionalRepairingFormScreen(
                         OutlinedTextField(
                             value = uiState.comments,
                             onValueChange = viewModel::onCommentsChange,
-                            label = { Text("Comments") },
+                            label = { Text(stringResource(R.string.label_comments)) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
                             maxLines = 5
@@ -245,7 +247,7 @@ fun AdditionalRepairingFormScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
-                                Text("Save Draft")
+                                Text(stringResource(R.string.button_save_draft))
                             }
                             
                             Button(
@@ -269,7 +271,7 @@ fun AdditionalRepairingFormScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(if (isAdditionalTripNo) "Next" else "Submit")
+                                Text(if (isAdditionalTripNo) stringResource(R.string.button_next) else stringResource(R.string.button_submit))
                             }
                         }
                     }
@@ -287,7 +289,7 @@ fun AdditionalRepairingFormScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (uiState.formStep is FormStep.TripSubmitting) "Submitting Trip..." else "Loading Payment Details...")
+                            Text(if (uiState.formStep is FormStep.TripSubmitting) stringResource(R.string.message_submitting_trip) else stringResource(R.string.message_loading_payment_details))
                         }
                     }
                     
@@ -310,7 +312,7 @@ fun AdditionalRepairingFormScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                 }
-                                Text("Draft")
+                                Text(stringResource(R.string.button_draft))
                             }
                             
                             Button(
@@ -325,7 +327,7 @@ fun AdditionalRepairingFormScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Submit")
+                                Text(stringResource(R.string.button_submit))
                             }
                         }
                     }
@@ -343,7 +345,7 @@ fun AdditionalRepairingFormScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Submitting Payment...")
+                            Text(stringResource(R.string.message_submitting_payment))
                         }
                     }
                     
@@ -364,7 +366,7 @@ fun AdditionalRepairingFormScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Completed!")
+                            Text(stringResource(R.string.message_completed))
                         }
                     }
                 }
@@ -409,11 +411,13 @@ private fun TripEntryContent(
         } else time24
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            text = "Trip ${trip.tripNumber}",
+            text = stringResource(R.string.label_trip_number, trip.tripNumber),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
@@ -424,7 +428,7 @@ private fun TripEntryContent(
         OutlinedTextField(
             value = convert24HourTo12Hour(trip.startTime),
             onValueChange = {},
-            label = { Text("Start Time") },
+            label = { Text(stringResource(R.string.label_start_time)) },
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             trailingIcon = {
@@ -439,7 +443,7 @@ private fun TripEntryContent(
         OutlinedTextField(
             value = convert24HourTo12Hour(trip.endTime),
             onValueChange = {},
-            label = { Text("End Time") },
+            label = { Text(stringResource(R.string.label_end_time)) },
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             isError = trip.timeError != null,
@@ -463,15 +467,15 @@ private fun TripEntryContent(
 
         ReadOnlyTextField(
             value = trip.amountOfRegularPayment,
-            label = "Amount of Regular Payment",
+            label = stringResource(R.string.label_amount_regular_payment),
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         RadioButtonGroupField(
-            label = "Additional Trip Required",
-            options = listOf("Yes", "No"),
+            label = stringResource(R.string.label_additional_trip_required),
+            options = listOf(stringResource(R.string.option_yes), stringResource(R.string.option_no)),
             selectedValue = trip.additionalTripRequired,
             onValueSelected = onAdditionalRequiredChange,
             error = null,
@@ -588,7 +592,7 @@ private fun TimePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Select Time",
+                    text = stringResource(R.string.label_select_time),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 12.dp) // ✅ Reduced from default 16dp
                 )
@@ -621,7 +625,7 @@ private fun TimePickerDialog(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
 
                     Button(
@@ -647,7 +651,7 @@ private fun TimePickerDialog(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("OK")
+                        Text(stringResource(R.string.action_ok))
                     }
                 }
             }

@@ -10,12 +10,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.data.model.EmptyingFormState
 import com.innovative.smis.data.model.LocationOfContainment
 import com.innovative.smis.data.model.PumpingPointPresence
@@ -60,7 +62,7 @@ fun EmptyingFormScreen(
             .verticalScroll(scrollState)
     ) {
         Text(
-            text = StringResources.getString(StringResources.EMPTYING_REQUEST_FORM, languageCode),
+            text = stringResource(R.string.title_emptying_request_form),
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -108,14 +110,14 @@ private fun EmptyingFormContent(
     languageCode: String
 ) {
     // Auto-generated Application Date
-    SectionHeader(StringResources.getString(StringResources.APPLICATION_INFORMATION, languageCode))
+    SectionHeader(stringResource(R.string.section_application_information))
     
     OutlinedTextField(
         value = state.applicationDate.ifEmpty { 
             LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         },
         onValueChange = { },
-        label = { Text(StringResources.getString(StringResources.APPLICATION_DATE, languageCode)) },
+        label = { Text(stringResource(R.string.label_application_date)) },
         enabled = false,
         modifier = Modifier.fillMaxWidth()
     )
@@ -127,7 +129,7 @@ private fun EmptyingFormContent(
     OutlinedTextField(
         value = state.sanitationCustomerName,
         onValueChange = { },
-        label = { Text("Sanitation Customer Name") },
+        label = { Text(stringResource(R.string.label_sanitation_customer_name)) },
         enabled = false,
         modifier = Modifier.fillMaxWidth()
     )
@@ -137,7 +139,7 @@ private fun EmptyingFormContent(
     OutlinedTextField(
         value = state.sanitationCustomerContact,
         onValueChange = { },
-        label = { Text("Sanitation Customer Contact") },
+        label = { Text(stringResource(R.string.label_sanitation_customer_contact)) },
         enabled = false,
         modifier = Modifier.fillMaxWidth()
     )
@@ -147,7 +149,7 @@ private fun EmptyingFormContent(
     OutlinedTextField(
         value = state.sanitationCustomerAddress,
         onValueChange = { },
-        label = { Text("Sanitation Customer Address") },
+        label = { Text(stringResource(R.string.label_sanitation_customer_address)) },
         enabled = false,
         maxLines = 3,
         modifier = Modifier.fillMaxWidth()
@@ -228,7 +230,7 @@ private fun EmptyingFormContent(
         OutlinedTextField(
             value = state.otherEmptyingPurpose,
             onValueChange = { onStateChange(state.copy(otherEmptyingPurpose = it)) },
-            label = { Text("Please specify") },
+            label = { Text(stringResource(R.string.label_please_specify)) },
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -311,7 +313,7 @@ private fun EmptyingFormContent(
         OutlinedTextField(
             value = state.notEmptiedBeforeReason,
             onValueChange = { onStateChange(state.copy(notEmptiedBeforeReason = it)) },
-            label = { Text("Reason for Not Being Emptied Before") },
+            label = { Text(stringResource(R.string.label_reason_not_being_emptied_before)) },
             maxLines = 3,
             modifier = Modifier.fillMaxWidth()
         )
@@ -322,7 +324,7 @@ private fun EmptyingFormContent(
         OutlinedTextField(
             value = state.reasonForNoEmptiedDate,
             onValueChange = { onStateChange(state.copy(reasonForNoEmptiedDate = it)) },
-            label = { Text("Reason for No Emptied Date") },
+            label = { Text(stringResource(R.string.label_reason_for_no_emptied_date)) },
             maxLines = 3,
             modifier = Modifier.fillMaxWidth()
         )
@@ -357,7 +359,7 @@ private fun EmptyingFormContent(
     OutlinedTextField(
         value = state.sizeOfContainmentM3,
         onValueChange = { onStateChange(state.copy(sizeOfContainmentM3 = it)) },
-        label = { Text("Size of Containment (m³)") },
+        label = { Text(stringResource(R.string.label_size_of_containment)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth()
     )
@@ -367,7 +369,7 @@ private fun EmptyingFormContent(
     OutlinedTextField(
         value = state.yearOfInstallation,
         onValueChange = { onStateChange(state.copy(yearOfInstallation = it)) },
-        label = { Text("Year of Installation") },
+        label = { Text(stringResource(R.string.label_year_of_installation)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
     )
@@ -482,7 +484,7 @@ private fun EmptyingFormContent(
         OutlinedTextField(
             value = state.amountOfExtraPayment,
             onValueChange = { onStateChange(state.copy(amountOfExtraPayment = it)) },
-            label = { Text("Amount of Extra Payment (Estimation)") },
+            label = { Text(stringResource(R.string.label_amount_extra_payment_estimation)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth()
         )
@@ -514,7 +516,7 @@ private fun EmptyingFormContent(
         onClick = { /* TODO: Navigate to Containments screen */ },
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text("Containments")
+        Text(stringResource(R.string.section_containments))
     }
     
     Spacer(modifier = Modifier.height(16.dp))

@@ -2,80 +2,540 @@
 <resources>
     <!-- App Name -->
     <string name="app_name">SMIS BETA</string>
-
     <!-- Navigation -->
     <string name="nav_dashboard">ផ្ទាំងគ្រប់គ្រង</string>
     <string name="nav_map">ផែនទី</string>
     <string name="nav_tasks">កិច្ចការ</string>
-    <string name="nav_survey">ការស្រាវជ្រាវ</string>
+    <string name="nav_survey">ការស្ទង់មតិ</string>
     <string name="nav_settings">ការកំណត់</string>
-
+    <string name="nav_logout">ចាកចេញ</string>
+    <string name="nav_desludging_vehicles">រថយន្តបូមកាក</string>
     <!-- Dashboard -->
     <string name="dashboard_title">ផ្ទាំងគ្រប់គ្រង</string>
     <string name="dashboard_total_tasks">កិច្ចការសរុប</string>
-    <string name="dashboard_pending">កំពុងរង់ចាំ</string>
+    <string name="dashboard_pending">រង់ចាំ</string>
     <string name="dashboard_in_progress">កំពុងដំណើរការ</string>
     <string name="dashboard_completed">បានបញ្ចប់</string>
-
-    <!-- Tasks -->
-    <string name="task_status_pending">កំពុងរង់ចាំ</string>
+    <string name="dashboard_welcome">សូមស្វាគមន៍</string>
+    <!-- Tasks / Todo List -->
+    <string name="tasks_title">កិច្ចការ</string>
+    <string name="tasks_emptying_scheduling">កាលវិភាគបូមកាក</string>
+    <string name="tasks_site_preparation">រៀបចំទីតាំង</string>
+    <string name="tasks_emptying_service">សេវាបូមកាក</string>
+    <string name="tasks_additional_repairing">ការជួសជុលបន្ថែម</string>
+    <string name="task_status_pending">រង់ចាំ</string>
     <string name="task_status_in_progress">កំពុងដំណើរការ</string>
     <string name="task_status_completed">បានបញ្ចប់</string>
-    <string name="task_status_cancelled">បានលុបចោល</string>
+    <string name="task_status_cancelled">បានបោះបង់</string>
     <string name="task_priority_low">ទាប</string>
     <string name="task_priority_medium">មធ្យម</string>
     <string name="task_priority_high">ខ្ពស់</string>
     <string name="task_priority_urgent">បន្ទាន់</string>
-
     <!-- Settings -->
     <string name="settings_title">ការកំណត់</string>
     <string name="settings_app_section">ការកំណត់កម្មវិធី</string>
     <string name="settings_language">ភាសា</string>
-    <string name="settings_theme">រូបរាង</string>
-    <string name="settings_offline_section">ការកំណត់បណ្តាញ</string>
-    <string name="settings_offline_mode">របៀបបណ្តាញ</string>
+    <string name="settings_theme">ស្បែក</string>
+    <string name="settings_date_format">ទម្រង់កាលបរិច្ឆេទ</string>
+    <string name="settings_offline_section">ការកំណត់មិនមានអ៊ីនធឺណិត</string>
+    <string name="settings_offline_mode">របៀបមិនមានអ៊ីនធឺណិត</string>
     <string name="settings_auto_sync">ធ្វើសមកាលកម្មស្វ័យប្រវត្តិ</string>
-    <string name="settings_storage">ការកំណត់ការរក្សាទុក</string>
+    <string name="settings_storage">ការកំណត់ការផ្ទុក</string>
     <string name="settings_data_section">ទិន្នន័យ</string>
-    <string name="settings_sync_now">ធ្វើសមកាលកម្មឥឡូវនេះ</string>
-    <string name="settings_clear_cache">សម្អាតកម្មសម្រាម</string>
+    <string name="settings_sync_now">ធ្វើសមកាលកម្មឥឡូវ</string>
+    <string name="settings_clear_cache">សម្អាតឃ្លាំងសម្ងាត់</string>
     <string name="settings_about_section">អំពី</string>
     <string name="settings_version">កំណែ</string>
-
     <!-- Theme Options -->
     <string name="theme_light">ភ្លឺ</string>
     <string name="theme_dark">ងងឹត</string>
     <string name="theme_auto">ស្វ័យប្រវត្តិ</string>
-
     <!-- Common Actions -->
     <string name="action_save">រក្សាទុក</string>
     <string name="action_cancel">បោះបង់</string>
     <string name="action_delete">លុប</string>
     <string name="action_edit">កែសម្រួល</string>
-    <string name="action_back">ថយក្រោយ</string>
+    <string name="action_back">ត្រឡប់ក្រោយ</string>
     <string name="action_done">រួចរាល់</string>
     <string name="action_retry">ព្យាយាមម្តងទៀត</string>
     <string name="action_sync">ធ្វើសមកាលកម្ម</string>
-
+    <string name="action_ok">យល់ព្រម</string>
+    <string name="action_yes">បាទ/ចាស</string>
+    <string name="action_no">ទេ</string>
+    <string name="action_select">ជ្រើសរើស</string>
+    <string name="action_next">បន្ទាប់</string>
+    <string name="action_submit">ដាក់ស្នើ</string>
+    <string name="action_update">ធ្វើបច្ចុប្បន្នភាព</string>
+    <string name="action_postpone">ពន្យារពេល</string>
+    <string name="action_expand">ពង្រីក</string>
+    <string name="action_collapse">បង្រួម</string>
     <!-- Messages -->
     <string name="message_loading">កំពុងផ្ទុក...</string>
-    <string name="message_error">មានកំហុសកើតឡើង</string>
-    <string name="message_no_internet">គ្មានការភ្ជាប់អ៊ីនធឺណិត</string>
-    <string name="message_sync_success">ធ្វើសមកាលកម្មបានជោគជ័យ</string>
-    <string name="message_sync_failed">ធ្វើសមកាលកម្មបានបរាជ័យ</string>
-
+    <string name="message_error">មានបញ្ហាកើតឡើង</string>
+    <string name="message_no_internet">គ្មានការតភ្ជាប់អ៊ីនធឺណិត</string>
+    <string name="message_sync_success">ការធ្វើសមកាលកម្មបានបញ្ចប់ដោយជោគជ័យ</string>
+    <string name="message_sync_failed">ការធ្វើសមកាលកម្មបានបរាជ័យ</string>
+    <string name="message_saving">កំពុងរក្សាទុក...</string>
+    <string name="message_submitting">កំពុងដាក់ស្នើ...</string>
+    <string name="message_saved_successfully">បានរក្សាទុកដោយជោគជ័យ!</string>
+    <string name="message_submitted_successfully">បានដាក់ស្នើទម្រង់ដោយជោគជ័យ!</string>
+    <string name="message_draft_saved">បានរក្សាទុកសេចក្តីព្រាងដោយជោគជ័យ!</string>
+    <string name="message_postponed_successfully">ពន្យារពេលពាក្យស្នើសុំបានដោយជោគជ័យ</string>
+    <string name="message_please_wait">សូមរង់ចាំខណៈពេលយើងកំពុងផ្ទុកព័ត៌មានពាក្យស្នើសុំ...</string>
+    <string name="title_loading_application">កំពុងផ្ទុកព័ត៌មានពាក្យស្នើសុំ</string>
+    <string name="message_loading_application">សូមរង់ចាំខណៈពេលយើងកំពុងផ្ទុកព័ត៌មានពាក្យស្នើសុំ...</string>
     <!-- Offline -->
-    <string name="offline_mode">របៀបបណ្តាញ</string>
-    <string name="offline_cached_maps">ការប្រើប្រាស់ផែនទីដែលបានរក្សាទុក</string>
-    <string name="offline_sync_pending">%d ធាតុកំពុងរង់ចាំធ្វើសមកាលកម្ម</string>
-
+    <string name="offline_mode">របៀបមិនមានអ៊ីនធឺណិត</string>
+    <string name="offline_cached_maps">កំពុងប្រើផែនទីឃ្លាំងសម្ងាត់</string>
+    <string name="offline_sync_pending">មាន %d ធាតុរង់ចាំធ្វើសមកាលកម្ម</string>
     <!-- Map -->
     <string name="map_download_area">ទាញយកតំបន់</string>
-    <string name="map_cache_stats">ស្ថិតិការរក្សាទុក</string>
-    <string name="map_offline_available">ផែនទីបណ្តាញអាចប្រើបាន</string>
-
-    <!-- Form Labels - Emptying Workflow -->
-    <string name="form_task_details">ព័ត៌មានលម្អិតកិច្ចការ</string>
+    <string name="map_cache_stats">ស្ថិតិឃ្លាំងសម្ងាត់</string>
+    <string name="map_offline_available">មានផែនទីមិនមានអ៊ីនធឺណិត</string>
+    <!-- Form Section Headers -->
+    <string name="section_applicant_information">ព័ត៌មានអ្នកដាក់ពាក្យ</string>
+    <string name="section_applicant_details">លម្អិតអ្នកដាក់ពាក្យ</string>
+    <string name="section_additional_services">សេវាកម្មបន្ថែម</string>
+    <string name="section_payment_information">ព័ត៌មានការទូទាត់</string>
+    <string name="section_receiver_information">ព័ត៌មានអ្នកទទួលសេវា</string>
+    <string name="section_scheduling_information">ព័ត៌មានកាលវិភាគ</string>
+    <string name="section_service_details">លម្អិតសេវាកម្ម</string>
+    <string name="section_vehicle_sludge_details">លម្អិតរថយន្ត និងកាកសំណល់</string>
+    <string name="section_payment_documentation">ការទូទាត់ និងឯកសារ</string>
+    <string name="section_application_details">លម្អិតពាក្យស្នើសុំ</string>
+    <string name="section_trip_entries">ការបញ្ចូលដំណើរ</string>
+    <string name="section_payment_details">លម្អិតការទូទាត់</string>
+    <!-- Form Labels - Common -->
+    <string name="label_application_id">លេខសម្គាល់ពាក្យស្នើសុំ</string>
+    <string name="label_sanitation_customer_id">លេខសម្គាល់អតិថិជនអនាម័យ</string>
+    <string name="label_applicant_name">ឈ្មោះអ្នកដាក់ពាក្យ</string>
+    <string name="label_applicant_contact">ទំនាក់ទំនងអ្នកដាក់ពាក្យ</string>
+    <string name="label_service_receiver_name">ឈ្មោះអ្នកទទួលសេវា</string>
+    <string name="label_service_receiver_contact">ទំនាក់ទំនងអ្នកទទួលសេវា</string>
+    <string name="label_comments">មតិយោបល់</string>
+    <string name="label_latitude">រយៈទទឹង</string>
+    <string name="label_longitude">រយៈបណ្តោយ</string>
+    <!-- Workflow Progress -->
+    <string name="label_progress">វឌ្ឍនភាព:</string>
+    <string name="workflow_progress_format">%d/%d</string>
+    <string name="workflow_stage_scheduling">កាលវិភាគ</string>
+    <string name="workflow_stage_site_preparation">ការរៀបចំទីតាំង</string>
+    <string name="workflow_stage_emptying_service">សេវាបង្ហូរ</string>
+    <string name="workflow_stage_completed">បានបញ្ចប់</string>
+    <string name="workflow_stage_cancelled">បានបោះបង់</string>
+    <!-- Site Preparation Form -->
+    <string name="form_site_preparation_title">ទម្រង់រៀបចំទីតាំង</string>
+    <string name="label_free_service_under_pbc">សេវាកម្មឥតគិតថ្លៃក្រោម PBC</string>
+    <string name="label_additional_repairing">ការជួសជុលបន្ថែម</string>
+    <string name="label_other_additional_repairing">ការជួសជុលបន្ថែមផ្សេងទៀត</string>
+    <string name="label_extra_payment_required">ត្រូវការទូទាត់បន្ថែម</string>
+    <string name="label_amount_extra_payment">ចំនួនទឹកប្រាក់បន្ថែម</string>
+    <string name="label_receiver_same_as_applicant">អ្នកទទួលគឺដូចអ្នកដាក់ពាក្យ</string>
+    <string name="label_propose_emptying_date">កាលបរិច្ឆេទស្នើសុំបូម</string>
+    <string name="label_need_reschedule">ត្រូវការកំណត់ពេលវេលាឡើងវិញ?</string>
+    <string name="label_new_proposed_emptying_date">កាលបរិច្ឆេទស្នើសុំបូមថ្មី</string>
+    <string name="button_save_draft">សេចក្តីព្រាង</string>
+    <string name="cd_call_applicant">ហៅទៅអ្នកដាក់ពាក្យ</string>
+    <string name="cd_call_service_receiver">ហៅទៅអ្នកទទួលសេវា</string>
+    <string name="cd_postpone">ពន្យារពេល</string>
+    <string name="cd_containment">អាងផ្ទុក</string>
+    <!-- Emptying Service Form -->
+    <string name="form_emptying_service_title">ទម្រង់សេវាបូមកាក</string>
+    <string name="label_emptied_date">កាលបរិច្ឆេទបូម</string>
+    <string name="label_start_time">ពេលវេលាចាប់ផ្តើម</string>
+    <string name="label_end_time">ពេលវេលាបញ្ចប់</string>
+    <string name="label_additional_trip_required">ត្រូវការដំណើរបន្ថែម</string>
+    <string name="label_desludging_vehicle_id">លេខសម្គាល់រថយន្តបូមកាក *</string>
+    <string name="label_sludge_type">ប្រភេទកាកសំណល់</string>
+    <string name="label_type_of_sludge">ប្រភេទកាកសំណល់</string>
+    <string name="label_pumping_point_type">ប្រភេទចំណុចបូម *</string>
+    <string name="label_presence_pumping_point">វត្តមានចំណុចបូម</string>
+    <string name="label_location_of_containment">ទីតាំងនៃធុងផ្ទុក</string>
+    <string name="option_around_house">ជុំវិញផ្ទះ</string>
+    <string name="option_ground_floor">ជាន់ផ្ទាល់ដី</string>
+    <string name="label_additional_repairing_in_emptying">ការជួសជុលបន្ថែមក្នុងការបូម</string>
+    <string name="label_other_additional_repairing_emptying">ការជួសជុលបន្ថែមផ្សេងទៀត</string>
+    <string name="label_free_under_pbc">ឥតគិតថ្លៃក្រោម PBC</string>
+    <string name="label_amount_regular_cost">ចំនួនតម្លៃធម្មតា</string>
+    <string name="label_amount_extra_cost">ចំនួនតម្លៃបន្ថែម</string>
+    <string name="label_receipt_number">លេខបង្កាន់ដៃ</string>
+    <string name="label_receipt_image">រូបភាពបង្កាន់ដៃ</string>
+    <string name="label_picture_of_emptying">រូបភាពការបូម</string>
+    <string name="label_service_receiver_same_as_applicant">អ្នកទទួលសេវាគឺដូចអ្នកដាក់ពាក្យ</string>
+    <string name="button_capture_gps">ចាប់យក GPS</string>
+    <string name="button_update_map">ធ្វើបច្ចុប្បន្នភាពផែនទី</string>
+    <string name="option_mixed">លាយ</string>
+    <string name="option_not_mixed">មិនលាយ</string>
+    <string name="option_yes">បាទ/ចាស</string>
+    <string name="option_no">ទេ</string>
+    <string name="option_processing_food">ប្រែ​ហ្គរប់​អាហារ</string>
+    <string name="option_oil_and_fat">ប្រេង និងខ្លាញ់ (ភោជនីយដ្ឋាន)</string>
+    <string name="option_content_of_fuel">មាតិកាឥន្ធនៈ</string>
+    <string name="option_cover">គម្រប</string>
+    <string name="option_tube">បំពង់</string>
+    <string name="option_pierce">ចាក់</string>
+    <!-- Additional Repairing Form -->
+    <string name="form_additional_trips_title">ដំណើរបន្ថែម</string>
+    <string name="label_trip_number">ដំណើរទី %d</string>
+    <string name="label_amount_regular_payment">ចំនួនការទូទាត់ធម្មតា</string>
+    <string name="label_total_amount_regular_payment">ចំនួនការទូទាត់ធម្មតាសរុប</string>
+    <string name="label_total_extra_payment">ការទូទាត់បន្ថែមសរុប</string>
+    <string name="button_submitting_trip">កំពុងដាក់ស្នើដំណើរ...</string>
+    <string name="button_loading_payment_details">កំពុងផ្ទុកលម្អិតការទូទាត់...</string>
+    <string name="button_submitting_payment">កំពុងដាក់ស្នើការទូទាត់...</string>
+    <string name="status_completed">បានបញ្ចប់!</string>
+    <!-- Emptying Scheduling Form -->
+    <string name="form_emptying_scheduling_title">ទម្រង់កាលវិភាគបូមកាក</string>
+    <string name="label_applicant_is_same_as_customer">អ្នកដាក់ពាក្យគឺដូចអតិថិជន</string>
+    <string name="label_purpose_of_emptying_request">គោលបំណងនៃការស្នើសុំបូម</string>
+    <string name="label_customer_name">ឈ្មោះអតិថិជន</string>
+    <string name="label_customer_contact">ទំនាក់ទំនងអតិថិជន</string>
+    <string name="cd_call_customer">ហៅទៅអតិថិជន</string>
+    <!-- Containment Form -->
+    <string name="form_containment_title">ទម្រង់អាងផ្ទុក</string>
+    <string name="label_type_of_toilet">ប្រភេទបង្គន់</string>
+    <string name="label_toilet_connection">ការតភ្ជាប់បង្គន់</string>
+    <string name="label_type_of_containment">ប្រភេទអាងផ្ទុក</string>
+    <string name="label_size_of_containment">ទំហំអាងផ្ទុក (m³)</string>
+    <string name="label_emptied_status">ស្ថានភាពបូម</string>
+    <string name="label_sewer_code">កូដប្រព័ន្ធលូ</string>
+    <string name="button_submit_containment">ដាក់ស្នើអាងផ្ទុក</string>
+    <!-- Time Picker -->
+    <string name="time_picker_select_time">ជ្រើសរើស %s</string>
+    <string name="time_picker_select">ជ្រើសរើសពេលវេលា</string>
+    <string name="validation_time_must_be_after">ពេលវេលាត្រូវតែក្រោយ %s</string>
+    <string name="cd_select_time">ជ្រើសរើសពេលវេលា</string>
+    <!-- Date Picker -->
+    <string name="cd_select_date">ជ្រើសរើសកាលបរិច្ឆេទ</string>
+    <!-- Postpone Dialog -->
+    <string name="dialog_postpone_title">ពន្យារពេលពាក្យស្នើសុំ</string>
+    <string name="dialog_postpone_message">ជ្រើសរើសកាលបរិច្ឆេទថ្មីដើម្បីពន្យារពេលពាក្យស្នើសុំនេះ៖</string>
+    <string name="label_postpone_date">កាលបរិច្ឆេទពន្យារពេល</string>
+    <string name="button_confirm_postpone">បញ្ជាក់ការពន្យារពេល</string>
+    <!-- Loading States -->
+    <string name="loading_title_application_details">កំពុងផ្ទុកលម្អិតពាក្យស្នើសុំ</string>
+    <!-- Error Messages -->
+    <string name="error_prefix">កំហុស៖ %s</string>
+    <string name="error_failed_to_submit">បានបរាជ័យក្នុងការដាក់ស្នើ</string>
+    <string name="error_failed_to_save_draft">បានបរាជ័យក្នុងការរក្សាទុកសេចក្តីព្រាង</string>
+    <!-- Validation Messages -->
+    <string name="validation_required">ចាំបាច់បំពេញវាលនេះ</string>
+    <string name="validation_invalid_phone">លេខទូរសព្ទមិនត្រឹមត្រូវ</string>
+    <string name="validation_phone_too_long">លេខទូរសព្ទមិនអាចលើសពី 13 ខ្ទង់</string>
+    <string name="validation_cambodian_phone_format">សូមបញ្ចូលលេខទូរសព្ទកម្ពុជាត្រឹមត្រូវ (ឧទាហរណ៍៖ 012345678 ឬ +85512345678)</string>
+    <string name="validation_invalid_email">អាសយដ្ឋានអ៊ីមែលមិនត្រឹមត្រូវ</string>
+    <string name="validation_invalid_number">សូមបញ្ចូលលេខត្រឹមត្រូវ</string>
+    <string name="validation_invalid_date">ទម្រង់កាលបរិច្ឆេទមិនត្រឹមត្រូវ</string>
+    <string name="validation_min_length">ត្រូវការយ៉ាងតិច %d តួអក្សរ</string>
+    <string name="validation_max_length">អនុញ្ញាតអតិបរមា %d តួអក្សរ</string>
+    <!-- Dropdown Options -->
+    <string name="dropdown_select">ជ្រើសរើស...</string>
+    <string name="dropdown_please_select">សូមជ្រើសរើសជម្រើសមួយ</string>
+    <string name="dropdown_other">ផ្សេងទៀត</string>
+    <string name="dropdown_loading">កំពុងផ្ទុក...</string>
+    <!-- Content Descriptions -->
+    <string name="cd_back">ត្រឡប់ក្រោយ</string>
+    <string name="cd_expand">ពង្រីក</string>
+    <string name="cd_collapse">បង្រួម</string>
+    <string name="cd_schedule">កាលវិភាគ</string>
+    <string name="cd_camera">កាមេរ៉ា</string>
+    <string name="cd_gallery">វិចិត្រសាល</string>
+    <string name="cd_add_photo">បន្ថែមរូបភាព</string>
+    <string name="cd_remove_image">លុបរូបភាព</string>
+    <string name="cd_selected_image">រូបភាពដែលបានជ្រើសរើស</string>
+    <string name="cd_menu">ម៉ឺនុយ</string>
+    <string name="cd_open_menu">បើកម៉ឺនុយ</string>
+    <string name="cd_refresh">ធ្វើឱ្យស្រស់</string>
+    <string name="cd_my_location">ទីតាំងរបស់ខ្ញុំ</string>
+    <string name="cd_location_pin">ម្ជុលទីតាំង</string>
+    <string name="cd_navigate_back">រុករកត្រឡប់ក្រោយ</string>
+    <string name="cd_smis_logo">និមិត្តសញ្ញា SMIS</string>
+    <string name="cd_warning">ការព្រមាន</string>
+    <string name="cd_error">កំហុស</string>
+    <string name="cd_dropdown">ទម្លាក់ចុះ</string>
+    <string name="cd_close">បិទ</string>
+    <string name="cd_granted">បានអនុញ្ញាត</string>
+    <string name="cd_offline">មិនមានអ៊ីនធឺណិត</string>
+    <string name="cd_switch_map_type">ប្តូរប្រភេទផែនទី</string>
+    <string name="cd_navigate_to_data_region">រុករកទៅតំបន់ទិន្នន័យ</string>
+    <string name="cd_cache_stats">ស្ថិតិឃ្លាំងសម្ងាត់</string>
+    <!-- Building Survey Section Headers -->
+    <string name="section_building_location">ក. ព័ត៌មានទីតាំងអាគារ</string>
+    <string name="section_building_info">ខ. ព័ត៌មានអាគារ</string>
+    <string name="section_toilet_containment">គ. ព័ត៌មានបង្គន់ និងអាងផ្ទុក</string>
+    <string name="section_water_source">ឃ. ព័ត៌មានប្រភពទឹក</string>
+    <string name="section_customer_details">លម្អិតអតិថិជន</string>
+    <string name="section_containment_accessibility">ភាពងាយស្រួលអាងផ្ទុក</string>
+    <string name="section_containment_details">លម្អិតអាងផ្ទុក</string>
+    <string name="section_emptying_details">លម្អិតការបូម</string>
+    <string name="section_sanitation_system">ប្រព័ន្ធអនាម័យ</string>
+    <string name="section_payment_visit_details">ការទូទាត់ និងលម្អិតការទស្សនា</string>
+    <string name="section_ever_emptied">ធ្លាប់បូមពីមុន</string>
+    <string name="section_location_containment">ទីតាំងអាងផ្ទុក</string>
+    <string name="section_technology">បច្ចេកវិទ្យា</string>
+    <string name="section_vacutug_accessible">អាចចូលដំណើរការបាន</string>
+    <string name="section_gender_respondent">ភេទអ្នកឆ្លើយតប</string>
+    <string name="section_extra_payment_required">ត្រូវការទូទាត់បន្ថែម?</string>
+    <string name="section_site_visit_required">ត្រូវការទស្សនាទីតាំង?</string>
+    <!-- Building Survey Form Labels -->
+    <string name="label_bin">BIN (លេខសម្គាល់អាគារ)</string>
+    <string name="label_bin_no_shared">លេខ BIN (ប្រសិនបើចែករំលែកបង្គន់/អាគារ)</string>
+    <string name="label_building_photo">រូបភាពអាគារ *</string>
+    <string name="label_building_use">ការប្រើប្រាស់អាគារ</string>
+    <string name="label_functional_use">ការប្រើប្រាស់មុខងារ</string>
+    <string name="label_construction_date">កាលបរិច្ឆេទសាងសង់</string>
+    <string name="label_construction_year">ឆ្នាំសាងសង់</string>
+    <string name="label_construction_year_tank">ឆ្នាំសាងសង់អាងផ្ទុក</string>
+    <string name="label_contact">ទំនាក់ទំនង</string>
+    <string name="label_defecation_place">ទីកន្លែងបន្ទប់ទឹក</string>
+    <string name="label_floor_count">ចំនួនជាន់ *</string>
+    <string name="label_is_respondent_owner">អ្នកឆ្លើយតបគឺជាម្ចាស់? *</string>
+    <string name="label_is_connection_shared">ការតភ្ជាប់ចែករំលែក</string>
+    <string name="label_main_connection_bin">BIN ការតភ្ជាប់មេ</string>
+    <string name="label_other_connection">ការតភ្ជាប់ផ្សេងទៀត *</string>
+    <string name="label_other_tank_type">ប្រភេទអាងផ្សេងទៀត *</string>
+    <string name="label_outlet_storage_tank">ច្រកចេញអាងផ្ទុក *</string>
+    <string name="label_owner_contact">ទំនាក់ទំនងម្ចាស់ *</string>
+    <string name="label_owner_gender">ភេទម្ចាស់ *</string>
+    <string name="label_owner_name_english">ឈ្មោះម្ចាស់ (អង់គ្លេស) *</string>
+    <string name="label_owner_name_khmer">ឈ្មោះម្ចាស់ (ខ្មែរ) *</string>
+    <string name="label_name_respondent">ឈ្មោះអ្នកឆ្លើយតប (អង់គ្លេស)</string>
+    <string name="label_households_served">គ្រួសារបម្រើ *</string>
+    <string name="label_applied_on">ដាក់ពាក្យនៅថ្ងៃ</string>
+    <string name="label_ever_emptied_before">ធ្លាប់បូមពីមុន?</string>
+    <string name="label_ever_emptied_tank">ធ្លាប់បូមអាងផ្ទុក (បាទ/ទេ)</string>
+    <string name="label_experience_issues">មានបញ្ហាជាមួយអាងផ្ទុក?</string>
+    <string name="label_experience_issues_containment">មានបញ្ហាជាមួយអាងផ្ទុក</string>
+    <string name="label_accessible_desludging_vehicle">អាចចូលដល់រថយន្តបូមកាក</string>
+    <string name="label_accessible_desludging_vehicle_yesno">អាចចូលដល់រថយន្តបូមកាក (បាទ/ទេ)</string>
+    <string name="label_last_emptied_date">កាលបរិច្ឆេទបូមចុងក្រោយ</string>
+    <string name="label_last_emptied_date_required">កាលបរិច្ឆេទបូមចុងក្រោយ *</string>
+    <string name="label_last_emptied_year">ឆ្នាំបូមចុងក្រោយ</string>
+    <string name="label_reason_no_emptied_date">មូលហេតុគ្មានកាលបរិច្ឆេទបូម *</string>
+    <string name="label_reason_no_emptied_date_optional">មូលហេតុគ្មានកាលបរិច្ឆេទបូម</string>
+    <string name="label_reason_not_emptied">មូលហេតុមិនបានបូមពីមុន</string>
+    <string name="label_reason_if_not_emptied">មូលហេតុប្រសិនមិនបានបូមពីមុន</string>
+    <string name="label_village_optional">ភូមិ (ស្រេចចិត្ត)</string>
+    <string name="label_respondent_contact">ទំនាក់ទំនងអ្នកឆ្លើយតប</string>
+    <string name="label_owner_name">ឈ្មោះម្ចាស់</string>
+    <string name="label_owner_contact_simple">ទំនាក់ទំនងម្ចាស់</string>
+    <string name="label_no_floors">ចំនួនជាន់</string>
+    <string name="label_household_served">គ្រួសារបម្រើ</string>
+    <string name="label_population_served">ប្រជាជនបម្រើ</string>
+    <string name="label_floor_area">ផ្ទៃជាន់ (ម៉ែត្រការ៉េ)</string>
+    <string name="label_no_toilets">ចំនួនបង្គន់</string>
+    <string name="label_toilet_count">ចំនួនបង្គន់</string>
+    <string name="label_no_tanks">ចំនួនអាង</string>
+    <string name="label_size_tank">ទំហំអាង (ម៉ែត្រគូប)</string>
+    <string name="label_storage_tank_size">ទំហំអាងផ្ទុក (ម៉ែត្រគូប)</string>
+    <string name="label_distance_well">ចម្ងាយពីអណ្តូង (ម៉ែត្រ)</string>
+    <string name="label_containment_location">ទីតាំងអាងផ្ទុក</string>
+    <string name="label_distance_house_containment">ចម្ងាយផ្ទះទៅអាងផ្ទុក (ម៉ែត្រ)</string>
+    <string name="label_water_customer_id">លេខសម្គាល់អតិថិជនទឹក</string>
+    <string name="label_meter_serial_number">លេខស៊េរីម៉ែត្រ</string>
+    <string name="label_sanitation_customer_name">ឈ្មោះអតិថិជនអនាម័យ</string>
+    <string name="label_sanitation_customer_address">អាសយដ្ឋានអតិថិជនអនាម័យ</string>
+    <string name="label_sanitation_customer_contact">ទំនាក់ទំនងអតិថិជនអនាម័យ</string>
+    <string name="label_area_name">ឈ្មោះតំបន់</string>
+    <string name="label_other_storage_tank_connection">ការតភ្ជាប់អាងផ្ទុកផ្សេងទៀត</string>
+    <string name="label_other_type_storage_tank">ប្រភេទអាងផ្ទុកផ្សេងទៀត</string>
+    <string name="label_amount_extra_payment_estimation">ចំនួនទឹកប្រាក់បន្ថែម (ការប៉ាន់ស្មាន)</string>
+    <!-- Map & Location -->
+    <string name="map_title">ផែនទី</string>
+    <string name="map_type">ប្រភេទផែនទី</string>
+    <string name="map_layer_options">ជម្រើសស្រទាប់</string>
+    <string name="map_overlays">ស្រទាប់គម្រប</string>
+    <string name="map_available_types">ប្រភេទផែនទីដែលមាន៖</string>
+    <string name="map_building_layer_local">ស្រទាប់អាគារ (មូលដ្ឋាន)</string>
+    <string name="map_road_networks">បណ្តាញផ្លូវ</string>
+    <string name="map_sangkat_boundaries">ព្រំដែនសង្កាត់</string>
+    <string name="map_containments">អាងផ្ទុក</string>
+    <string name="map_download_map_area">ទាញយកតំបន់ផែនទី</string>
+    <string name="map_download_tiles">ទាញយកផ្ទាំងផែនទីសម្រាប់ប្រើមិនមានអ៊ីនធឺណិត</string>
+    <string name="map_offline_cache_stats">ស្ថិតិឃ្លាំងសម្ងាត់មិនមានអ៊ីនធឺណិត</string>
+    <string name="button_download">ទាញយក</string>
+    <!-- Task Management -->
+    <string name="title_task_management">គ្រប់គ្រងកិច្ចការ</string>
+    <string name="title_manage_additional_trips">គ្រប់គ្រងដំណើរបន្ថែម</string>
+    <string name="status_emptied">បានបូមចេញ</string>
+    <string name="message_no_applications_additional_trips">គ្មានពាក្យស្នើសុំត្រូវការដំណើរបន្ថែម</string>
+    <string name="message_submitting_trip">កំពុងដាក់ដំណើរ...</string>
+    <string name="message_loading_payment_details">កំពុងផ្ទុកព័ត៌មានទូទាត់...</string>
+    <string name="label_select_time">ជ្រើសរើសពេលវេលា</string>
+    <string name="message_loading_tasks">កំពុងផ្ទុកកិច្ចការ...</string>
+    <string name="message_no_applications">រកមិនឃើញពាក្យស្នើសុំ</string>
+    <string name="message_pull_to_refresh">ទាញដើម្បីធ្វើឱ្យស្រស់ ឬប្រើម៉ឺនុយដើម្បីផ្ទុកកិច្ចការ។</string>
+    <string name="message_ready_to_load">រួចរាល់ដើម្បីផ្ទុក</string>
+    <string name="message_loading_details">កំពុងផ្ទុកលម្អិត...</string>
+    <string name="label_application_id_hash">លេខសម្គាល់ពាក្យស្នើសុំ #%d</string>
+    <!-- Desludging Vehicle -->
+    <string name="title_update_vehicle_status">ធ្វើបច្ចុប្បន្នភាពស្ថានភាពរថយន្ត</string>
+    <string name="status_active">សកម្ម</string>
+    <string name="status_inactive">អសកម្ម</string>
+    <string name="status_under_maintenance">កំពុងថែទាំ</string>
+    <!-- Postpone Dialog Extra Labels -->
+    <string name="label_postpone_from">ពន្យារពេលពី (កាលបរិច្ឆេទបច្ចុប្បន្ន)</string>
+    <string name="label_postpone_until">ពន្យារពេលដល់ (កាលបរិច្ឆេទថ្មី)</string>
+    <string name="label_reason">មូលហេតុ</string>
+    <string name="label_remark">កំណត់សម្គាល់</string>
+    <string name="button_postpone">ពន្យារពេល</string>
+    <!-- Logout Dialog -->
+    <string name="dialog_logout_title">ចាកចេញ</string>
+    <string name="button_logout_without_syncing">ចាកចេញដោយមិនធ្វើសមកាលកម្ម</string>
+    <string name="dialog_permission_later">ពេលក្រោយ</string>
+    <!-- Misc Buttons & Actions -->
+    <string name="action_close">បិទ</string>
+    <string name="action_clear">សម្អាត</string>
+    <string name="action_previous">មុន</string>
+    <string name="button_close">បិទ</string>
+    <string name="button_save">រក្សាទុក</string>
+    <string name="button_clear">សម្អាត</string>
+    <string name="button_retry">ព្យាយាមម្តងទៀត</string>
+    <!-- Data Screen -->
+    <string name="data_screen_title">នេះគឺជាអេក្រង់ទិន្នន័យ</string>
+    <!-- Misc Messages -->
+    <string name="message_please_specify">សូមបញ្ជាក់</string>
+    <string name="message_please_specify_other_issue">សូមបញ្ជាក់បញ្ហាផ្សេងទៀត</string>
+    <string name="message_please_specify_other_reason">សូមបញ្ជាក់មូលហេតុផ្សេងទៀត</string>
+    <!-- Version -->
+    <string name="version_info">SMIS v1.0</string>
+    <!-- Status Filters -->
+    <string name="filter_all">ទាំងអស់</string>
+    <string name="filter_today">ថ្ងៃនេះ</string>
+    <string name="filter_urgent">បន្ទាន់</string>
+    <string name="filter_initiated">ចាប់ផ្តើម</string>
+    <string name="filter_scheduled">កាលវិភាគ</string>
+    <string name="filter_rescheduled">កំណត់ពេលឡើងវិញ</string>
+    <string name="filter_site_preparation">រៀបចំទីតាំង</string>
+    <string name="filter_emptied">បានបង្ហូរ</string>
+    <string name="filter_completed">បានបញ្ចប់</string>
+    <string name="filter_cancelled">បានបោះបង់</string>
+    <string name="filter_reassigned">បានប្តូរផ្ទេរ</string>
+    <string name="filter_pending">រង់ចាំ</string>
+    <string name="label_filter_by_status">ត្រងតាមស្ថានភាព</string>
+    <!-- Additional Repairing -->
+    <string name="screen_additional_trips">ការធ្វើដំណើរបន្ថែម</string>
+    <string name="status_ready_to_load">រួចរាល់ផ្ទុក</string>
+    <string name="button_draft">សេចក្តីព្រាង</string>
+    <string name="button_submit">ដាក់ស្នើ</string>
+    <string name="message_submitting_payment">កំពុងដាក់ស្នើការទូទាត់...</string>
+    <string name="message_completed">បានបញ្ចប់</string>
+    
+    <!-- Building Survey -->
+    <string name="screen_building_survey">ការស្ទង់អគារ</string>
+    <string name="label_no_of_floors">ចំនួនជាន់</string>
+    <string name="label_no_of_toilets">ចំនួនបង្គន់</string>
+    <string name="label_no_of_tanks">ចំនួនធុង</string>
+    <string name="label_size_of_tank">ទំហំធុង</string>
+    <string name="label_distance_from_well">ចម្ងាយពីអណ្តូង</string>
+    <string name="label_distance_house_to_containment">ចម្ងាយផ្ទះទៅធុងផ្ទុក</string>
+    <string name="button_submit_survey">ដាក់ស្នើការស្ទង់</string>
+    <string name="button_update">ធ្វើបច្ចុប្បន្នភាព</string>
+    <string name="message_no_applications_found">រកមិនឃើញពាក្យស្នើសុំ</string>
+    <string name="action_sync_and_logout">ធ្វើសមកាលកម្មហើយចាកចេញ</string>
+    <string name="label_construction_year_storage_tank">ឆ្នាំសាងសង់ធុងផ្ទុក</string>
+    <string name="screen_task_management">គ្រប់គ្រងភារកិច្ច</string>
+    <string name="label_yes">បាទ/ចាស</string>
+    <string name="button_next">បន្ទាប់</string>
+    <string name="action_logout_without_syncing">ចាកចេញដោយមិនធ្វើសមកាលកម្ម</string>
+    <string name="button_previous">ថយក្រោយ</string>
+    <string name="label_no">ទេ</string>
+    <string name="label_proposed_date">កាលបរិច្ឆេទស្នើ</string>
+    <string name="message_not_scheduled">មិនបានកំណត់ពេល</string>
+    <string name="cd_open_form">បើកទម្រង់</string>
+    <string name="screen_data_placeholder">អេក្រង់ទិន្នន័យ</string>
+    <string name="label_please_specify">សូមបញ្ជាក់</string>
+    <string name="label_reason_not_being_emptied_before">មូលហេតុមិនបានបង្ហូរពីមុន</string>
+    <string name="label_reason_for_no_emptied_date">មូលហេតុគ្មានកាលបរិច្ឆេទបង្ហូរ</string>
+    <string name="label_year_of_installation">ឆ្នាំនៃការដំឡើង</string>
+    <string name="section_containments">ធុងផ្ទុក</string>
+    <string name="message_error_format">ទម្រង់កំហុស</string>
+    <string name="label_purpose_of_emptying">គោលបំណងនៃការបង្ហូរ</string>
+    <string name="label_please_specify_other_reason">សូមបញ្ជាក់មូលហេតុផ្សេងទៀត</string>
+    <string name="label_reason_not_emptied_before">មូលហេតុមិនបានបង្ហូរពីមុន</string>
+    <string name="label_experience_containment_issues">បញ្ហាធុងផ្ទុក</string>
+    <string name="label_please_specify_other_issue">សូមបញ្ជាក់បញ្ហាផ្សេងទៀត</string>
+    <string name="screen_emptying_scheduling">កាលវិភាគបង្ហូរ</string>
+    <string name="label_amount_of_regular_cost">ចំនួនថ្លៃធម្មតា</string>
+    <string name="label_amount_of_extra_cost">ចំនួនថ្លៃបន្ថែម</string>
+    <string name="screen_emptying_service">សេវាបង្ហូរ</string>
+    <string name="action_logout">ចាកចេញ</string>
+    <string name="title_layer_options">ជម្រើសស្រទាប់</string>
+    <string name="label_map_type">ប្រភេទផែនទី</string>
+    <string name="label_overlays">ស្រទាប់លើ</string>
+    <string name="label_building_layer_local">ស្រទាប់អគារ (ក្នុងស្រុក)</string>
+    <string name="label_sangkat_boundaries">ព្រំដែនសង្កាត់</string>
+    <string name="label_road_networks">បណ្តាញផ្លូវ</string>
+    <string name="label_sewer_networks">បណ្តាញលូ</string>
+    <string name="title_download_map_area">ទាញយកផែនទី</string>
+    <string name="message_download_map_tiles">ទាញយកផែនទីសម្រាប់ប្រើក្រៅបណ្តាញ</string>
+    <string name="label_zoom_levels_recommended">កម្រិតពង្រីក (ណែនាំ: 13-18)</string>
+    <string name="title_offline_cache_statistics">ស្ថិតិឃ្លាំងសម្ងាត់ក្រៅបណ្តាញ</string>
+    <string name="label_available_map_types">ប្រភេទផែនទីអាចប្រើបាន</string>
+    <string name="button_clear_cache">សម្អាតឃ្លាំងសម្ងាត់</string>
+    <string name="setting_date_format">ទម្រង់កាលបរិច្ឆេទ</string>
+    <string name="screen_site_preparation_form">ទម្រង់រៀបចំទីតាំង</string>
+    <string name="label_amount_of_extra_payment">ចំនួនទឹកប្រាក់បន្ថែម</string>
+    <string name="checkbox_receiver_same_as_applicant">អ្នកទទួលដូចអ្នកដាក់ពាក្យ</string>
+    <string name="button_saving">កំពុងរក្សាទុក...</string>
+    <string name="button_submitting">កំពុងដាក់ស្នើ...</string>
+    <string name="screen_site_preparation">រៀបចំទីតាំង</string>
+    <string name="form_building_details">ព័ត៌មានអគារ</string>
+    <string name="form_building_name">ឈ្មោះអគារ</string>
+    <string name="form_building_type">ប្រភេទអគារ</string>
+    <string name="form_number_of_floors">ចំនួនជាន់</string>
+    <string name="form_total_units">ចំនួនបន្ទប់សរុប</string>
+    <string name="form_occupied_units">បន្ទប់មានមនុស្សរស់</string>
+    <string name="form_construction_year">ឆ្នាំសាងសង់</string>
+    <string name="form_building_area">ផ្ទៃដីអគារ</string>
+    <string name="form_compound_area">ផ្ទៃដីបរិវេណ</string>
+    <string name="form_sanitation_system">ប្រព័ន្ធអនាម័យ</string>
+    <string name="form_toilet_type">ប្រភេទបង្គន់</string>
+    <string name="form_tank_location">ទីតាំងធុង</string>
+    <string name="form_tank_material">សម្ភារៈធុង</string>
+    <string name="form_tank_condition">លក្ខខណ្ឌធុង</string>
+    <string name="form_last_emptied">បង្ហូរចុងក្រោយ</string>
+    <string name="form_emptying_frequency">ភាពញឹកញាប់នៃការបង្ហូរ</string>
+    <string name="form_access_road">ផ្លូវចូល</string>
+    <string name="form_road_width">ទទឹងផ្លូវ</string>
+    <string name="form_distance_to_tank">ចម្ងាយទៅធុង</string>
+    <string name="form_contact_info">ព័ត៌មានទំនាក់ទំនង</string>
+    <string name="form_owner_name">ឈ្មោះម្ចាស់</string>
+    <string name="form_phone_number">លេខទូរស័ព្ទ</string>
+    <string name="form_email">អ៊ីមែល</string>
+    <string name="form_contact_person">អ្នកទំនាក់ទំនង</string>
+    <string name="form_alternate_phone">លេខទូរស័ព្ទបន្ទាប់បន្សំ</string>
+    <string name="form_clear">សម្អាត</string>
+    <string name="form_save_draft">រក្សាទុកសេចក្តីព្រាង</string>
+    <string name="form_submit">ដាក់ស្នើ</string>
+    <string name="form_task_details">ព័ត៌មានភារកិច្ច</string>
+    <string name="form_worker_name">ឈ្មោះកម្មករ</string>
+    <string name="form_supervisor">អ្នកត្រួតពិនិត្យ</string>
+    <string name="form_team_size">ទំហំក្រុម</string>
+    <string name="form_equipment">គ្រឿងបរិក្ខារ</string>
+    <string name="form_vehicle_number">លេខរថយន្ត</string>
+    <string name="form_truck_capacity">សមត្ថភាពរថយន្ត</string>
+    <string name="form_emptying_type">ប្រភេទបង្ហូរ</string>
+    <string name="form_tank_type">ប្រភេទធុង</string>
+    <string name="form_tank_capacity">សមត្ថភាពធុង</string>
+    <string name="form_sludge_level">កម្រិតសារធាតុរឹង</string>
+    <string name="form_water_level">កម្រិតទឹក</string>
+    <string name="form_volume_emptied">បរិមាណបានបង្ហូរ</string>
+    <string name="form_sludge_quality">គុណភាពសារធាតុរឹង</string>
+    <string name="form_environmental_conditions">លក្ខខណ្ឌបរិស្ថាន</string>
+    <string name="form_weather">អាកាសធាតុ</string>
+    <string name="form_temperature">សីតុណ្ហភាព</string>
+    <string name="form_notes">កំណត់ចំណាំ</string>
+    <string name="form_additional_comments">មតិយោបល់បន្ថែម</string>
+    <string name="nav_todo_list">បញ្ជីភារកិច្ច</string>
+    <string name="action_refresh">ផ្ទុកឡើងវិញ</string>
+    <string name="status_unknown">មិនស្គាល់</string>
+    <string name="message_name_not_provided">គ្មានឈ្មោះ</string>
+    <string name="action_filter_by_date">ត្រងតាមកាលបរិច្ឆេទ</string>
+    <string name="cd_clear_date_filter">សម្អាតការត្រងកាលបរិច្ឆេទ</string>
+    <string name="message_pull_to_refresh_tasks">ទាញដើម្បីផ្ទុកភារកិច្ចឡើងវិញ</string>
+    <string name="message_all_clear">ទាំងអស់បានបញ្ចប់!</string>
+    <string name="message_no_applications_filter_criteria">គ្មានពាក្យស្នើសុំដែលត្រូវគ្នានឹងលក្ខខណ្ឌត្រងរបស់អ្នក</string>
     <string name="form_location">ទីតាំង</string>
     <string name="form_address">អាសយដ្ឋាន</string>
     <string name="form_coordinates">កូអរដោនេ</string>
@@ -86,102 +546,97 @@
     <string name="form_start_time">ម៉ោងចាប់ផ្តើម</string>
     <string name="form_end_time">ម៉ោងបញ្ចប់</string>
     <string name="form_duration">រយៈពេល</string>
-    <string name="form_worker_name">ឈ្មោះកម្មករ</string>
-    <string name="form_supervisor">អ្នកគ្រប់គ្រង</string>
-    <string name="form_team_size">ទំហំក្រុម</string>
-    <string name="form_equipment">បរិក្ខារ</string>
-    <string name="form_vehicle_number">លេខយានយន្ត</string>
-    <string name="form_truck_capacity">ចំណុះរថយន្ត (លីត្រ)</string>
-
-    <!-- Emptying Process Form -->
-    <string name="form_emptying_type">ប្រភេទការបូម</string>
-    <string name="form_tank_type">ប្រភេទធុង</string>
-    <string name="form_tank_capacity">ចំណុះធុង (លីត្រ)</string>
-    <string name="form_sludge_level">កម្រិតកាកសំណល់ (%)</string>
-    <string name="form_water_level">កម្រិតទឹក (%)</string>
-    <string name="form_volume_emptied">បរិមាណដែលបានបូម (លីត្រ)</string>
-    <string name="form_sludge_quality">គុណភាពកាកសំណល់</string>
-    <string name="form_access_difficulty">ការលំបាកក្នុងការចូលដំណើរការ</string>
-    <string name="form_safety_equipment">បរិក្ខារសុវត្ថិភាពដែលប្រើ</string>
-    <string name="form_environmental_conditions">លក្ខខណ្ឌបរិស្ថាន</string>
-    <string name="form_weather">អាកាសធាតុ</string>
-    <string name="form_temperature">សីតុណ្ហភាព (°C)</string>
-    <string name="form_notes">ចំណាំ</string>
-    <string name="form_additional_comments">មតិយោបល់បន្ថែម</string>
+    <string name="form_access_difficulty">ភាពលំបាកក្នុងការចូលទៅដល់</string>
+    <string name="form_safety_equipment">គ្រឿងបរិក្ខារសុវត្ថិភាព</string>
     <string name="form_photos">រូបថត</string>
-    <string name="form_before_photos">រូបថតមុនការងារ</string>
-    <string name="form_after_photos">រូបថតក្រោយការងារ</string>
-
-    <!-- Building Survey Form -->
-    <string name="form_building_details">ព័ត៌មានលម្អិតអាគារ</string>
-    <string name="form_building_name">ឈ្មោះអាគារ</string>
-    <string name="form_building_type">ប្រភេទអាគារ</string>
-    <string name="form_number_of_floors">ចំនួនជាន់</string>
-    <string name="form_total_units">ខ្នងសរុប</string>
-    <string name="form_occupied_units">ខ្នងដែលមានមនុស្សរស់នៅ</string>
-    <string name="form_construction_year">ឆ្នាំសង់</string>
-    <string name="form_building_area">ផ្ទៃអាគារ (ម²)</string>
-    <string name="form_compound_area">ផ្ទៃបរិវេណ (ម²)</string>
-
-    <!-- Sanitation System -->
-    <string name="form_sanitation_system">ប្រព័ន្ធអនាម័យ</string>
-    <string name="form_toilet_type">ប្រភេទបង្គន់</string>
-    <string name="form_septic_tank">ធុងកាកសំណល់</string>
-    <string name="form_tank_location">ទីតាំងធុង</string>
-    <string name="form_tank_material">សម្ភារៈធុង</string>
-    <string name="form_tank_condition">ស្ថានភាពធុង</string>
-    <string name="form_last_emptied">បូមចុងក្រោយ</string>
-    <string name="form_emptying_frequency">ប្រេកង់នៃការបូម</string>
-    <string name="form_access_road">ផ្លូវចូល</string>
-    <string name="form_road_width">ទទឹងផ្លូវ (ម)</string>
-    <string name="form_distance_to_tank">ចម្ងាយដល់ធុង (ម)</string>
-
-    <!-- Contact Information -->
-    <string name="form_contact_info">ព័ត៌មានទំនាក់ទំនង</string>
-    <string name="form_owner_name">ឈ្មោះម្ចាស់</string>
-    <string name="form_phone_number">លេខទូរសព្ទ</string>
-    <string name="form_email">អ៊ីមែល</string>
-    <string name="form_contact_person">អ្នកទំនាក់ទំនង</string>
-    <string name="form_alternate_phone">លេខទូរសព្ទបម្រុង</string>
-
-    <!-- Validation Messages -->
-    <string name="validation_required">វាលនេះត្រូវបំពេញ</string>
-    <string name="validation_invalid_phone">លេខទូរសព្ទមិនត្រឹមត្រូវ</string>
-    <string name="validation_invalid_email">អាសយដ្ឋានអ៊ីមែលមិនត្រឹមត្រូវ</string>
-    <string name="validation_invalid_number">សូមបញ្ចូលលេខត្រឹមត្រូវ</string>
-    <string name="validation_invalid_date">ទម្រង់កាលបរិច្ឆេទមិនត្រឹមត្រូវ</string>
-    <string name="validation_min_length">ត្រូវការអក្សរយ៉ាងតិច %d តួ</string>
-    <string name="validation_max_length">អនុញ្ញាតអក្សរយ៉ាងច្រើន %d តួ</string>
-
-    <!-- Form Actions -->
-    <string name="form_submit">ដាក់ស្នើ</string>
-    <string name="form_save_draft">រក្សាទុកសេចក្តីព្រាង</string>
-    <string name="form_clear">សម្អាត</string>
-    <string name="form_reset">កំណត់ឡើងវិញ</string>
-    <string name="form_next">បន្ទាប់</string>
-    <string name="form_previous">មុន</string>
-    <string name="form_finish">បញ្ចប់</string>
-
-    <!-- Dropdown Options -->
-    <string name="dropdown_select">ជ្រើសរើស...</string>
-    <string name="dropdown_please_select">សូមជ្រើសរើសជម្រើស</string>
-    <string name="dropdown_other">ផ្សេងទៀត</string>
-
-    <!-- Building Types -->
+    <string name="form_before_photos">រូបថតពីមុន</string>
+    <string name="form_after_photos">រូបថតពីក្រោយ</string>
+    <string name="form_septic_tank">ធុងបំរែបំរាយ</string>
     <string name="building_residential">លំនៅដ្ឋាន</string>
     <string name="building_commercial">ពាណិជ្ជកម្ម</string>
     <string name="building_institutional">ស្ថាប័ន</string>
-    <string name="building_mixed_use">ប្រើប្រាស់លាយ</string>
-
-    <!-- Tank Types -->
-    <string name="tank_septic">ធុងកាកសំណល់</string>
-    <string name="tank_holding">ធុងស្តុក</string>
-    <string name="tank_pit_latrine">បង្គន់គុម</string>
+    <string name="building_mixed_use">ប្រើប្រាស់ចម្រុះ</string>
+    <string name="tank_septic">ធុងបំរែបំរាយ</string>
+    <string name="tank_holding">ធុងផ្ទុក</string>
+    <string name="tank_pit_latrine">រណ្តៅបង្គន់</string>
     <string name="tank_other">ផ្សេងទៀត</string>
-
-    <!-- Quality Levels -->
     <string name="quality_good">ល្អ</string>
     <string name="quality_fair">មធ្យម</string>
-    <string name="quality_poor">មិនល្អ</string>
-    <string name="quality_very_poor">មិនល្អខ្លាំង</string>
+    <string name="quality_poor">អន់</string>
+    <string name="quality_very_poor">អន់ណាស់</string>
+    <string name="form_reset">កំណត់ឡើងវិញ</string>
+    <string name="form_next">បន្ទាប់</string>
+    <string name="form_previous">ពីមុន</string>
+    <string name="form_finish">បញ្ចប់</string>
+    <string name="checkbox_applicant_same_as_customer">អ្នកដាក់ពាក្យដូចអតិថិជន</string>
+    <string name="card_emptying_scheduling">កាលវិភាគបង្ហូរ</string>
+    <string name="card_site_preparation">រៀបចំទីតាំង</string>
+    <string name="card_emptying_service">សេវាបង្ហូរ</string>
+    <string name="card_additional_trips">ដំណើរបន្ថែម</string>
+    <string name="language_english">អង់គ្លេស</string>
+    <string name="language_khmer">ខ្មែរ</string>
+    <string name="settings_database_size">ទំហំមូលដ្ឋានទិន្នន័យ</string>
+    <string name="status_syncing">កំពុងធ្វើសមកាលកម្ម...</string>
+    <string name="status_calculating">កំពុងគណនា...</string>
+    <string name="status_clearing">កំពុងសម្អាត...</string>
+    <string name="message_cache_cleared">សម្អាតឃ្លាំងសម្ងាត់បានជោគជ័យ</string>
+    <string name="dialog_select_language">ជ្រើសរើសភាសា</string>
+    <string name="settings_work_without_internet">ធ្វើការដោយគ្មានអ៊ីនធឺណិត</string>
+    <string name="settings_sync_when_online">ធ្វើសមកាលកម្មទិន្នន័យនៅពេលមានអ៊ីនធឺណិត</string>
+    <string name="settings_tap_to_test_sync">ចុចដើម្បីសាកល្បងសមកាលកម្ម</string>
+    <string name="settings_test_sync">សាកល្បងសមកាលកម្ម</string>
+    <string name="settings_clear_cache_description">សម្អាតទិន្នន័យដែលបានរក្សាទុកដើម្បីបង្កើនទំហំផ្ទុក</string>
+    <string name="unit_megabytes">មេកាបៃ</string>
+    <string name="message_logout_subtitle">ចាកចេញពីគណនី</string>
+    <string name="label_new_building">អាគារថ្មី</string>
+    <string name="action_new_survey">ការស្ទង់មតិថ្មី</string>
+    <string name="cd_toggle_map_layers">បើក/បិទស្រទាប់ផែនទី</string>
+    <string name="section_application_information">ព័ត៌មានពាក្យស្នើសុំ</string>
+    <string name="label_application_date">កាលបរិច្ឆេទដាក់ពាក្យ</string>
+    <string name="title_emptying_request_form">ទម្រង់ស្នើសុំបង្ហូរ</string>
+    <string name="permission_camera_access">ការប្រើប្រាស់កាមេរ៉ា</string>
+    <string name="permission_camera_description">ថតរូបសម្រាប់ការស្ទង់មតិអាគារ និងឯកសារ</string>
+    <string name="permission_photo_gallery">ការប្រើប្រាស់ថតរូប</string>
+    <string name="permission_photo_gallery_description">ជ្រើសរើសរូបភាពពីឧបករណ៍របស់អ្នក</string>
+    <string name="permission_location">ការប្រើប្រាស់ទីតាំង</string>
+    <string name="permission_location_description">បង្ហាញទីតាំងបច្ចុប្បន្នរបស់អ្នកលើផែនទី</string>
+    <string name="action_grant_permissions">ផ្តល់សិទ្ធិ</string>
+    <string name="section_quick_actions">សកម្មភាពរហ័ស</string>
+    <string name="action_view_all">មើលទាំងអស់</string>
+    <string name="action_continue_to_app">បន្តទៅកម្មវិធី</string>
+    <string name="action_grant_all_permissions">ផ្តល់សិទ្ធិទាំងអស់</string>
+    <string name="permission_welcome_title">ស្វាគមន៍មកកាន់ SMIS</string>
+    <string name="permission_app_subtitle">ប្រព័ន្ធព័ត៌មានគ្រប់គ្រងប្រព័ន្ធលូ</string>
+    <string name="permission_intro_message">ដើម្បីផ្តល់បទពិសោធន៍ល្អបំផុត SMIS ត្រូវការសិទ្ធិប្រើប្រាស់ដូចខាងក្រោម៖</string>
+    <string name="cd_app_logo">រូបសញ្ញា SMIS</string>
+    
+    <!-- Navigation strings -->
+    <string name="nav_site_preparation">រៀបចំទីតាំង</string>
+    <string name="nav_emptying_service">សេវាបង្ហូរ</string>
+    <string name="nav_emptying_scheduling">កាលវិភាគបង្ហូរ</string>
+    
+    <!-- Status strings -->
+    <string name="status_draft">សេចក្តីព្រាង</string>
+    <string name="status_sync_failed">ការធ្វើសមកាលកម្មបានបរាជ័យ</string>
+    <string name="status_synced">បានធ្វើសមកាលកម្ម</string>
+    
+    <!-- Login screen strings -->
+    <string name="message_welcome_back">សូមស្វាគមន៍ការត្រលប់មកវិញ</string>
+    <string name="message_sign_in_to_continue">ចូលដើម្បីបន្ត</string>
+    <string name="label_email">អ៊ីមែល</string>
+    <string name="label_password">ពាក្យសម្ងាត់</string>
+    <string name="cd_hide_password">លាក់ពាក្យសម្ងាត់</string>
+    <string name="cd_show_password">បង្ហាញពាក្យសម្ងាត់</string>
+    <string name="action_forgot_password">ភ្លេចពាក្យសម្ងាត់?</string>
+    <string name="action_sign_in">ចូល</string>
+    <string name="label_remember_me">ចងចាំខ្ញុំ</string>
+    
+    <!-- Form action strings -->
+    <string name="action_saving">កំពុងរក្សាទុក...</string>
+    <string name="action_submitting">កំពុងដាក់ស្នើ...</string>
+    <string name="label_customer_phone">លេខទូរស័ព្ទអតិថិជន</string>
+    <string name="label_site_visit_required">ត្រូវការទស្សនាទីតាំង?</string>
+    
+    <!-- Offline map -->
+    <string name="offline_map">ផែនទីក្រៅបណ្តាញ</string>
 </resources>

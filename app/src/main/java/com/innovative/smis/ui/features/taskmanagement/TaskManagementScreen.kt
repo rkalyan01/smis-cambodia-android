@@ -34,13 +34,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -81,7 +84,7 @@ fun TaskManagementScreen(navController: NavController, onMenuClick: (() -> Unit)
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Task Management", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.screen_task_management), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -159,9 +162,25 @@ private fun TaskStatusFilter(
     selectedStatus: String,
     onStatusSelected: (String) -> Unit
 ) {
+    // Map of status keys to their string resource IDs
+    val statusFiltersMap = mapOf(
+        "All" to R.string.filter_all,
+        "Today" to R.string.filter_today,
+        "Urgent" to R.string.filter_urgent,
+        "Initiated" to R.string.filter_initiated,
+        "Scheduled" to R.string.filter_scheduled,
+        "Rescheduled" to R.string.filter_rescheduled,
+        "Site-Preparation" to R.string.filter_site_preparation,
+        "Emptied" to R.string.filter_emptied,
+        "Completed" to R.string.filter_completed,
+        "Cancelled" to R.string.filter_cancelled,
+        "Reassigned" to R.string.filter_reassigned,
+        "Pending" to R.string.filter_pending
+    )
+    
     Column {
         Text(
-            text = "Filter by Status",
+            text = stringResource(R.string.label_filter_by_status),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -172,11 +191,14 @@ private fun TaskStatusFilter(
             contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
             items(availableStatuses) { status ->
-                FilterChip(
-                    selected = selectedStatus == status,
-                    onClick = { onStatusSelected(status) },
-                    label = { Text(status) }
-                )
+                val stringResId = statusFiltersMap[status]
+                if (stringResId != null) {
+                    FilterChip(
+                        selected = selectedStatus == status,
+                        onClick = { onStatusSelected(status) },
+                        label = { Text(stringResource(stringResId)) }
+                    )
+                }
             }
         }
     }
@@ -200,7 +222,14 @@ private fun ApplicationTaskCard(
     }
     val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     val isToday = todoItem.proposedEmptyingDate == todayStr
-    val cardBorder = if (isToday) BorderStroke(2.dp, Color(0xFFFF9800)) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    val isUrgent = todoItem.urgency?.equals("yes", ignoreCase = true) == true
+    
+    // Priority: Urgent (red) > Today (orange) > Normal (gray)
+    val cardBorder = when {
+        isUrgent -> BorderStroke(3.dp, Color(0xFFDC3545)) // Red border for urgent
+        isToday -> BorderStroke(2.dp, Color(0xFFFF9800))  // Orange border for today
+        else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) // Normal border
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -210,17 +239,18 @@ private fun ApplicationTaskCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column {
-            Row(
-                modifier = Modifier.clickable { expanded = !expanded }.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Application ID #${todoItem.applicationId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(todoItem.applicantName ?: "Name not provided", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.clickable { expanded = !expanded }.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Application ID #${todoItem.applicationId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(todoItem.applicantName ?: "Name not provided", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    StatusBadge(text = statusText, color = statusColor)
+                    Icon(Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", modifier = Modifier.rotate(rotationAngle))
                 }
-                Spacer(Modifier.width(8.dp))
-                StatusBadge(text = statusText, color = statusColor)
-                Icon(Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", modifier = Modifier.rotate(rotationAngle))
+                Spacer(Modifier.height(8.dp))
+                WorkflowProgressIndicator(status = todoItem.status)
             }
             AnimatedVisibility(visible = expanded) {
                 Column(
@@ -257,7 +287,7 @@ private fun ApplicationTaskCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     todoItem.applicantContact?.let { contact ->
                         IconButton(onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contact"))
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(contact)}"))
                             context.startActivity(intent)
                         }) { 
                             Icon(Icons.Outlined.Call, "Call Applicant", tint = MaterialTheme.colorScheme.primary) 
@@ -298,7 +328,7 @@ fun LoadingState() {
     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator()
-            Text("Loading tasks...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.message_loading_tasks), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -314,7 +344,7 @@ fun EmptyState(filter: String) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(Icons.Filled.Assignment, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
-            Text("No Applications Found", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.message_no_applications_found), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
                 text = "There are no applications matching the current filter criteria.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -322,5 +352,98 @@ fun EmptyState(filter: String) {
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+data class WorkflowStage(
+    val step: Int,
+    val totalSteps: Int,
+    val stageName: String,
+    val isCompleted: Boolean
+)
+
+fun getWorkflowStage(status: String?): WorkflowStage {
+    return when (status?.lowercase()) {
+        // Stage 1: Emptying Scheduling
+        "initiated" -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
+        "pending" -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
+        
+        // Stage 2: Site Preparation
+        "scheduled" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
+        "rescheduled" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
+        "reassigned" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
+        
+        // Stage 3: Emptying Service
+        "site-preparation" -> WorkflowStage(3, 4, "workflow_stage_emptying_service", false)
+        
+        // Stage 4: Completed
+        "emptied" -> WorkflowStage(4, 4, "workflow_stage_completed", true)
+        "completed" -> WorkflowStage(4, 4, "workflow_stage_completed", true)
+        
+        // Cancelled/Terminal states - show as cancelled at stage 0
+        "cancelled" -> WorkflowStage(0, 4, "workflow_stage_cancelled", false)
+        
+        // Unknown/Default - assume early stage
+        else -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
+    }
+}
+
+@Composable
+fun WorkflowProgressIndicator(status: String?, modifier: Modifier = Modifier) {
+    val workflowStage = getWorkflowStage(status)
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val completedColor = Color(0xFF28A745)
+    val inactiveColor = MaterialTheme.colorScheme.outlineVariant
+    val dotColor = if (workflowStage.isCompleted) completedColor else primaryColor
+    
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.label_progress),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
+        
+        repeat(workflowStage.totalSteps) { index ->
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        color = if (index < workflowStage.step) dotColor else inactiveColor,
+                        shape = RoundedCornerShape(50)
+                    )
+            )
+        }
+        
+        Text(
+            text = stringResource(R.string.workflow_progress_format, workflowStage.step, workflowStage.totalSteps),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold
+        )
+        
+        Text(
+            text = stringResource(
+                when (workflowStage.stageName) {
+                    "workflow_stage_scheduling" -> R.string.workflow_stage_scheduling
+                    "workflow_stage_site_preparation" -> R.string.workflow_stage_site_preparation
+                    "workflow_stage_emptying_service" -> R.string.workflow_stage_emptying_service
+                    "workflow_stage_completed" -> R.string.workflow_stage_completed
+                    "workflow_stage_cancelled" -> R.string.workflow_stage_cancelled
+                    else -> R.string.workflow_stage_scheduling
+                }
+            ),
+            style = MaterialTheme.typography.labelSmall,
+            color = when {
+                workflowStage.stageName == "workflow_stage_cancelled" -> MaterialTheme.colorScheme.error
+                workflowStage.isCompleted -> completedColor
+                else -> primaryColor
+            },
+            fontWeight = FontWeight.Bold
+        )
     }
 }

@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.innovative.smis.R
 import java.util.Calendar
 
 /**
@@ -46,7 +48,7 @@ fun DatePickerField(
                 onClick = { showDatePicker = true },
                 enabled = enabled
             ) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = "Select Date")
+                Icon(Icons.Default.CalendarMonth, contentDescription = stringResource(R.string.cd_select_date))
             }
         },
         colors = if (!enabled) {
@@ -92,10 +94,10 @@ fun DatePickerField(
                 TextButton(onClick = {
                     onDateSelected(datePickerState.selectedDateMillis)
                     showDatePicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {

@@ -7,12 +7,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.data.model.response.*
 import com.innovative.smis.data.model.BuildingSurveyFormState
 import com.innovative.smis.data.model.RespondentGender
@@ -59,14 +61,14 @@ fun BuildingSurveyScreen(
             .verticalScroll(scrollState)
     ) {
         Text(
-            text = StringResources.getString(StringResources.BUILDING_SURVEY, languageCode),
+            text = stringResource(R.string.nav_survey),
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         Text(
-            text = "BIN: ${bin ?: StringResources.getString(StringResources.NEW_BUILDING, languageCode)}",
+            text = "BIN: ${bin ?: stringResource(R.string.label_new_building)}",
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -131,7 +133,7 @@ private fun BuildingSurveyFormContent(
     OutlinedTextField(
         value = state.village,
         onValueChange = { onStateChange(state.copy(village = it)) },
-        label = { Text("Village (Optional)") },
+        label = { Text(stringResource(R.string.label_village_optional)) },
         modifier = Modifier.fillMaxWidth()
     )
     
@@ -172,14 +174,13 @@ private fun BuildingSurveyFormContent(
     
     Spacer(modifier = Modifier.height(8.dp))
     
-    OutlinedTextField(
+    PhoneNumberField(
         value = state.respondentContact,
         onValueChange = { onStateChange(state.copy(respondentContact = it)) },
-        label = { Text("Respondent Contact") },
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = KeyboardType.Phone
-        ),
-        modifier = Modifier.fillMaxWidth()
+        label = stringResource(R.string.label_respondent_contact),
+        modifier = Modifier,
+        enabled = true,
+        isRequired = false
     )
     
     Spacer(modifier = Modifier.height(8.dp))
@@ -187,20 +188,19 @@ private fun BuildingSurveyFormContent(
     OutlinedTextField(
         value = state.ownerName,
         onValueChange = { onStateChange(state.copy(ownerName = it)) },
-        label = { Text("Owner Name") },
+        label = { Text(stringResource(R.string.label_owner_name)) },
         modifier = Modifier.fillMaxWidth()
     )
     
     Spacer(modifier = Modifier.height(8.dp))
     
-    OutlinedTextField(
+    PhoneNumberField(
         value = state.ownerContact,
         onValueChange = { onStateChange(state.copy(ownerContact = it)) },
-        label = { Text("Owner Contact") },
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = KeyboardType.Phone
-        ),
-        modifier = Modifier.fillMaxWidth()
+        label = stringResource(R.string.label_owner_contact),
+        modifier = Modifier,
+        enabled = true,
+        isRequired = false
     )
     
     Spacer(modifier = Modifier.height(8.dp))
@@ -242,7 +242,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.numberOfFloors,
             onValueChange = { onStateChange(state.copy(numberOfFloors = it)) },
-            label = { Text("No. of Floors") },
+            label = { Text(stringResource(R.string.label_no_of_floors)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
@@ -252,7 +252,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.householdServed,
             onValueChange = { onStateChange(state.copy(householdServed = it)) },
-            label = { Text("Household Served") },
+            label = { Text(stringResource(R.string.label_household_served)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
@@ -269,7 +269,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.populationServed,
             onValueChange = { onStateChange(state.copy(populationServed = it)) },
-            label = { Text("Population Served") },
+            label = { Text(stringResource(R.string.label_population_served)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
@@ -279,7 +279,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.floorArea,
             onValueChange = { onStateChange(state.copy(floorArea = it)) },
-            label = { Text("Floor Area (m²)") },
+            label = { Text(stringResource(R.string.label_floor_area)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Decimal
             ),
@@ -312,7 +312,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.constructionYear,
             onValueChange = { onStateChange(state.copy(constructionYear = it)) },
-            label = { Text("Construction Year") },
+            label = { Text(stringResource(R.string.label_construction_year)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
@@ -354,7 +354,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.numberOfToilets,
             onValueChange = { onStateChange(state.copy(numberOfToilets = it)) },
-            label = { Text("No. of Toilets") },
+            label = { Text(stringResource(R.string.label_no_of_toilets)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
@@ -364,7 +364,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.toiletCount,
             onValueChange = { onStateChange(state.copy(toiletCount = it)) },
-            label = { Text("Toilet Count") },
+            label = { Text(stringResource(R.string.label_toilet_count)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
@@ -431,7 +431,7 @@ private fun BuildingSurveyFormContent(
             OutlinedTextField(
                 value = state.numberOfTanks,
                 onValueChange = { onStateChange(state.copy(numberOfTanks = it)) },
-                label = { Text("No. of Tanks") },
+                label = { Text(stringResource(R.string.label_no_of_tanks)) },
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     keyboardType = KeyboardType.Number
                 ),
@@ -441,7 +441,7 @@ private fun BuildingSurveyFormContent(
             OutlinedTextField(
                 value = state.sizeOfTank,
                 onValueChange = { onStateChange(state.copy(sizeOfTank = it)) },
-                label = { Text("Size of Tank (m³)") },
+                label = { Text(stringResource(R.string.label_size_of_tank)) },
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     keyboardType = KeyboardType.Decimal
                 ),
@@ -454,7 +454,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.distanceFromWell,
             onValueChange = { onStateChange(state.copy(distanceFromWell = it)) },
-            label = { Text("Distance from Well (m)") },
+            label = { Text(stringResource(R.string.label_distance_from_well)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Decimal
             ),
@@ -513,7 +513,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.containmentLocation,
             onValueChange = { onStateChange(state.copy(containmentLocation = it)) },
-            label = { Text("Containment Location") },
+            label = { Text(stringResource(R.string.label_containment_location)) },
             modifier = Modifier.fillMaxWidth()
         )
         
@@ -522,7 +522,7 @@ private fun BuildingSurveyFormContent(
         OutlinedTextField(
             value = state.distanceHouseToContainment,
             onValueChange = { onStateChange(state.copy(distanceHouseToContainment = it)) },
-            label = { Text("Distance House to Containment (m)") },
+            label = { Text(stringResource(R.string.label_distance_house_to_containment)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = KeyboardType.Decimal
             ),
@@ -538,7 +538,7 @@ private fun BuildingSurveyFormContent(
     OutlinedTextField(
         value = state.waterCustomerId,
         onValueChange = { onStateChange(state.copy(waterCustomerId = it)) },
-        label = { Text("Water Customer ID") },
+        label = { Text(stringResource(R.string.label_water_customer_id)) },
         modifier = Modifier.fillMaxWidth()
     )
     
@@ -547,7 +547,7 @@ private fun BuildingSurveyFormContent(
     OutlinedTextField(
         value = state.meterSerialNumber,
         onValueChange = { onStateChange(state.copy(meterSerialNumber = it)) },
-        label = { Text("Meter Serial Number") },
+        label = { Text(stringResource(R.string.label_meter_serial_number)) },
         modifier = Modifier.fillMaxWidth()
     )
     
@@ -599,7 +599,7 @@ private fun BuildingSurveyFormContent(
     OutlinedTextField(
         value = state.comments,
         onValueChange = { onStateChange(state.copy(comments = it)) },
-        label = { Text("Comments") },
+        label = { Text(stringResource(R.string.label_comments)) },
         maxLines = 4,
         modifier = Modifier.fillMaxWidth()
     )

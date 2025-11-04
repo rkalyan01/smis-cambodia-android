@@ -1,22 +1,32 @@
 package com.innovative.smis.ui.components
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material3.*
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.innovative.smis.R
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +53,7 @@ fun OutlinedTextFieldWithError(
                 {
                     Icon(
                         imageVector = Icons.Default.Error,
-                        contentDescription = "Error",
+                        contentDescription = stringResource(R.string.cd_error),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -60,6 +70,71 @@ fun OutlinedTextFieldWithError(
             )
         }
     }
+}
+
+/**
+ * Phone number input field with Cambodian phone number validation and call functionality
+ * 
+ * Features:
+ * - Real-time validation for Cambodian phone numbers
+ * - Call button when number is valid
+ * - Error display with localized messages
+ * - Phone keyboard type
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PhoneNumberField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isRequired: Boolean = false
+) {
+    val context = LocalContext.current
+    val validationResult = FormValidation.validateCambodianPhone(value, isRequired)
+    
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        isError = !validationResult.isValid && value.isNotBlank(),
+        supportingText = {
+            if (!validationResult.isValid && value.isNotBlank()) {
+                Text(
+                    text = validationResult.errorMessage ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp
+                )
+            }
+        },
+        trailingIcon = {
+            if (value.isNotEmpty() && validationResult.isValid) {
+                IconButton(
+                    onClick = {
+                        val formattedNumber = PhoneNumberFormatter.formatForDialing(value)
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
+                        context.startActivity(intent)
+                    }
+                ) {
+                    Icon(
+                        Icons.Outlined.Call,
+                        contentDescription = "Call",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else if (!validationResult.isValid && value.isNotBlank()) {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,7 +163,7 @@ fun DropdownField(
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Dropdown"
+                        contentDescription = stringResource(R.string.cd_dropdown)
                     )
                 },
                 readOnly = true,
@@ -190,7 +265,7 @@ fun YesNoRadioGroup(
                     onClick = { onOptionSelected(true) }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Yes", fontSize = 14.sp)
+                Text(stringResource(R.string.action_yes), fontSize = 14.sp)
             }
             
             Spacer(modifier = Modifier.width(16.dp))
@@ -209,7 +284,7 @@ fun YesNoRadioGroup(
                     onClick = { onOptionSelected(false) }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("No", fontSize = 14.sp)
+                Text(stringResource(R.string.action_no), fontSize = 14.sp)
             }
         }
     }
@@ -359,7 +434,7 @@ fun DropdownMenuField(
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Dropdown"
+                        contentDescription = stringResource(R.string.cd_dropdown)
                     )
                 },
                 readOnly = true,

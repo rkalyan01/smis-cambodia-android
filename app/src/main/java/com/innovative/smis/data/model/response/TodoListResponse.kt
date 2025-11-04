@@ -17,7 +17,10 @@ data class TodoItem(
     @Json(name = "applicant_name") val applicantName: String?,
     @Json(name = "applicant_contact") val applicantContact: String?,
     @Json(name = "proposed_emptying_date") val proposedEmptyingDate: String?,
-    @Json(name = "application_status") val status: String? = "Initiated"
+    @Json(name = "application_status") val status: String? = "Initiated",
+    @Json(name = "application_type") val applicationType: String? = null,
+    @Json(name = "purpose_of_emptying_request") val purposeOfEmptyingRequest: Int? = null,
+    @Json(name = "urgency") val urgency: String? = null
 )
 
 enum class TodoStatus(val value: String, val displayName: String) {

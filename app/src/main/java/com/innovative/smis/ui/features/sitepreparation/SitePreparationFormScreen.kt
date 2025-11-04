@@ -17,18 +17,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.ui.components.DropdownMenuField
 import com.innovative.smis.ui.components.MultiSelectCheckboxGroup
+import com.innovative.smis.ui.components.PhoneNumberField
 import com.innovative.smis.ui.components.PostponeDialog
 import com.innovative.smis.ui.components.PostponeData
 import com.innovative.smis.ui.components.DatePickerField
+import com.innovative.smis.ui.components.disabledTextFieldColors
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -89,10 +94,10 @@ fun SitePreparationFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Site Preparation Form", style = MaterialTheme.typography.titleMedium) },
+                title = { Text(stringResource(R.string.screen_site_preparation_form), style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
@@ -102,7 +107,7 @@ fun SitePreparationFormScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.EventBusy,
-                            contentDescription = "Postpone",
+                            contentDescription = stringResource(R.string.cd_postpone),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -116,7 +121,7 @@ fun SitePreparationFormScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Inventory,
-                            contentDescription = "Containment",
+                            contentDescription = stringResource(R.string.cd_containment),
                             tint = if (uiState.sanitationCustomerId != null) 
                                 MaterialTheme.colorScheme.onSurface 
                             else 
@@ -143,7 +148,7 @@ fun SitePreparationFormScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Error: ${loadingState.message}")
+                    Text(stringResource(R.string.message_error_format, loadingState.message ?: ""))
                 }
             }
             else -> {
@@ -164,7 +169,7 @@ fun SitePreparationFormScreen(
                     // Application ID (readonly at top)
                     item {
                         ReadOnlyTextField(
-                            label = "Application ID",
+                            label = stringResource(R.string.label_application_id),
                             value = uiState.applicationId
                         )
                     }
@@ -177,22 +182,22 @@ fun SitePreparationFormScreen(
                     // Sanitation Customer ID (readonly)
                     item {
                         ReadOnlyTextField(
-                            label = "Sanitation Customer ID",
+                            label = stringResource(R.string.label_sanitation_customer_id),
                             value = uiState.sanitationCustomerId ?: ""
                         )
                     }
                     
                     item {
                         ReadOnlyTextField(
-                            label = "Applicant Name",
+                            label = stringResource(R.string.label_applicant_name),
                             value = uiState.applicantName
                         )
                     }
                     item {
                         OutlinedTextField(
-                            value = uiState.applicantContact,
+                            value = PhoneNumberFormatter.formatForDisplay(uiState.applicantContact),
                             onValueChange = { },
-                            label = { Text("Applicant Contact") },
+                            label = { Text(stringResource(R.string.label_applicant_contact)) },
                             readOnly = true,
                             enabled = false,
                             modifier = Modifier.fillMaxWidth(),
@@ -205,13 +210,14 @@ fun SitePreparationFormScreen(
                                 if (uiState.applicantContact.isNotEmpty()) {
                                     IconButton(
                                         onClick = {
-                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${uiState.applicantContact}"))
+                                            val formattedNumber = PhoneNumberFormatter.formatForDialing(uiState.applicantContact)
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
                                             context.startActivity(intent)
                                         }
                                     ) {
                                         Icon(
                                             Icons.Default.Phone,
-                                            contentDescription = "Call applicant",
+                                            contentDescription = stringResource(R.string.cd_call_applicant),
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
@@ -223,7 +229,7 @@ fun SitePreparationFormScreen(
                     // Free Service Under PBC (readonly from API)
                     item {
                         ReadOnlyTextField(
-                            label = "Free Service Under PBC",
+                            label = stringResource(R.string.label_free_service_under_pbc),
                             value = if (uiState.freeServiceUnderPbc) "Yes" else "No"
                         )
                     }
@@ -237,13 +243,13 @@ fun SitePreparationFormScreen(
                             OutlinedTextField(
                                 value = "Loading...",
                                 onValueChange = {},
-                                label = { Text("Additional repairing") },
+                                label = { Text(stringResource(R.string.label_additional_repairing)) },
                                 readOnly = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         } else {
                             MultiSelectCheckboxGroup(
-                                label = "Additional repairing",
+                                label = stringResource(R.string.label_additional_repairing),
                                 options = uiState.containmentIssuesList,
                                 selectedKeys = uiState.additionalRepairingKeys,
                                 onSelectionChange = viewModel::onAdditionalRepairingChange,
@@ -260,7 +266,7 @@ fun SitePreparationFormScreen(
                             OutlinedTextField(
                                 value = uiState.otherAdditionalRepairing,
                                 onValueChange = viewModel::onOtherAdditionalRepairingChange,
-                                label = { Text("Other Additional Repairing") },
+                                label = { Text(stringResource(R.string.label_other_additional_repairing)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -272,7 +278,7 @@ fun SitePreparationFormScreen(
                     }
                     item {
                         YesNoRadioGroup(
-                            label = "Extra payment required",
+                            label = stringResource(R.string.label_extra_payment_required),
                             selectedOption = uiState.extraPaymentRequired,
                             onOptionSelected = viewModel::onExtraPaymentRequiredChange
                         )
@@ -284,7 +290,7 @@ fun SitePreparationFormScreen(
                             OutlinedTextField(
                                 value = uiState.amountOfExtraPayment,
                                 onValueChange = viewModel::onAmountOfExtraPaymentChange,
-                                label = { Text("Amount of Extra Payment") },
+                                label = { Text(stringResource(R.string.label_amount_of_extra_payment)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -305,44 +311,39 @@ fun SitePreparationFormScreen(
                                 onCheckedChange = viewModel::onReceiverSameAsApplicantChange
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Receiver is same as applicant")
+                            Text(stringResource(R.string.checkbox_receiver_same_as_applicant))
                         }
                     }
                     item {
                         OutlinedTextField(
                             value = if (uiState.isReceiverSameAsApplicant) uiState.applicantName else uiState.serviceReceiverName,
                             onValueChange = viewModel::onServiceReceiverNameChange,
-                            label = { Text("Service Receiver Name") },
+                            label = { Text(stringResource(R.string.label_service_receiver_name)) },
                             enabled = !uiState.isReceiverSameAsApplicant,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                     item {
-                        OutlinedTextField(
-                            value = if (uiState.isReceiverSameAsApplicant) uiState.applicantContact else uiState.serviceReceiverContact,
-                            onValueChange = viewModel::onServiceReceiverContactChange,
-                            label = { Text("Service Receiver Contact") },
-                            enabled = !uiState.isReceiverSameAsApplicant,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            modifier = Modifier.fillMaxWidth(),
-                            trailingIcon = {
-                                val contact = if (uiState.isReceiverSameAsApplicant) uiState.applicantContact else uiState.serviceReceiverContact
-                                if (contact.isNotEmpty()) {
-                                    IconButton(
-                                        onClick = {
-                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$contact"))
-                                            context.startActivity(intent)
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Phone,
-                                            contentDescription = "Call service receiver",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                            }
-                        )
+                        if (uiState.isReceiverSameAsApplicant) {
+                            // Disabled state - show existing contact
+                            OutlinedTextField(
+                                value = uiState.applicantContact,
+                                onValueChange = {},
+                                label = { Text(stringResource(R.string.label_service_receiver_contact)) },
+                                enabled = false,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = disabledTextFieldColors()
+                            )
+                        } else {
+                            PhoneNumberField(
+                                value = uiState.serviceReceiverContact,
+                                onValueChange = viewModel::onServiceReceiverContactChange,
+                                label = stringResource(R.string.label_service_receiver_contact),
+                                modifier = Modifier,
+                                enabled = true,
+                                isRequired = false
+                            )
+                        }
                     }
 
                     // Scheduling Information
@@ -367,13 +368,13 @@ fun SitePreparationFormScreen(
                         }
                         
                         ReadOnlyTextField(
-                            label = "Propose Emptying Date",
+                            label = stringResource(R.string.label_propose_emptying_date),
                             value = displayProposedDate
                         )
                     }
                     item {
                         YesNoRadioGroup(
-                            label = "need reschedule?",
+                            label = stringResource(R.string.label_need_reschedule),
                             selectedOption = uiState.needReschedule,
                             onOptionSelected = viewModel::onNeedRescheduleChange
                         )
@@ -386,7 +387,7 @@ fun SitePreparationFormScreen(
                                 .parseDisplayDate(context, uiState.newProposedEmptyingDate)
                             
                             DatePickerField(
-                                label = "New Proposed Emptying Date",
+                                label = stringResource(R.string.label_new_proposed_emptying_date),
                                 selectedDate = selectedMillis,
                                 onDateSelected = { millis ->
                                     val formattedDate = millis?.let {
@@ -421,9 +422,9 @@ fun SitePreparationFormScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Saving...")
+                                    Text(stringResource(R.string.button_saving))
                                 } else {
-                                    Text("Draft")
+                                    Text(stringResource(R.string.button_draft))
                                 }
                             }
                             
@@ -439,9 +440,9 @@ fun SitePreparationFormScreen(
                                         color = MaterialTheme.colorScheme.onPrimary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Submitting...")
+                                    Text(stringResource(R.string.button_submitting))
                                 } else {
-                                    Text("Submit")
+                                    Text(stringResource(R.string.button_submit))
                                 }
                             }
                         }
@@ -531,14 +532,14 @@ fun YesNoRadioGroup(
                     selected = selectedOption == true,
                     onClick = { onOptionSelected(true) }
                 )
-                Text("Yes", modifier = Modifier.padding(start = 4.dp))
+                Text(stringResource(R.string.label_yes), modifier = Modifier.padding(start = 4.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = selectedOption == false,
                     onClick = { onOptionSelected(false) }
                 )
-                Text("No", modifier = Modifier.padding(start = 4.dp))
+                Text(stringResource(R.string.label_no), modifier = Modifier.padding(start = 4.dp))
             }
         }
     }

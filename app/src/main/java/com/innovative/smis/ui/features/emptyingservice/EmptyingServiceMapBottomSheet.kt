@@ -18,6 +18,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import androidx.compose.ui.res.stringResource
+import com.innovative.smis.R
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -246,7 +248,7 @@ fun EmptyingServiceMapBottomSheet(
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.action_cancel))
                         }
 
                         Button(
@@ -256,7 +258,7 @@ fun EmptyingServiceMapBottomSheet(
                             },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Update")
+                            Text(stringResource(R.string.button_update))
                         }
                     }
                 }

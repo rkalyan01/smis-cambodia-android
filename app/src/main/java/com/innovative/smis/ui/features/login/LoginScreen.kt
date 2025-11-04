@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.innovative.smis.BuildConfig
 import com.innovative.smis.R
 import com.innovative.smis.ui.theme.SMISTheme
 import com.innovative.smis.util.common.Resource
@@ -39,8 +41,6 @@ import com.innovative.smis.domain.model.UserRole
 import com.innovative.smis.util.constants.PrefConstant
 import com.innovative.smis.util.constants.ScreenName
 import com.innovative.smis.util.helper.PreferenceHelper
-import com.innovative.smis.util.localization.LocalizationManager
-import com.innovative.smis.util.localization.StringResources
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,8 +49,8 @@ fun LoginScreen(navController: NavController) {
     val loginViewModel: LoginViewModel = koinViewModel()
     val loginState by loginViewModel.loginState.collectAsState()
 
-    var email by remember { mutableStateOf("etoadmin@gmail.com") }
-    var password by remember { mutableStateOf("123456") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
 
     val emailError by loginViewModel.emailError
@@ -127,12 +127,8 @@ fun LoginScreen(navController: NavController) {
                         .padding(top = 64.dp, bottom = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val context = LocalContext.current
-                    val currentLanguage = remember { LocalizationManager.getCurrentLanguage(context) }
-                    val languageCode = remember(currentLanguage) { LocalizationManager.getLanguageCode(currentLanguage) }
-
                     Text(
-                        text = StringResources.getString(StringResources.APP_NAME, languageCode),
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.displayLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -140,12 +136,12 @@ fun LoginScreen(navController: NavController) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = StringResources.getString(StringResources.WELCOME_BACK, languageCode),
+                        text = stringResource(R.string.message_welcome_back),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = StringResources.getString(StringResources.SIGN_IN_TO_CONTINUE, languageCode),
+                        text = stringResource(R.string.message_sign_in_to_continue),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -155,7 +151,7 @@ fun LoginScreen(navController: NavController) {
                         value = email,
                         onValueChange = { email = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(StringResources.getString(StringResources.EMAIL, languageCode)) },
+                        label = { Text(stringResource(R.string.label_email)) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Email,
@@ -188,7 +184,7 @@ fun LoginScreen(navController: NavController) {
                         value = password,
                         onValueChange = { password = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(StringResources.getString(StringResources.PASSWORD, languageCode)) },
+                        label = { Text(stringResource(R.string.label_password)) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Lock,
@@ -214,9 +210,9 @@ fun LoginScreen(navController: NavController) {
                             else Icons.Filled.VisibilityOff
 
                             val description = if (passwordVisible)
-                                StringResources.getString(StringResources.HIDE_PASSWORD, languageCode)
+                                stringResource(R.string.cd_hide_password)
                             else
-                                StringResources.getString(StringResources.SHOW_PASSWORD, languageCode)
+                                stringResource(R.string.cd_show_password)
 
                             IconButton(onClick = { loginViewModel.togglePasswordVisibility() }) {
                                 Icon(imageVector = image, description)
@@ -240,11 +236,10 @@ fun LoginScreen(navController: NavController) {
                     ) {
                         RememberMeCheckbox(
                             isChecked = rememberMe,
-                            onCheckedChange = { rememberMe = it },
-                            languageCode = languageCode
+                            onCheckedChange = { rememberMe = it }
                         )
                         Text(
-                            text = StringResources.getString(StringResources.FORGOT_PASSWORD, languageCode),
+                            text = stringResource(R.string.action_forgot_password),
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -277,9 +272,18 @@ fun LoginScreen(navController: NavController) {
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text(StringResources.getString(StringResources.SIGN_IN, languageCode), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.action_sign_in), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                     }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Text(
+                        text = "SMIS v${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
             }
         }
@@ -290,7 +294,6 @@ fun LoginScreen(navController: NavController) {
 fun RememberMeCheckbox(
     isChecked: Boolean,
     text: String? = null,
-    languageCode: String,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -307,7 +310,7 @@ fun RememberMeCheckbox(
             )
         )
         Text(
-            text = text ?: StringResources.getString(StringResources.REMEMBER_ME, languageCode),
+            text = text ?: stringResource(R.string.label_remember_me),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )

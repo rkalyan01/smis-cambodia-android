@@ -16,15 +16,17 @@ class TaskManagementViewModel(
     val uiState: StateFlow<TaskManagementUiState> = _uiState.asStateFlow()
 
     // Predefined status filters for Task Management
-    private val availableStatuses = listOf("Rescheduled", "Emptied", "Completed", "Pending", "Cancelled", "Reassigned")
+    private val availableStatuses = listOf("All", "Today", "Urgent", "Rescheduled", "Emptied", "Completed", "Pending", "Cancelled", "Reassigned")
 
     init {
         _uiState.update {
             it.copy(
                 availableStatuses = availableStatuses,
-                selectedStatus = availableStatuses.first() // Set to first status by default
+                selectedStatus = "All" // Default to "All"
             )
         }
+        // Load all tasks initially
+        setStatusFilter("All")
     }
 
     fun loadTasks() {
@@ -35,14 +37,39 @@ class TaskManagementViewModel(
     private fun loadTasksWithStatus(status: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            
+            // Determine if this is an "Urgent" filter request
+            val currentStatus = _uiState.value.selectedStatus
+            val urgency = if (currentStatus.equals("Urgent", true)) "yes" else null
+            val applicationType = if (currentStatus.equals("Urgent", true)) "On-Demand" else null
 
-            repository.getTaskManagementApplications(status).collect { result ->
+            repository.getTaskManagementApplications(
+                status = status,
+                urgency = urgency,
+                applicationType = applicationType
+            ).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         val tasks = result.data ?: emptyList()
+                        
+                        // For "Today" filter, apply client-side date filtering
+                        // For "Urgent" filter, data is already filtered by API
+                        val currentStatus = _uiState.value.selectedStatus
+                        val filteredTasks = if (currentStatus.equals("Today", true)) {
+                            val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                            tasks.filter { it.proposedEmptyingDate == todayStr }
+                        } else {
+                            tasks // API already handles Urgent filter
+                        }
+                        
+                        // Sort urgent items to the top (urgent first, then rest)
+                        val sortedTasks = filteredTasks.sortedByDescending { item ->
+                            item.urgency?.equals("yes", ignoreCase = true) == true
+                        }
+                        
                         _uiState.update {
                             it.copy(
-                                tasks = tasks,
+                                tasks = sortedTasks,
                                 isLoading = false
                             )
                         }
@@ -67,7 +94,13 @@ class TaskManagementViewModel(
     fun setStatusFilter(status: String) {
         _uiState.update { it.copy(selectedStatus = status) }
         // Load tasks with the specific status filter
-        loadTasksWithStatus(status)
+        // Handle special filters: All, Today (client-side), Urgent (API-side)
+        val filterStatus = when (status) {
+            "All", "Today" -> "" // These are handled client-side
+            "Urgent" -> "" // API-side filter via urgency & applicationType params
+            else -> status
+        }
+        loadTasksWithStatus(filterStatus)
     }
 
     fun clearError() {

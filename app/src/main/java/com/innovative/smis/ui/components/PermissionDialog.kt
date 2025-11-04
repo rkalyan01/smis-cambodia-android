@@ -10,11 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.innovative.smis.R
 import com.innovative.smis.util.permission.PermissionManager
 
 @Composable
@@ -54,7 +56,7 @@ fun PermissionDialog(
                 
                 // Title
                 Text(
-                    text = "Permissions Required",
+                    text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -64,7 +66,7 @@ fun PermissionDialog(
                 
                 // Description
                 Text(
-                    text = "SMIS requires the following permissions to function properly:",
+                    text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -99,7 +101,7 @@ fun PermissionDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Grant Permissions",
+                            text = stringResource(R.string.cd_granted),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Medium
                         )
@@ -109,7 +111,7 @@ fun PermissionDialog(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Later")
+                        Text(stringResource(R.string.dialog_permission_later))
                     }
                 }
             }

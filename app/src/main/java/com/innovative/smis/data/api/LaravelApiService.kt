@@ -4,6 +4,7 @@ import com.innovative.smis.data.model.response.*
 import com.innovative.smis.data.model.response.SimpleDropdownResponse
 import com.innovative.smis.data.model.response.DesludgingVehicleListResponse
 import com.innovative.smis.data.api.request.EmptyingServiceRequest
+import com.innovative.smis.data.api.request.EmptyingPaymentUpdateRequest
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -39,11 +40,14 @@ interface LaravelApiService {
     /**
      * Filter applications
      * GET /api/emptying-scheduling/filter
+     * Also supports: /api/applications/filter
      */
-    @GET("emptying-scheduling/filter")
+    @GET("applications/filter")
     suspend fun filterApplications(
         @Query("application_status") status: String? = null,
-        @Query("eto_id") etoId: String? = null
+        @Query("eto_id") etoId: String? = null,
+        @Query("urgency") urgency: String? = null,
+        @Query("application_type") applicationType: String? = null
     ): Response<ApplicationListResponse>
 
     /**
@@ -88,18 +92,13 @@ interface LaravelApiService {
 
     /**
      * Update payment details for emptying service
-     * POST /api/emptyings/{emptying_id} with X-HTTP-Method-Override: PUT
-     * Using POST with method override header for Laravel multipart compatibility
+     * PUT /api/emptyings/{emptying_id}
+     * Using JSON with base64-encoded receipt image
      */
-    @Multipart
-    @POST("emptyings/{emptying_id}")
+    @PUT("emptyings/{emptying_id}")
     suspend fun updateEmptyingPaymentDetails(
         @Path("emptying_id") emptyingId: Int,
-        @Header("X-HTTP-Method-Override") method: String,
-        @Part("extra_payment") extraPayment: okhttp3.RequestBody?,
-        @Part("receipt_number") receiptNumber: okhttp3.RequestBody?,
-        @Part("comments") comments: okhttp3.RequestBody?,
-        @Part receiptImage: okhttp3.MultipartBody.Part?
+        @Body request: EmptyingPaymentUpdateRequest
     ): Response<EmptyingFormResponse>
 
     /**

@@ -31,13 +31,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import com.innovative.smis.util.helper.DateFormatManager
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
@@ -108,9 +111,9 @@ fun TodoListScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
                 TextButton(onClick = {
                     showDatePicker = false
                     viewModel.setDateFilter(dateRangePickerState.selectedStartDateMillis, dateRangePickerState.selectedEndDateMillis)
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.action_ok)) }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) } }
         ) {
             DateRangePicker(state = dateRangePickerState, modifier = Modifier.weight(1f))
         }
@@ -122,15 +125,15 @@ fun TodoListScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Todo List", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.nav_todo_list), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refreshList() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -213,7 +216,7 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
     var expanded by remember { mutableStateOf(false) }
     val rotationAngle by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rotation")
 
-    val statusText = todoItem.status ?: "Unknown"
+    val statusText = todoItem.status ?: stringResource(R.string.status_unknown)
 
     val statusColor = when (statusText.lowercase()) {
         "initiated" -> Color(0xFF6C757D)
@@ -243,12 +246,12 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Application ID #${todoItem.applicationId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(todoItem.applicantName ?: "Name not provided", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.label_application_id_hash, todoItem.applicationId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(todoItem.applicantName ?: stringResource(R.string.message_name_not_provided), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.width(8.dp))
                 StatusBadge(text = statusText, color = statusColor)
-                Icon(Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", modifier = Modifier.rotate(rotationAngle))
+                Icon(Icons.Default.ExpandMore, if (expanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand), modifier = Modifier.rotate(rotationAngle))
             }
             AnimatedVisibility(visible = expanded) {
                 Column(
@@ -257,13 +260,13 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
                 ) {
                     InfoRow(
                         icon = Icons.Outlined.DateRange,
-                        label = "Proposed Date",
-                        text = todoItem.proposedEmptyingDate ?: "Not scheduled"
+                        label = stringResource(R.string.label_proposed_date),
+                        text = todoItem.proposedEmptyingDate ?: stringResource(R.string.message_not_scheduled)
                     )
                     todoItem.applicationDatetime?.let { date ->
                         InfoRow(
                             icon = Icons.Default.CalendarToday,
-                            label = "Applied On",
+                            label = stringResource(R.string.label_applied_on),
                             text = date
                         )
                     }
@@ -277,10 +280,10 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${todoItem.applicantContact}"))
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(todoItem.applicantContact)}"))
                         context.startActivity(intent)
                     }) {
-                        Icon(Icons.Outlined.Call, "Call Applicant", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Outlined.Call, stringResource(R.string.cd_call_applicant), tint = MaterialTheme.colorScheme.primary)
                     }
 //                    IconButton(onClick = { /* TODO: Open map with location */ }) {
 //                        Icon(Icons.Outlined.LocationOn, "View on Map", tint = MaterialTheme.colorScheme.primary)
@@ -295,7 +298,7 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
                 
                 if (shouldShowFormButton) {
                     FilledIconButton(onClick = onOpenFormClick) {
-                        Icon(Icons.Outlined.EditNote, "Open Form")
+                        Icon(Icons.Outlined.EditNote, stringResource(R.string.cd_open_form))
                     }
                 }
             }
@@ -313,7 +316,18 @@ fun TaskFilters(
     onDateFilterClick: () -> Unit,
     onClearDateFilterClick: () -> Unit
 ) {
-    val statusFilters = listOf("All", "Today", "Initiated")
+    val statusFilters = listOf(
+        stringResource(R.string.filter_all), 
+        stringResource(R.string.filter_today), 
+        stringResource(R.string.filter_initiated),
+        stringResource(R.string.filter_scheduled),
+        stringResource(R.string.filter_rescheduled),
+        stringResource(R.string.filter_site_preparation),
+        stringResource(R.string.filter_emptied),
+        stringResource(R.string.filter_completed),
+        stringResource(R.string.filter_cancelled),
+        stringResource(R.string.filter_reassigned)
+    )
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(statusFilters) { status ->
@@ -331,12 +345,12 @@ fun TaskFilters(
             shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Icon(Icons.Outlined.EditCalendar, "Filter by Date", modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.EditCalendar, stringResource(R.string.action_filter_by_date), modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text(text = dateFilterText, modifier = Modifier.weight(1f))
             if (isDateFilterApplied) {
                 IconButton(onClick = onClearDateFilterClick, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, "Clear date filter")
+                    Icon(Icons.Default.Close, stringResource(R.string.cd_clear_date_filter))
                 }
             }
         }
@@ -371,7 +385,7 @@ fun LoadingState() {
     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CircularProgressIndicator()
-            Text("Loading tasks...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.message_loading_tasks), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -379,7 +393,7 @@ fun LoadingState() {
 @Composable
 fun IdleState() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Pull to refresh or use the menu to load tasks.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.message_pull_to_refresh_tasks), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -394,9 +408,9 @@ fun EmptyState(filter: String) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(Icons.Filled.Assignment, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
-            Text("No Applications Found", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.message_no_applications_found), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                text = "There are no applications matching the current filter criteria.",
+                text = stringResource(R.string.message_no_applications_filter_criteria),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

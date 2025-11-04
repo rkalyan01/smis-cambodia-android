@@ -107,19 +107,33 @@ fun SMISTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = Color.Transparent.toArgb()
             
-            // Set navigation bar color based on theme for better visibility
-            window.navigationBarColor = if (darkTheme) {
-                Color(0xFF1C1B1F).toArgb() // Dark surface color
+            // 🔧 CRITICAL FIX: Check if running on MIUI device
+            val manufacturer = Build.MANUFACTURER.lowercase()
+            val isMiui = manufacturer.contains("xiaomi") || 
+                         manufacturer.contains("redmi") || 
+                         manufacturer.contains("poco")
+            
+            if (!isMiui) {
+                // Only enable edge-to-edge on non-MIUI devices
+                // MIUI's DisplayFeatureHal causes black screen with edge-to-edge mode
+                window.statusBarColor = Color.Transparent.toArgb()
+                
+                // Set navigation bar color based on theme for better visibility
+                window.navigationBarColor = if (darkTheme) {
+                    Color(0xFF1C1B1F).toArgb() // Dark surface color
+                } else {
+                    Color(0xFFFFFBFE).toArgb() // Light surface color
+                }
+                
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                val insetsController = WindowCompat.getInsetsController(window, view)
+                insetsController.isAppearanceLightStatusBars = !darkTheme
+                insetsController.isAppearanceLightNavigationBars = !darkTheme
             } else {
-                Color(0xFFFFFBFE).toArgb() // Light surface color
+                // On MIUI: Use system defaults to avoid firmware conflicts
+                android.util.Log.d("SMISTheme", "🔧 MIUI detected - skipping edge-to-edge configuration")
             }
-            
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

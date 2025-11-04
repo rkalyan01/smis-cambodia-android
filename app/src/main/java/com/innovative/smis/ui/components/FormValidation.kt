@@ -50,6 +50,57 @@ object FormValidation {
         }
     }
 
+    /**
+     * Validates Cambodian phone numbers
+     * 
+     * Valid formats:
+     * - Domestic: 0XX XXX XXX(X) → 9-10 digits (starts with 0)
+     * - International: +855 XX XXX XXX(X) or 855 XX XXX XXX(X) → 12-13 characters
+     * 
+     * Mobile prefixes: 10-18, 31, 38, 60-61, 69, 70-71, 77-78, 80-88, 90, 92-93, 95-99
+     * Landline prefixes: 2X, 3X (area codes)
+     */
+    @Composable
+    fun validateCambodianPhone(value: String, isRequired: Boolean = false): ValidationResult {
+        if (value.isBlank() && !isRequired) {
+            return ValidationResult(isValid = true)
+        }
+        
+        if (value.isBlank() && isRequired) {
+            return ValidationResult(
+                isValid = false,
+                errorMessage = stringResource(R.string.validation_required)
+            )
+        }
+        
+        // Remove spaces and dashes for validation
+        val cleanedNumber = value.replace(Regex("[\\s-]"), "")
+        
+        // Domestic format: 0 + (2-digit prefix) + (6-7 digits) = 9-10 digits
+        val domesticPattern = Pattern.compile("^0(1[0-8]|2[0-9]|3[0-9]|6[0-179]|7[0-18]|8[0-8]|9[0-38]|69|77|78)\\d{6,7}$")
+        
+        // International format: +855 or 855 + (2-digit prefix) + (6-7 digits)
+        val internationalPattern = Pattern.compile("^(\\+?855)(1[0-8]|2[0-9]|3[0-9]|6[0-179]|7[0-18]|8[0-8]|9[0-38]|69|77|78)\\d{6,7}$")
+        
+        val isDomesticValid = domesticPattern.matcher(cleanedNumber).matches()
+        val isInternationalValid = internationalPattern.matcher(cleanedNumber).matches()
+        
+        // Check maximum length (prevent excessively long numbers)
+        val isTooLong = cleanedNumber.length > 13
+        
+        return when {
+            isTooLong -> ValidationResult(
+                isValid = false,
+                errorMessage = stringResource(R.string.validation_phone_too_long)
+            )
+            isDomesticValid || isInternationalValid -> ValidationResult(isValid = true)
+            else -> ValidationResult(
+                isValid = false,
+                errorMessage = stringResource(R.string.validation_cambodian_phone_format)
+            )
+        }
+    }
+
     @Composable
     fun validateEmail(value: String, isRequired: Boolean = false): ValidationResult {
         if (value.isBlank() && !isRequired) {

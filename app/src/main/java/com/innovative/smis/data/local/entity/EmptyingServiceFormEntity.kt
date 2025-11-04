@@ -84,8 +84,8 @@ fun EmptyingServiceFormEntity.toApiRequest(): EmptyingServiceRequest {
         extra_payment = extraCost,
         receipt_number = receiptNumber,
         comments = comments,
-        receipt_image = receiptImage,
-        picture_of_emptying = pictureOfEmptying,
+        receipt_image_base64 = receiptImage,
+        picture_of_emptying_base64 = pictureOfEmptying,
         eto_id = "", // Empty - will be filled by repository from PreferenceHelper
         desludging_vehicle_id = desludgingVehicleId,
         lng = longitude,

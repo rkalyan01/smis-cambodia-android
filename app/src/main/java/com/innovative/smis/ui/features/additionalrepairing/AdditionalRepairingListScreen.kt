@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.innovative.smis.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,7 @@ import androidx.navigation.NavController
 import com.innovative.smis.data.model.response.TripFilterApplication
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.DateFormatManager
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -74,7 +77,7 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Additional Trips", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.screen_additional_trips), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -146,7 +149,7 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
                                         )
                                         Spacer(modifier = Modifier.height(16.dp))
                                         Text(
-                                            "No applications requiring additional trips",
+                                            stringResource(R.string.message_no_applications_additional_trips),
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -175,7 +178,7 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
                                     .padding(32.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("Ready to load")
+                                Text(stringResource(R.string.status_ready_to_load))
                             }
                         }
                     }
@@ -216,7 +219,7 @@ private fun AdditionalRepairingCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Application ID: ${application.id}",
+                        text = stringResource(R.string.label_application_id_hash, application.id),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -228,7 +231,7 @@ private fun AdditionalRepairingCard(
                     color = Color(0xFF28A745).copy(alpha = 0.1f)
                 ) {
                     Text(
-                        text = "Emptied",
+                        text = stringResource(R.string.status_emptied),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFF28A745),
@@ -265,7 +268,7 @@ private fun AdditionalRepairingCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.clickable {
                                 application.applicantContact?.let { phone ->
-                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(phone)}"))
                                     context.startActivity(intent)
                                 }
                             }
@@ -291,7 +294,7 @@ private fun AdditionalRepairingCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Proposed Date",
+                        text = stringResource(R.string.label_proposed_date),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -322,7 +325,7 @@ private fun AdditionalRepairingCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Manage Additional Trips")
+                Text(stringResource(R.string.title_manage_additional_trips))
             }
         }
     }

@@ -53,7 +53,7 @@ class DashboardViewModel(
                     status = if (currentState.selectedStatus.equals("All", true) || currentState.selectedStatus.equals("Today", true)) {
                         null
                     } else {
-                        currentState.selectedStatus
+                        currentState.selectedStatus // Pass "Urgent" to repository
                     },
                     isToday = currentState.selectedStatus.equals("Today", true)
                 )
@@ -89,10 +89,18 @@ class DashboardViewModel(
                             is Resource.Success -> {
                                 val items = result.data ?: emptyList()
                                 android.util.Log.d("DashboardViewModel", "✅ Success state - ${items.size} items loaded")
+                                
+                                // Sort urgent items to the top (urgent first, then rest)
+                                val sortedItems = items.sortedByDescending { item ->
+                                    item.urgency?.equals("yes", ignoreCase = true) == true
+                                }
+                                
+                                android.util.Log.d("DashboardViewModel", "📋 Final items: ${sortedItems.size} (filter: ${currentState.selectedStatus})")
+                                
                                 _uiState.update {
                                     it.copy(
-                                        applicationLoadingState = Resource.Success(items),
-                                        applications = items
+                                        applicationLoadingState = Resource.Success(sortedItems),
+                                        applications = sortedItems
                                     )
                                 }
                             }

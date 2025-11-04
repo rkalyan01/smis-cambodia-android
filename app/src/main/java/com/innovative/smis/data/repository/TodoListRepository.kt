@@ -75,27 +75,54 @@ class TodoListRepository(
             val apiStatus: String?
             val apiFromDate: String?
             val apiToDate: String?
+            val apiUrgency: String?
+            val apiApplicationType: String?
 
-            if (filter.isToday) {
+            // Check if filter is for "Urgent" applications
+            val isUrgentFilter = filter.status?.equals("Urgent", ignoreCase = true) == true
+
+            if (isUrgentFilter) {
+                // For Urgent filter: use API endpoint with urgency=yes and application_type=On-Demand
+                apiStatus = null
+                apiFromDate = null
+                apiToDate = null
+                apiUrgency = "yes"
+                apiApplicationType = "On-Demand"
+            } else if (filter.isToday) {
                 val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 apiStatus = null
                 apiFromDate = todayStr
                 apiToDate = todayStr
+                apiUrgency = null
+                apiApplicationType = null
             } else {
                 apiStatus = if (filter.status.equals("All", true)) null else filter.status
                 apiFromDate = filter.dateFrom
                 apiToDate = filter.dateTo
+                apiUrgency = null
+                apiApplicationType = null
             }
 
             // Get eto_id from preferences
             val etoId = preferenceHelper.getEtoId()?.toString()
 
-            val response = apiService.getFilteredApplications(
-                status = apiStatus,
-                etoId = etoId,
-                dateFrom = apiFromDate,
-                dateTo = apiToDate
-            )
+            val response = if (isUrgentFilter) {
+                // Use the new getFilteredApplications endpoint for urgent
+                apiService.getFilteredApplications(
+                    status = null,
+                    etoId = etoId,
+                    urgency = apiUrgency,
+                    applicationType = apiApplicationType
+                )
+            } else {
+                // Use the existing getFilteredApplications endpoint for other filters
+                apiService.getFilteredApplications(
+                    status = apiStatus,
+                    etoId = etoId,
+                    dateFrom = apiFromDate,
+                    dateTo = apiToDate
+                )
+            }
 
             if (response.isSuccessful && response.body()?.success == true) {
                 val networkItems = response.body()?.data ?: emptyList()

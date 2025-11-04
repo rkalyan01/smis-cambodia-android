@@ -1,6 +1,9 @@
 package com.innovative.smis.ui.base
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,12 +11,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import com.innovative.smis.ui.components.AppNavigationDrawer
 import kotlinx.coroutines.launch
 import com.innovative.smis.ui.features.buildingsurvey.BuildingSurveyScreen
@@ -103,56 +109,183 @@ private fun MainAppScreen(topLevelNavController: NavController) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val activity = context as? Activity
+    
+    // Create the UI action lock to prevent race conditions
+    val isActionInProgress = remember { AtomicBoolean(false) }
+    
+    // 🔧 MIUI FIX: Track last navigation time to prevent rapid back presses
+    // MIUI's DisplayFeatureHal triggers black screen on rapid navigation even without edge-to-edge
+    val lastNavigationTime = remember { AtomicLong(0L) }
+    
+    // Track current destination to handle back button
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
+    
+    // 🔧 FIX: Add composition delay protection
+    // Prevents clicks during screen recomposition (fixes black screen on fast navigation + fast click)
+    var isScreenReady by remember { mutableStateOf(false) }
+    
+    // Reset screen ready state on ANY backstack change (not just route change)
+    // This fixes the issue when clicking the same route from drawer (e.g., Dashboard → Dashboard)
+    LaunchedEffect(currentBackStackEntry) {
+        isScreenReady = false
+        android.util.Log.d("MainAppScreen", "🔄 Navigation detected - route: $currentRoute, entry: ${currentBackStackEntry?.id} - blocking UI for 200ms")
+        kotlinx.coroutines.delay(200) // Wait for screen to fully compose
+        isScreenReady = true
+        android.util.Log.d("MainAppScreen", "✅ Screen ready: $currentRoute - UI interactions enabled")
+    }
+    
+    // Create a STABLE onMenuClick lambda that checks screen readiness
+    val stableOnMenuClick: () -> Unit = {
+        android.util.Log.d("MainAppScreen", "🍔 Menu click - isScreenReady=$isScreenReady, isActionInProgress=${isActionInProgress.get()}")
+        if (isScreenReady && isActionInProgress.compareAndSet(false, true)) {
+            scope.launch {
+                try {
+                    if (drawerState.isClosed) {
+                        android.util.Log.d("MainAppScreen", "📂 Opening drawer...")
+                        drawerState.open()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainAppScreen", "❌ Error opening drawer: ${e.message}", e)
+                } finally {
+                    isActionInProgress.set(false)
+                }
+            }
+        } else {
+            android.util.Log.w("MainAppScreen", "⚠️ Menu click blocked - Screen not ready or action in progress")
+        }
+    }
+    
+    // Handle back button press with atomic lock + navigation throttling
+    BackHandler(enabled = true) {
+        // 🔧 MIUI FIX: Throttle rapid back presses to prevent DisplayFeatureHal black screen
+        val currentTime = System.currentTimeMillis()
+        val lastTime = lastNavigationTime.get()
+        val timeSinceLastNav = currentTime - lastTime
+        
+        if (timeSinceLastNav < 300) {
+            // Ignore back presses within 300ms of last navigation
+            android.util.Log.d("MainAppScreen", "⚠️ Back press ignored - too soon after last navigation ($timeSinceLastNav ms)")
+            return@BackHandler
+        }
+        
+        if (isActionInProgress.compareAndSet(false, true)) {
+            when {
+                // If drawer is open, close it
+                drawerState.isOpen -> {
+                    scope.launch {
+                        try {
+                            drawerState.close()
+                        } finally {
+                            isActionInProgress.set(false)
+                        }
+                    }
+                }
+                // If on Dashboard (root), minimize app
+                currentRoute == ScreenName.Dashboard -> {
+                    activity?.moveTaskToBack(true)
+                    isActionInProgress.set(false)
+                }
+                // Check if there's something to pop
+                navController.previousBackStackEntry != null && currentRoute != ScreenName.Dashboard -> {
+                    try {
+                        lastNavigationTime.set(currentTime) // Update navigation time
+                        navController.popBackStack()
+                    } finally {
+                        isActionInProgress.set(false)
+                    }
+                }
+                // Fallback case
+                else -> {
+                    try {
+                        lastNavigationTime.set(currentTime) // Update navigation time
+                        navController.navigate(ScreenName.Dashboard) {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        }
+                    } finally {
+                        isActionInProgress.set(false)
+                    }
+                }
+            }
+        }
+    }
 
-    // AppNavigationDrawer - gestures always enabled
-    AppNavigationDrawer(
-        navController = navController,
-        topLevelNavController = topLevelNavController,
-        drawerState = drawerState,
-        gesturesEnabled = true
-    ) { onMenuClick ->
-        // The NavHost is INSIDE the drawer's content
-        NavHost(
-            navController = navController, 
-            startDestination = ScreenName.Dashboard,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+    // 🔧 FIX: Block pointer input during composition instead of using overlay
+    // This prevents black screen issues while still blocking rapid clicks
+    val pointerModifier = if (!isScreenReady) {
+        Modifier.pointerInput(Unit) {
+            // Consume all pointer events during composition
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    android.util.Log.d("MainAppScreen", "⛔ Pointer event blocked - screen composing")
+                    // Consume the event without passing it through
+                }
+            }
+        }
+    } else {
+        Modifier
+    }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(pointerModifier) // Apply pointer blocking conditionally
+    ) {
+        // AppNavigationDrawer - gestures gated on screen readiness
+        AppNavigationDrawer(
+            navController = navController,
+            topLevelNavController = topLevelNavController,
+            drawerState = drawerState,
+            gesturesEnabled = true,
+            isScreenReady = isScreenReady, // 🔧 FIX: Pass screen ready state to drawer
+            isActionInProgress = isActionInProgress,
+            onMenuClick = stableOnMenuClick
         ) {
+            // The NavHost is INSIDE the drawer's content
+            NavHost(
+                navController = navController, 
+                startDestination = ScreenName.Dashboard,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
 
             // Define all your screens here
             composable(ScreenName.Dashboard) {
                 DashboardScreen(
                     navController = navController,
-                    onMenuClick = onMenuClick
+                    onMenuClick = stableOnMenuClick
                 )
             }
             composable(ScreenName.Map) {
-                MapScreen(navController = navController, onMenuClick = onMenuClick)
+                MapScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable("emptying_scheduling") {
-                EmptyingSchedulingScreen(navController = navController, onMenuClick = onMenuClick)
+                EmptyingSchedulingScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable("site_preparation") {
-                SitePreparationScreen(navController = navController, onMenuClick = onMenuClick)
+                SitePreparationScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable("emptying_service") {
-                EmptyingServiceScreen(navController = navController, onMenuClick = onMenuClick)
+                EmptyingServiceScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable(ScreenName.TodoList) {
-                TodoListScreen(navController = navController, onMenuClick = onMenuClick)
+                TodoListScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable(ScreenName.Settings) {
-                SettingsScreen(navController = navController, onMenuClick = onMenuClick)
+                SettingsScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable("task_management") {
-                TaskManagementScreen(navController = navController, onMenuClick = onMenuClick)
+                TaskManagementScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable(ScreenName.DesludgingVehicle) {
-                DesludgingVehicleScreen(navController = navController, onMenuClick = onMenuClick)
+                DesludgingVehicleScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
             composable("additional_repairing") {
-                AdditionalRepairingListScreen(navController = navController, onMenuClick = onMenuClick)
+                AdditionalRepairingListScreen(navController = navController, onMenuClick = stableOnMenuClick)
             }
 
             // Form Screens (Now they don't need the drawer wrapped around them)
@@ -225,6 +358,7 @@ private fun MainAppScreen(topLevelNavController: NavController) {
                     navController = navController,
                     bin = bin
                 )
+            }
             }
         }
     }
