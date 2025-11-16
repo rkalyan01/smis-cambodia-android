@@ -32,6 +32,8 @@ data class EmptyingServiceFormEntity(
 
     // Service Information
     val freeUnderPBC: Boolean = false,
+    val customerType: String = "",
+    val otherCustomerType: String = "",
     val additionalRepairingInEmptying: String = "",
     val otherAdditionalRepairing: String = "",
     val regularCost: String = "",
@@ -55,12 +57,21 @@ data class EmptyingServiceFormEntity(
 )
 
 fun EmptyingServiceFormEntity.toApiRequest(): EmptyingServiceRequest {
-    // Separate additional_repairing_id (keys only) from other_additional_repairing (Others text)
-    val selectedKeys = additionalRepairingInEmptying.split(",")
+    // Database column is PostgreSQL integer[] array
+    // Send PostgreSQL literal format: "{2,4,5}" as string (database-specific format)
+    val selectedIds = additionalRepairingInEmptying.split(",")
         .map { it.trim() }
         .filter { it.isNotEmpty() && it != "Others" }
-        .joinToString(",")
+        .mapNotNull { it.toIntOrNull() }
     
+    // Format as PostgreSQL literal: {2,4,5}
+    val postgresArrayLiteral = if (selectedIds.isNotEmpty()) {
+        "{${selectedIds.joinToString(",")}}"
+    } else {
+        null
+    }
+    
+    // Single string value for other_additional_repairing (character varying)
     val othersText = if (additionalRepairingInEmptying.contains("Others", ignoreCase = true) && otherAdditionalRepairing.isNotEmpty()) {
         otherAdditionalRepairing
     } else {
@@ -79,8 +90,10 @@ fun EmptyingServiceFormEntity.toApiRequest(): EmptyingServiceRequest {
         location_of_containment = "Around the house", // Default location - will be made configurable
         presence_of_pumping_point = pumpingPointPresence.ifEmpty { null },
         pumping_point_type = if (pumpingPointPresence == "Yes" && pumpingPointType.isNotEmpty()) pumpingPointType else null,
-        additional_repairing_id = selectedKeys.takeIf { it.isNotEmpty() },
+        additional_repairing_id = postgresArrayLiteral,
         other_additional_repairing = othersText,
+        customer_type = customerType.ifEmpty { null },
+        other_customer_type = otherCustomerType.ifEmpty { null },
         extra_payment = extraCost,
         receipt_number = receiptNumber,
         comments = comments,

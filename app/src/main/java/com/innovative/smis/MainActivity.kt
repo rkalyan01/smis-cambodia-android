@@ -16,55 +16,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import android.view.View
-import android.view.MotionEvent
 import com.innovative.smis.ui.base.MyApp
 import com.innovative.smis.ui.theme.SMISTheme
 import com.innovative.smis.util.permission.PermissionManager
 import com.innovative.smis.ui.components.PermissionDialog
 import com.innovative.smis.util.helper.PreferenceHelper
+import com.innovative.smis.util.helper.MiuiInputGuard
 import java.util.*
 
 class MainActivity : ComponentActivity() {
 
-    private var tapCount = 0
-    private var lastTapTime = 0L
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 🔧 CRITICAL FIX: MIUI black screen prevention
-        // Detects MIUI using system properties (more reliable than manufacturer string)
-        val isMiui = isMiuiDevice()
-        
-        if (isMiui) {
+        // 🔧 CRITICAL FIX: MIUI/HyperOS black screen prevention
+        // Uses enhanced MiuiInputGuard utility for comprehensive protection
+        if (MiuiInputGuard.isMiuiDevice()) {
             // Disable edge-to-edge to prevent firmware interference
             androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
-            Log.d("MIUI-FIX", "🔧 MIUI detected - disabling edge-to-edge")
-            
-            // Install DecorView-level rapid tap interceptor
-            // This stops MIUI's DisplayFeatureHal from detecting "machine-gun" taps
-            window.decorView.post {
-                window.decorView.setOnTouchListener { _, event ->
-                    if (event.action == MotionEvent.ACTION_DOWN) {
-                        val now = System.currentTimeMillis()
-                        
-                        // Count taps within 150ms window
-                        if (now - lastTapTime < 150) tapCount++ else tapCount = 1
-                        lastTapTime = now
-                        
-                        // Block 3rd+ rapid tap to prevent MIUI black screen
-                        if (tapCount >= 3) {
-                            Log.w("MIUI-FIX", "⚠️ Rapid tapping detected - event consumed to prevent black screen")
-                            return@setOnTouchListener true // Consume event
-                        }
-                    }
-                    false // Let normal events through
-                }
-            }
-            
-            Log.d("MIUI-FIX", "✅ MIUI rapid tap interception enabled")
+            Log.d("MIUI-FIX", "🔧 MIUI/HyperOS detected - disabling edge-to-edge")
         }
+        
+        // Attach enhanced rapid tap interceptor (blocks 3+ taps in 150ms)
+        MiuiInputGuard.attachTapInterceptor(this)
 
         setContent {
             SMISTheme {
@@ -75,24 +49,6 @@ class MainActivity : ComponentActivity() {
                     PermissionAwareApp()
                 }
             }
-        }
-    }
-    
-    /**
-     * Detects MIUI using Android's SystemProperties (more reliable than manufacturer check)
-     */
-    private fun isMiuiDevice(): Boolean {
-        return try {
-            val prop = Class.forName("android.os.SystemProperties")
-            val get = prop.getMethod("get", String::class.java)
-            val value = get.invoke(prop, "ro.miui.ui.version.name") as String
-            value.isNotEmpty()
-        } catch (e: Exception) {
-            // Fallback to manufacturer check
-            val manufacturer = android.os.Build.MANUFACTURER.lowercase()
-            manufacturer.contains("xiaomi") || 
-            manufacturer.contains("redmi") || 
-            manufacturer.contains("poco")
         }
     }
     

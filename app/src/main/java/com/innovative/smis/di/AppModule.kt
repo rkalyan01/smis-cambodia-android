@@ -63,6 +63,9 @@ val appModule = module {
 
     // Cache Management
     single { com.innovative.smis.data.local.cache.OfflineCacheManager(get()) }
+    
+    // Session Management
+    single { com.innovative.smis.util.session.SessionResetManager(get(), get()) }
 
     // Workflow Repository for new eto_id based API calls  
     single { WorkflowRepository(get(), get(), get()) }
@@ -157,7 +160,7 @@ val offlineModule = module {
 }
 
 val repositoryModule = module {
-    single { AuthRepository(get(), get()) }
+    single { AuthRepository(get(), get(), get()) }
     single<TaskRepository> { OfflineTaskRepositoryImpl(get<OfflineManager>(), get<TaskDao>(), get<WorkflowStepDao>(), get<SyncQueueDao>()) }
     single<com.innovative.smis.data.local.TaskDao> { MemoryTaskDao() }
     single<EmptyingRepository> { EmptyingRepositoryImpl(get()) }
@@ -207,20 +210,30 @@ val repositoryModule = module {
 }
 
 val networkModule = module {
+    single { com.innovative.smis.data.network.LanguageInterceptor(get()) }
     single { AuthInterceptor(get()) }
     single {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
         }
         OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
+            // ✅ Add LanguageInterceptor FIRST - rewrites URLs for Khmer endpoints
+            .addInterceptor(get<com.innovative.smis.data.network.LanguageInterceptor>())
+            // ✅ Add AuthInterceptor SECOND - adds authentication headers
             .addInterceptor(get<AuthInterceptor>())
+            // ✅ Add LoggingInterceptor LAST - logs final rewritten URL
+            .addInterceptor(loggingInterceptor)
             .connectTimeout(60, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .build()
     }
-    single { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }
+    single { 
+        Moshi.Builder()
+            .add(com.innovative.smis.util.adapter.PostgresArrayIntAdapter())
+            .add(KotlinJsonAdapterFactory())
+            .build() 
+    }
     single {
         Retrofit.Builder()
             .baseUrl(ApiConstants.BASE_URL)

@@ -22,6 +22,7 @@ data class EmptyingServiceFormUiState(
     val emptiedDateError: String? = null,
     val startTimeError: String? = null,
     val endTimeError: String? = null,
+    val additionalTripRequiredError: String? = null,
     
     // Personnel Information
     val applicantName: String = "",
@@ -47,10 +48,14 @@ data class EmptyingServiceFormUiState(
     
     // Service Information
     val freeUnderPBC: Boolean = false,
+    val customerType: String = "", // Selected customer type ID/key
+    val otherCustomerType: String = "", // Text input when "Other" is selected
+    val customerTypeOptions: Map<String, String> = emptyMap(), // Customer type dropdown options
     val additionalRepairingKeys: List<String> = emptyList(),
     val pendingAdditionalRepairingKeys: List<String> = emptyList(), // Stores unvalidated keys from API until options load
     val otherAdditionalRepairing: String = "",
     val additionalRepairingOptions: Map<String, String> = emptyMap(),
+    val additionalRepairingError: String? = null,
     val regularCost: String = "",
     val extraCost: String = "0",
     val regularCostError: String? = null,
@@ -62,6 +67,7 @@ data class EmptyingServiceFormUiState(
     val pictureOfEmptying: String = "",
     val comments: String = "",
     val receiptNumberError: String? = null,
+    val receiptImageError: String? = null,
     
     // Location Information
     val longitude: Double? = null,
@@ -100,16 +106,19 @@ fun EmptyingServiceFormUiState.hasValidationErrors(): Boolean {
     return emptiedDateError != null ||
             startTimeError != null ||
             endTimeError != null ||
+            additionalTripRequiredError != null ||
             applicantNameError != null ||
             applicantContactError != null ||
             serviceReceiverNameError != null ||
             serviceReceiverContactError != null ||
             desludgingVehicleIdError != null ||
             sludgeTypeError != null ||
+            additionalRepairingError != null ||
             pumpingPointTypeError != null ||
             regularCostError != null ||
             extraCostError != null ||
             receiptNumberError != null ||
+            receiptImageError != null ||
             locationError != null ||
             receiptImageUploadError != null ||
             emptyingImageUploadError != null

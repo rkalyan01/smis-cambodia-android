@@ -33,7 +33,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
 
 
 data class DrawerItem(
@@ -41,7 +40,8 @@ data class DrawerItem(
     val title: String,
     val icon: ImageVector,
     val route: String,
-    val requiredPermission: String? = null
+    val requiredPermission: String? = null,
+    val requiredRole: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,9 +50,7 @@ fun AppNavigationDrawer(
     navController: NavController,
     topLevelNavController: NavController,
     drawerState: DrawerState = rememberDrawerState(DrawerValue.Closed),
-    gesturesEnabled: Boolean = true,
-    isScreenReady: Boolean = true, // 🔧 NEW: Gate gestures on screen readiness
-    isActionInProgress: AtomicBoolean, // Add lock to parameters
+    gesturesEnabled: Boolean = true, // 🔧 FIX: Gate gestures on destination lifecycle (isDestinationStable)
     onMenuClick: () -> Unit, // ✅ Receive the stable lambda as a parameter
     content: @Composable () -> Unit // ✅ Changed signature - no longer provides onMenuClick
 ) {
@@ -86,6 +84,14 @@ fun AppNavigationDrawer(
             emptyMap()
         }
     }
+    val initialUserRole = remember { 
+        try {
+            getUserRole(preferenceHelper)
+        } catch (e: Exception) {
+            android.util.Log.e("NavigationDrawer", "Error loading user role: ${e.message}", e)
+            emptyList()
+        }
+    }
     val initialLanguage = remember { 
         try {
             preferenceHelper.getString(PrefConstant.CURRENT_LANGUAGE, "English") ?: "English"
@@ -106,6 +112,7 @@ fun AppNavigationDrawer(
     var userName by remember { mutableStateOf(initialUserName) }
     var userEmail by remember { mutableStateOf(initialUserEmail) }
     var userPermissions by remember { mutableStateOf(initialPermissions) }
+    var userRole by remember { mutableStateOf(initialUserRole) }
     var currentLanguage by remember { mutableStateOf(initialLanguage) }
     var languageCode by remember { mutableStateOf(initialLanguageCode) }
 
@@ -120,6 +127,7 @@ fun AppNavigationDrawer(
                 val loadedUserName = preferenceHelper.getString(PrefConstant.USER_NAME, "User") ?: "User"
                 val loadedUserEmail = preferenceHelper.getString(PrefConstant.USER_EMAIL, "") ?: ""
                 val loadedPermissions = getUserPermissions(preferenceHelper)
+                val loadedRole = getUserRole(preferenceHelper)
                 val loadedLanguage = preferenceHelper.getString(PrefConstant.CURRENT_LANGUAGE, "English") ?: "English"
                 val loadedCode = LocalizationManager.getLanguageCode(loadedLanguage)
 
@@ -127,9 +135,10 @@ fun AppNavigationDrawer(
                     userName = loadedUserName
                     userEmail = loadedUserEmail
                     userPermissions = loadedPermissions
+                    userRole = loadedRole
                     currentLanguage = loadedLanguage
                     languageCode = loadedCode
-                    android.util.Log.d("NavigationDrawer", "Drawer data refreshed")
+                    android.util.Log.d("NavigationDrawer", "Drawer data refreshed (role: $loadedRole)")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("NavigationDrawer", "Error refreshing drawer data: ${e.message}")
@@ -148,143 +157,136 @@ fun AppNavigationDrawer(
             route = ScreenName.Dashboard
         ),
         DrawerItem(
+            id = "emptying_scheduling",
+            title = stringResource(com.innovative.smis.R.string.nav_emptying_scheduling),
+            icon = Icons.Default.Schedule,
+            route = "emptying_scheduling"
+        ),
+        DrawerItem(
             id = "site_preparation",
             title = stringResource(com.innovative.smis.R.string.nav_site_preparation),
             icon = Icons.Default.Construction,
-            route = "site_preparation",
-            requiredPermission = "Site Preparation"
+            route = "site_preparation"
         ),
         DrawerItem(
             id = "emptying_service",
             title = stringResource(com.innovative.smis.R.string.nav_emptying_service),
             icon = Icons.Default.Build,
-            route = "emptying_service",
-            requiredPermission = "Emptying Service"
+            route = "emptying_service"
         ),
         DrawerItem(
-            id = "todo_list",
-            title = stringResource(com.innovative.smis.R.string.nav_todo_list),
-            icon = Icons.AutoMirrored.Filled.List,
-            route = ScreenName.TaskManagement
+            id = "additional_trips",
+            title = stringResource(com.innovative.smis.R.string.nav_additional_trips),
+            icon = Icons.Default.AddCircle,
+            route = "additional_repairing"
         ),
         DrawerItem(
             id = "desludging_vehicle",
             title = stringResource(com.innovative.smis.R.string.nav_desludging_vehicles),
             icon = Icons.Default.LocalShipping,
-            route = ScreenName.DesludgingVehicle
+            route = ScreenName.DesludgingVehicle,
+            requiredRole = "ETO Admin"
         )
     )
 
-    // Filter items based on permissions - use derivedStateOf for better performance
-    val visibleItems by remember(drawerItems, userPermissions) {
+    // Filter items based on permissions and roles - use derivedStateOf for better performance
+    val visibleItems by remember(drawerItems, userPermissions, userRole) {
         derivedStateOf {
             drawerItems.filter { item ->
-                item.requiredPermission == null || userPermissions[item.requiredPermission] == true
+                val hasPermission = item.requiredPermission == null || userPermissions[item.requiredPermission] == true
+                val hasRole = item.requiredRole == null || userRole.contains(item.requiredRole)
+                hasPermission && hasRole
             }
         }
     }
 
-    // 🔧 FIX: Monitor drawer animation state and snap to closed if needed
-    LaunchedEffect(drawerState.currentValue) {
-        android.util.Log.d("NavigationDrawer", "🎨 Drawer state: ${drawerState.currentValue}, isAnimationRunning: ${drawerState.isAnimationRunning}, isScreenReady: $isScreenReady")
-        
-        // If drawer starts opening while screen not ready, snap it closed immediately
-        if (!isScreenReady && drawerState.currentValue != DrawerValue.Closed) {
-            android.util.Log.w("NavigationDrawer", "⚠️ Drawer opened before screen ready - snapping to closed!")
-            drawerState.snapTo(DrawerValue.Closed)
-        }
-    }
+    // ✅ Drawer state monitoring removed - gestures now controlled by parent's isDestinationStable
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = gesturesEnabled && isScreenReady, // 🔧 FIX: Only enable gestures when screen is ready
+        gesturesEnabled = gesturesEnabled, // ✅ Controlled by parent (isDestinationStable)
         scrimColor = Color.Black.copy(alpha = 0.1f), // Very subtle overlay to prevent black screen effect
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.width(300.dp)
             ) {
-                android.util.Log.d("NavigationDrawer", "Rendering DrawerContent - userName: $userName, languageCode: $languageCode, visibleItems: ${visibleItems.size}")
-                DrawerContent(
+                // 🔧 FIX: Only render drawer content when destination is stable (gesturesEnabled = true)
+                // This prevents black screen when drawer opens during navigation transitions
+                if (gesturesEnabled) {
+                    android.util.Log.d("NavigationDrawer", "Rendering DrawerContent - userName: $userName, languageCode: $languageCode, visibleItems: ${visibleItems.size}")
+                    DrawerContent(
                     userName = userName ?: "User",
                     userEmail = userEmail ?: "",
                     currentLanguage = currentLanguage ?: "English",
                     drawerItems = visibleItems,
                     onItemClick = { route ->
                         android.util.Log.d("NavigationDrawer", "📍 Drawer item clicked: $route, currentRoute: ${navController.currentDestination?.route}")
-                        if (isActionInProgress.compareAndSet(false, true)) {
-                            scope.launch {
-                                try {
-                                    // CRITICAL: Wait for drawer to fully close before navigating
-                                    if (drawerState.isOpen) {
-                                        drawerState.close()
-                                    }
-                                    // This ensures the animation completes before the next screen is built
-                                    snapshotFlow { drawerState.isClosed }.first { it }
-                                    
-                                    android.util.Log.d("NavigationDrawer", "🧭 Navigating to: $route")
-                                    navController.navigate(route) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("NavigationDrawer", "Navigation error: ${e.message}")
-                                } finally {
-                                    isActionInProgress.set(false) // Release lock
+                        scope.launch {
+                            try {
+                                // CRITICAL: Wait for drawer to fully close before navigating
+                                if (drawerState.isOpen) {
+                                    drawerState.close()
                                 }
+                                // This ensures the animation completes before the next screen is built
+                                snapshotFlow { drawerState.isClosed }.first { it }
+                                
+                                android.util.Log.d("NavigationDrawer", "🧭 Navigating to: $route")
+                                navController.navigate(route) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("NavigationDrawer", "Navigation error: ${e.message}")
                             }
                         }
                     },
                     onSettingsClick = {
-                        if (isActionInProgress.compareAndSet(false, true)) {
-                            scope.launch {
-                                try {
-                                    // CRITICAL: Wait for drawer to fully close before navigating
-                                    if (drawerState.isOpen) {
-                                        drawerState.close()
-                                    }
-                                    // This ensures the animation completes before the next screen is built
-                                    snapshotFlow { drawerState.isClosed }.first { it }
-                                    
-                                    navController.navigate(ScreenName.Settings) {
-                                        launchSingleTop = true
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("NavigationDrawer", "Settings navigation error: ${e.message}")
-                                } finally {
-                                    isActionInProgress.set(false) // Release lock
+                        scope.launch {
+                            try {
+                                // CRITICAL: Wait for drawer to fully close before navigating
+                                if (drawerState.isOpen) {
+                                    drawerState.close()
                                 }
+                                // This ensures the animation completes before the next screen is built
+                                snapshotFlow { drawerState.isClosed }.first { it }
+                                
+                                navController.navigate(ScreenName.Settings) {
+                                    launchSingleTop = true
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("NavigationDrawer", "Settings navigation error: ${e.message}")
                             }
                         }
                     },
                     onLogoutClick = {
-                        if (isActionInProgress.compareAndSet(false, true)) {
-                            scope.launch {
-                                try {
-                                    // CRITICAL: Wait for drawer to fully close before navigating
-                                    if (drawerState.isOpen) {
-                                        drawerState.close()
-                                    }
-                                    snapshotFlow { drawerState.isClosed }.first { it }
-                                    
-                                    // Clear authentication data
-                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                        preferenceHelper.setBoolean(PrefConstant.IS_LOGIN, false)
-                                        preferenceHelper.setString(PrefConstant.AUTH_TOKEN, "")
-                                        preferenceHelper.setString(PrefConstant.USER_PERMISSIONS, "")
-                                    }
-                                    topLevelNavController.navigate(ScreenName.Login) {
-                                        popUpTo(0) { inclusive = true }
-                                        launchSingleTop = true
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("NavigationDrawer", "Logout navigation error: ${e.message}")
-                                } finally {
-                                    isActionInProgress.set(false) // Release lock
+                        scope.launch {
+                            try {
+                                // CRITICAL: Wait for drawer to fully close before navigating
+                                if (drawerState.isOpen) {
+                                    drawerState.close()
                                 }
+                                snapshotFlow { drawerState.isClosed }.first { it }
+                                
+                                // Clear authentication data
+                                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    preferenceHelper.setBoolean(PrefConstant.IS_LOGIN, false)
+                                    preferenceHelper.setString(PrefConstant.AUTH_TOKEN, "")
+                                    preferenceHelper.setString(PrefConstant.USER_PERMISSIONS, "")
+                                }
+                                topLevelNavController.navigate(ScreenName.Login) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("NavigationDrawer", "Logout navigation error: ${e.message}")
                             }
                         }
                     }
                 )
+                } else {
+                    // Show empty drawer sheet while destination is transitioning
+                    android.util.Log.w("NavigationDrawer", "⚠️ Drawer content blocked - destination not stable")
+                }
             }
         },
         content = {
@@ -549,7 +551,7 @@ private fun getUserPermissions(preferenceHelper: PreferenceHelper): Map<String, 
                             val permissionName = when (fieldName) {
                                 "viewMap" -> "View Map"
                                 "editBuildingSurvey" -> "Edit Building Survey"
-                                "emptyingScheduling" -> "Emptying Scheduling"
+                                "emptyingScheduling" -> "Emtying Scheduling" // Note: API has typo "Emtying" instead of "Emptying"
                                 "sitePreparation" -> "Site Preparation"
                                 "emptying" -> "Emptying Service"
                                 else -> null
@@ -580,5 +582,63 @@ private fun getUserPermissions(preferenceHelper: PreferenceHelper): Map<String, 
         android.util.Log.e("NavigationDrawer", "getUserPermissions error: ${e.message}")
         // Return cached permissions if available, otherwise empty map
         return cachedPermissions ?: emptyMap()
+    }
+}
+
+// Cached role to avoid repeated parsing
+private var cachedRole: List<String>? = null
+private var lastRoleString: String? = null
+
+// Helper function to parse user role from SharedPreferences
+private fun getUserRole(preferenceHelper: PreferenceHelper): List<String> {
+    try {
+        val roleJson = preferenceHelper.getString(PrefConstant.USER_ROLE, "") ?: ""
+
+        // Return cached result if the role string hasn't changed
+        if (roleJson == lastRoleString && cachedRole != null) {
+            return cachedRole!!
+        }
+
+        if (roleJson.isEmpty()) {
+            cachedRole = emptyList()
+            lastRoleString = roleJson
+            return emptyList()
+        }
+
+        // Parse role from Kotlin List toString format
+        // Format: [ETO Admin] or [Field Worker, Supervisor]
+        try {
+            val cleanStr = roleJson.trim()
+            
+            // Remove brackets and split by comma
+            if (cleanStr.startsWith("[") && cleanStr.endsWith("]")) {
+                val content = cleanStr.substring(1, cleanStr.length - 1)
+                val roles = if (content.isNotEmpty()) {
+                    content.split(",").map { it.trim() }
+                } else {
+                    emptyList()
+                }
+                
+                android.util.Log.d("NavigationDrawer", "Parsed user roles: $roles")
+                
+                cachedRole = roles
+                lastRoleString = roleJson
+                return roles
+            }
+            
+            android.util.Log.w("NavigationDrawer", "Role format not recognized: $roleJson")
+            cachedRole = emptyList()
+            lastRoleString = roleJson
+            return emptyList()
+
+        } catch (e: Exception) {
+            android.util.Log.w("NavigationDrawer", "Role parsing failed: ${e.message}")
+            val result = cachedRole ?: emptyList()
+            return result
+        }
+
+    } catch (e: Exception) {
+        android.util.Log.e("NavigationDrawer", "getUserRole error: ${e.message}")
+        return cachedRole ?: emptyList()
     }
 }

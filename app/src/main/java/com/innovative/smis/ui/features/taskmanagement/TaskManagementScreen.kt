@@ -163,7 +163,7 @@ private fun TaskStatusFilter(
     onStatusSelected: (String) -> Unit
 ) {
     // Map of status keys to their string resource IDs
-    val statusFiltersMap = mapOf(
+    val statusFiltersMap = linkedMapOf(
         "All" to R.string.filter_all,
         "Today" to R.string.filter_today,
         "Urgent" to R.string.filter_urgent,
@@ -172,10 +172,7 @@ private fun TaskStatusFilter(
         "Rescheduled" to R.string.filter_rescheduled,
         "Site-Preparation" to R.string.filter_site_preparation,
         "Emptied" to R.string.filter_emptied,
-        "Completed" to R.string.filter_completed,
-        "Cancelled" to R.string.filter_cancelled,
-        "Reassigned" to R.string.filter_reassigned,
-        "Pending" to R.string.filter_pending
+        "Completed" to R.string.filter_completed
     )
     
     Column {
@@ -243,14 +240,16 @@ private fun ApplicationTaskCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Application ID #${todoItem.applicationId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(todoItem.applicantName ?: "Name not provided", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = todoItem.applicantName ?: todoItem.ownerName ?: "Name not provided",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Spacer(Modifier.width(8.dp))
                     StatusBadge(text = statusText, color = statusColor)
                     Icon(Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", modifier = Modifier.rotate(rotationAngle))
                 }
-                Spacer(Modifier.height(8.dp))
-                WorkflowProgressIndicator(status = todoItem.status)
             }
             AnimatedVisibility(visible = expanded) {
                 Column(
@@ -269,7 +268,8 @@ private fun ApplicationTaskCard(
                             text = date
                         )
                     }
-                    todoItem.applicantContact?.let { contact ->
+                    val contact = todoItem.applicantContact ?: todoItem.phoneNo
+                            contact?.let {
                         InfoRow(
                             icon = Icons.Outlined.Phone,
                             label = "Contact",
@@ -285,13 +285,32 @@ private fun ApplicationTaskCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    todoItem.applicantContact?.let { contact ->
-                        IconButton(onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(contact)}"))
-                            context.startActivity(intent)
-                        }) { 
-                            Icon(Icons.Outlined.Call, "Call Applicant", tint = MaterialTheme.colorScheme.primary) 
-                        }
+                    IconButton(
+                        onClick = {
+                            val contact = todoItem.applicantContact ?: todoItem.phoneNo
+                            contact?.let { rawPhone ->
+                                val formattedPhone = PhoneNumberFormatter.formatForDialing(rawPhone)
+                                android.util.Log.d("TaskManagementDial", "Raw: '$rawPhone' -> Formatted: '$formattedPhone'")
+                                if (formattedPhone.isNotBlank()) {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedPhone"))
+                                    context.startActivity(intent)
+                                } else {
+                                    android.util.Log.e("TaskManagementDial", "Formatted phone is blank!")
+                                }
+                            } ?: run {
+                                android.util.Log.e("TaskManagementDial", "No phone number available - applicantContact: '${todoItem.applicantContact}', phoneNo: '${todoItem.phoneNo}'")
+                            }
+                        },
+                        enabled = !todoItem.applicantContact.isNullOrBlank() || !todoItem.phoneNo.isNullOrBlank()
+                    ) { 
+                        Icon(
+                            Icons.Outlined.Call, 
+                            "Call Applicant", 
+                            tint = if (todoItem.applicantContact.isNullOrBlank() && todoItem.phoneNo.isNullOrBlank()) 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            else 
+                                MaterialTheme.colorScheme.primary
+                        ) 
                     }
                 }
                 // No form button for Task Management - just view details
@@ -352,98 +371,5 @@ fun EmptyState(filter: String) {
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-data class WorkflowStage(
-    val step: Int,
-    val totalSteps: Int,
-    val stageName: String,
-    val isCompleted: Boolean
-)
-
-fun getWorkflowStage(status: String?): WorkflowStage {
-    return when (status?.lowercase()) {
-        // Stage 1: Emptying Scheduling
-        "initiated" -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
-        "pending" -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
-        
-        // Stage 2: Site Preparation
-        "scheduled" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
-        "rescheduled" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
-        "reassigned" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
-        
-        // Stage 3: Emptying Service
-        "site-preparation" -> WorkflowStage(3, 4, "workflow_stage_emptying_service", false)
-        
-        // Stage 4: Completed
-        "emptied" -> WorkflowStage(4, 4, "workflow_stage_completed", true)
-        "completed" -> WorkflowStage(4, 4, "workflow_stage_completed", true)
-        
-        // Cancelled/Terminal states - show as cancelled at stage 0
-        "cancelled" -> WorkflowStage(0, 4, "workflow_stage_cancelled", false)
-        
-        // Unknown/Default - assume early stage
-        else -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
-    }
-}
-
-@Composable
-fun WorkflowProgressIndicator(status: String?, modifier: Modifier = Modifier) {
-    val workflowStage = getWorkflowStage(status)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val completedColor = Color(0xFF28A745)
-    val inactiveColor = MaterialTheme.colorScheme.outlineVariant
-    val dotColor = if (workflowStage.isCompleted) completedColor else primaryColor
-    
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.label_progress),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
-        )
-        
-        repeat(workflowStage.totalSteps) { index ->
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(
-                        color = if (index < workflowStage.step) dotColor else inactiveColor,
-                        shape = RoundedCornerShape(50)
-                    )
-            )
-        }
-        
-        Text(
-            text = stringResource(R.string.workflow_progress_format, workflowStage.step, workflowStage.totalSteps),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold
-        )
-        
-        Text(
-            text = stringResource(
-                when (workflowStage.stageName) {
-                    "workflow_stage_scheduling" -> R.string.workflow_stage_scheduling
-                    "workflow_stage_site_preparation" -> R.string.workflow_stage_site_preparation
-                    "workflow_stage_emptying_service" -> R.string.workflow_stage_emptying_service
-                    "workflow_stage_completed" -> R.string.workflow_stage_completed
-                    "workflow_stage_cancelled" -> R.string.workflow_stage_cancelled
-                    else -> R.string.workflow_stage_scheduling
-                }
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            color = when {
-                workflowStage.stageName == "workflow_stage_cancelled" -> MaterialTheme.colorScheme.error
-                workflowStage.isCompleted -> completedColor
-                else -> primaryColor
-            },
-            fontWeight = FontWeight.Bold
-        )
     }
 }

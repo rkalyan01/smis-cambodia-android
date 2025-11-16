@@ -25,6 +25,7 @@ import org.koin.androidx.compose.koinViewModel
 import com.innovative.smis.ui.components.*
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
+import com.innovative.smis.util.validation.InputValidators
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +111,7 @@ fun ContainmentFormScreen(
             ) {
                 // Form Header
                 item {
-                    SectionHeader("Storage Tank Information")
+                    SectionHeader(stringResource(R.string.section_storage_tank_information))
                 }
 
             // Toilet Connection (Read-only)
@@ -136,7 +137,7 @@ fun ContainmentFormScreen(
                     }
                 } else {
                     DropdownMenuField(
-                        label = "Storage Tank Type",
+                        label = stringResource(R.string.label_storage_tank_type),
                         selectedValue = uiState.selectedStorageType,
                         selectedKey = uiState.selectedStorageTypeKey,
                         options = uiState.storageTypeOptions,
@@ -171,7 +172,7 @@ fun ContainmentFormScreen(
                     }
                 } else {
                     DropdownMenuField(
-                        label = "Storage Tank Outlet Connection",
+                        label = stringResource(R.string.label_storage_tank_outlet_connection),
                         selectedValue = uiState.selectedStorageConnection,
                         selectedKey = uiState.selectedStorageConnectionKey,
                         options = uiState.storageConnectionOptions,
@@ -197,16 +198,19 @@ fun ContainmentFormScreen(
 
             // Tank Specifications
             item {
-                SectionHeader("Tank Specifications")
+                SectionHeader(stringResource(R.string.section_tank_specifications))
             }
 
             // Storage Tank Size
             item {
                 OutlinedTextField(
                     value = uiState.sizeOfStorageTankM3,
-                    onValueChange = viewModel::onSizeOfStorageTankM3Change,
+                    onValueChange = { value -> 
+                        val validated = InputValidators.validateStorageTankSize(value)
+                        viewModel.onSizeOfStorageTankM3Change(validated)
+                    },
                     label = { Text(stringResource(R.string.label_storage_tank_size)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -215,7 +219,10 @@ fun ContainmentFormScreen(
             item {
                 OutlinedTextField(
                     value = uiState.constructionYear,
-                    onValueChange = viewModel::onConstructionYearChange,
+                    onValueChange = { value -> 
+                        val validated = InputValidators.validateConstructionYear(value)
+                        viewModel.onConstructionYearChange(validated)
+                    },
                     label = { Text(stringResource(R.string.label_construction_year_storage_tank)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -224,18 +231,18 @@ fun ContainmentFormScreen(
 
             // Accessibility & History
             item {
-                SectionHeader("Accessibility & History")
+                SectionHeader(stringResource(R.string.section_accessibility_history))
             }
 
             // Accessible to Desludging Vehicle (Yes/No)
             item {
                 DropdownMenuField(
-                    label = "Accessible to Desludging Vehicle (Yes/No)",
+                    label = stringResource(R.string.label_accessible_to_desludging_vehicle),
                     selectedValue = uiState.accessibility,
                     selectedKey = uiState.accessibilityKey,
                     options = mapOf(
-                        "yes" to "Yes",
-                        "no" to "No"
+                        "yes" to stringResource(R.string.label_yes),
+                        "no" to stringResource(R.string.label_no)
                     ),
                     onOptionSelected = { key, value ->
                         viewModel.onAccessibilitySelected(key, value)
@@ -247,12 +254,12 @@ fun ContainmentFormScreen(
             // Ever Emptied the Storage Tank (Yes/No)
             item {
                 DropdownMenuField(
-                    label = "Ever Emptied the Storage Tank (Yes/No)",
+                    label = stringResource(R.string.label_ever_emptied_storage_tank),
                     selectedValue = uiState.everEmptied,
                     selectedKey = uiState.everEmptiedKey,
                     options = mapOf(
-                        "yes" to "Yes",
-                        "no" to "No"
+                        "yes" to stringResource(R.string.label_yes),
+                        "no" to stringResource(R.string.label_no)
                     ),
                     onOptionSelected = { key, value ->
                         viewModel.onEverEmptiedSelected(key, value)

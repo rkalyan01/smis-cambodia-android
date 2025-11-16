@@ -21,12 +21,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.innovative.smis.R
 import com.innovative.smis.util.helper.PhoneNumberFormatter
+
+/**
+ * Appends an asterisk (*) to the label if the field is required
+ * Improves accessibility by adding semantic information for screen readers
+ */
+fun labelWithAsterisk(label: String, isRequired: Boolean): String {
+    return if (isRequired) "$label *" else label
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,13 +52,14 @@ fun OutlinedTextFieldWithError(
     error: String? = null,
     enabled: Boolean = true,
     singleLine: Boolean = true,
-    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    isRequired: Boolean = false
 ) {
     Column(modifier = modifier) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label) },
+            label = { Text(labelWithAsterisk(label, isRequired)) },
             isError = error != null,
             enabled = enabled,
             singleLine = singleLine,
@@ -97,7 +112,7 @@ fun PhoneNumberField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { Text(labelWithAsterisk(label, isRequired)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
@@ -240,13 +255,16 @@ fun YesNoRadioGroup(
     label: String,
     selectedOption: Boolean?,
     onOptionSelected: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isRequired: Boolean = false
 ) {
     Column(modifier = modifier) {
         Text(
-            text = label,
+            text = labelWithAsterisk(label, isRequired),
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -255,17 +273,23 @@ fun YesNoRadioGroup(
                 modifier = Modifier
                     .selectable(
                         selected = selectedOption == true,
-                        onClick = { onOptionSelected(true) }
+                        enabled = enabled,
+                        onClick = { if (enabled) onOptionSelected(true) }
                     )
                     .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = selectedOption == true,
-                    onClick = { onOptionSelected(true) }
+                    onClick = { if (enabled) onOptionSelected(true) },
+                    enabled = enabled
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.action_yes), fontSize = 14.sp)
+                Text(
+                    text = stringResource(R.string.action_yes),
+                    fontSize = 14.sp,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
             }
             
             Spacer(modifier = Modifier.width(16.dp))
@@ -274,17 +298,23 @@ fun YesNoRadioGroup(
                 modifier = Modifier
                     .selectable(
                         selected = selectedOption == false,
-                        onClick = { onOptionSelected(false) }
+                        enabled = enabled,
+                        onClick = { if (enabled) onOptionSelected(false) }
                     )
                     .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = selectedOption == false,
-                    onClick = { onOptionSelected(false) }
+                    onClick = { if (enabled) onOptionSelected(false) },
+                    enabled = enabled
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.action_no), fontSize = 14.sp)
+                Text(
+                    text = stringResource(R.string.action_no),
+                    fontSize = 14.sp,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
             }
         }
     }
@@ -418,9 +448,13 @@ fun DropdownMenuField(
     options: Map<String, String>,
     onOptionSelected: (key: String, value: String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isRequired: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
+    
+    // Always derive display value from key to ensure correct translation
+    val displayValue = options[selectedKey] ?: selectedValue
 
     Column(modifier = modifier) {
         ExposedDropdownMenuBox(
@@ -428,9 +462,9 @@ fun DropdownMenuField(
             onExpandedChange = { expanded = it && enabled }
         ) {
             OutlinedTextField(
-                value = selectedValue,
+                value = displayValue,
                 onValueChange = { },
-                label = { Text(label) },
+                label = { Text(labelWithAsterisk(label, isRequired)) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,

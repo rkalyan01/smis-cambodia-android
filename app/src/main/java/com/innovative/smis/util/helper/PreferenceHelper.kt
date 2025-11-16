@@ -135,6 +135,24 @@ class PreferenceHelper(context: Context) {
         sharedPreferences.edit().putInt(key, value).apply()
     }
 
+    /**
+     * Clear all session-specific data (auth token, user info)
+     * Preserves device-level settings (language, theme, date format, etc.)
+     */
+    fun clearSessionOnly() {
+        sharedPreferences.edit()
+            .remove("AUTH_TOKEN")
+            .remove("USER_NAME")
+            .remove("USER_EMAIL")
+            .remove("IS_LOGIN")
+            .remove("ETO_ID")
+            .apply()
+    }
+
+    /**
+     * Clear ALL preferences including device settings
+     * Use this for complete logout
+     */
     fun clearAll() {
         sharedPreferences.edit().clear().apply()
     }

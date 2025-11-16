@@ -6,9 +6,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.innovative.smis.R
 
 @Composable
 fun BooleanField(
@@ -16,8 +18,8 @@ fun BooleanField(
     value: Boolean,
     onValueChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    yesLabel: String = "Yes",
-    noLabel: String = "No"
+    yesLabel: String = stringResource(R.string.common_yes),
+    noLabel: String = stringResource(R.string.common_no)
 ) {
     Column(modifier = modifier) {
         Text(

@@ -6,6 +6,7 @@ import com.innovative.smis.data.repository.EmptyingServiceRepository
 import com.innovative.smis.data.api.request.EmptyingServiceRequest
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PreferenceHelper
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -26,6 +27,37 @@ class EmptyingServiceFormViewModel(
     val saveResult = _saveResult.receiveAsFlow()
 
     private var currentApplicationId: Int = 0
+
+    // Helper functions to normalize translated values to English for API submission
+    private fun normalizeSludgeType(value: String): String = when (value) {
+        "Mixed", "លាយ" -> "Mixed"
+        "Not Mixed", "មិនលាយ" -> "Not mixed"
+        else -> value // Return as-is if already in English or unknown
+    }
+
+    private fun normalizeTypeOfSludge(value: String): String = when (value) {
+        "Processing food", "ប្រែហ្គរប់អាហារ" -> "Processing food"
+        "Oil and fat (restaurant)", "ប្រេង និងខ្លាញ់ (ភោជនីយដ្ឋាន)" -> "Oil and fat (restaurant)"
+        "Content of fuel", "មាតិកាឥន្ធនៈ" -> "Content of fuel"
+        else -> value // Return as-is if already in English or unknown
+    }
+
+    private fun normalizeYesNo(value: String): String = when (value) {
+        "Yes", "បាទ" -> "Yes"
+        "No", "ទេ" -> "No"
+        else -> value // Return as-is if already in English or unknown
+    }
+
+    private fun normalizePumpingPointType(value: String): String = when (value) {
+        "Cover", "គម្រប" -> "Cover"
+        "Tube", "បំពង់" -> "Tube"
+        "Pierce", "ចាក់" -> "Pierce"
+        else -> value // Return as-is if already in English or unknown
+    }
+
+    private fun isMixed(value: String): Boolean = value == "Mixed" || value == "លាយ"
+    
+    private fun isYes(value: String): Boolean = value == "Yes" || value == "បាទ"
 
     fun loadApplicationDetails(applicationId: Int) {
         if (applicationId == 0) return
@@ -141,7 +173,11 @@ class EmptyingServiceFormViewModel(
 
 
     fun onAdditionalTripRequiredChange(required: String) {
-        _uiState.update { it.copy(additionalTripRequired = required) }
+        _uiState.update { it.copy(
+            additionalTripRequired = required,
+            additionalTripRequiredError = null,
+            firstErrorField = null
+        ) }
     }
 
     fun onServiceReceiverSameAsApplicantChange(same: Boolean) {
@@ -149,20 +185,28 @@ class EmptyingServiceFormViewModel(
             it.copy(
                 isServiceReceiverSameAsApplicant = same,
                 serviceReceiverName = if (same) it.applicantName else "",
-                serviceReceiverContact = if (same) it.applicantContact else ""
+                serviceReceiverContact = if (same) PhoneNumberFormatter.formatCambodianNumber(it.applicantContact) else ""
             )
         }
     }
 
     fun onServiceReceiverNameChange(name: String) {
         if (!_uiState.value.isServiceReceiverSameAsApplicant) {
-            _uiState.update { it.copy(serviceReceiverName = name) }
+            _uiState.update { it.copy(
+                serviceReceiverName = name,
+                serviceReceiverNameError = null,
+                firstErrorField = null
+            ) }
         }
     }
 
     fun onServiceReceiverContactChange(contact: String) {
         if (!_uiState.value.isServiceReceiverSameAsApplicant) {
-            _uiState.update { it.copy(serviceReceiverContact = contact) }
+            _uiState.update { it.copy(
+                serviceReceiverContact = contact,
+                serviceReceiverContactError = null,
+                firstErrorField = null
+            ) }
         }
     }
 
@@ -174,8 +218,8 @@ class EmptyingServiceFormViewModel(
             it.copy(
                 selectedVehicleLicensePlate = licensePlate,
                 desludgingVehicleId = vehicleId,
-                // Clear error when user selects a value
-                desludgingVehicleIdError = null
+                desludgingVehicleIdError = null,
+                firstErrorField = null
             )
         }
         android.util.Log.d("EmptyingService", "State updated - desludgingVehicleId: ${_uiState.value.desludgingVehicleId}")
@@ -186,8 +230,10 @@ class EmptyingServiceFormViewModel(
         _uiState.update {
             it.copy(
                 sludgeType = sludgeType,
-                // Clear Type of Sludge when changing Sludge Type
-                typeOfSludge = if (sludgeType != "Mixed") "" else it.typeOfSludge
+                sludgeTypeError = null,
+                firstErrorField = null,
+                // Clear Type of Sludge when changing Sludge Type (works with both English and Khmer)
+                typeOfSludge = if (!isMixed(sludgeType)) "" else it.typeOfSludge
             )
         }
         android.util.Log.d("EmptyingService", "State updated - sludgeType: ${_uiState.value.sludgeType}")
@@ -213,15 +259,38 @@ class EmptyingServiceFormViewModel(
         _uiState.update { it.copy(freeUnderPBC = free) }
     }
 
-    fun onAdditionalRepairingChange(selectedKeys: List<String>) {
-        // Check if "Others" is in the selection
-        val hasOthers = selectedKeys.any { key ->
-            val value = _uiState.value.additionalRepairingOptions[key] ?: key
-            value.contains("Others", ignoreCase = true)
-        }
+    fun onCustomerTypeChange(customerType: String) {
+        // Get the display value for the selected key
+        val displayValue = _uiState.value.customerTypeOptions[customerType] ?: ""
+        
+        // Check if "Other" is selected - works for both English and Khmer
+        // English: "Others, specify" contains "other"
+        // Khmer: "ផ្សេងទៀត" or "ផ្សេងៗ" contains "ផ្សេង"
+        val hasOther = displayValue.contains("other", ignoreCase = true) || 
+                      displayValue.contains("ផ្សេង")
         
         _uiState.update { 
             it.copy(
+                customerType = customerType,
+                // Clear "other customer type" field when "Other" is not selected
+                otherCustomerType = if (!hasOther) "" else it.otherCustomerType
+            ) 
+        }
+    }
+
+    fun onOtherCustomerTypeChange(otherType: String) {
+        _uiState.update { it.copy(otherCustomerType = otherType) }
+    }
+
+    fun onAdditionalRepairingChange(selectedKeys: List<String>) {
+        // Check if "Others" (ID: 7) is in the selection
+        // Note: API returns numeric IDs as keys, e.g., {"7": "Others, specify"} or {"7": "ផ្សេងៗ"}
+        val hasOthers = selectedKeys.contains("7")
+        
+        _uiState.update { 
+            it.copy(
+                additionalRepairingError = null,
+                firstErrorField = null,
                 additionalRepairingKeys = selectedKeys,
                 // Clear "other" field when "Others" is not selected
                 otherAdditionalRepairing = if (!hasOthers) "" else it.otherAdditionalRepairing
@@ -238,15 +307,27 @@ class EmptyingServiceFormViewModel(
     }
 
     fun onExtraCostChange(extraCost: String) {
-        _uiState.update { it.copy(extraCost = extraCost) }
+        _uiState.update { it.copy(
+            extraCost = extraCost,
+            extraCostError = null,
+            firstErrorField = null
+        ) }
     }
 
     fun onReceiptNumberChange(receiptNumber: String) {
-        _uiState.update { it.copy(receiptNumber = receiptNumber) }
+        _uiState.update { it.copy(
+            receiptNumber = receiptNumber,
+            receiptNumberError = null,
+            firstErrorField = null
+        ) }
     }
 
     fun onReceiptImageSelected(imageUri: String?) {
-        _uiState.update { it.copy(receiptImage = imageUri ?: "") }
+        _uiState.update { it.copy(
+            receiptImage = imageUri ?: "",
+            receiptImageError = null,
+            firstErrorField = null
+        ) }
     }
 
     fun onEmptyingPictureSelected(imageUri: String?) {
@@ -292,27 +373,88 @@ class EmptyingServiceFormViewModel(
             var errorState = currentState
             var firstError: String? = null
             
-            // Validate Desludging Vehicle ID (mandatory field)
-            if (currentState.desludgingVehicleId.isEmpty()) {
-                errorState = errorState.copy(
-                    desludgingVehicleIdError = "Desludging Vehicle is required"
-                )
-                if (firstError == null) firstError = "desludging_vehicle"
+            // Clear all errors first
+            errorState = errorState.copy(
+                serviceReceiverNameError = null,
+                serviceReceiverContactError = null,
+                emptiedDateError = null,
+                startTimeError = null,
+                endTimeError = null,
+                additionalTripRequiredError = null,
+                desludgingVehicleIdError = null,
+                sludgeTypeError = null,
+                additionalRepairingError = null,
+                extraCostError = null,
+                receiptNumberError = null,
+                receiptImageError = null,
+                firstErrorField = null
+            )
+            
+            // 1. Validate Service Receiver Name
+            if (currentState.serviceReceiverName.isBlank()) {
+                errorState = errorState.copy(serviceReceiverNameError = "Please enter service receiver name")
+                if (firstError == null) firstError = "serviceReceiverName"
                 hasError = true
-            } else {
-                errorState = errorState.copy(desludgingVehicleIdError = null)
             }
             
-            // Validate Pumping Point Type (mandatory field)
-            if (currentState.pumpingPointType.isEmpty()) {
-                errorState = errorState.copy(
-                    pumpingPointTypeError = "Pumping Point Type is required"
-                )
-                if (firstError == null) firstError = "pumping_point_type"
+            // 2. Validate Service Receiver Contact
+            if (currentState.serviceReceiverContact.isBlank()) {
+                errorState = errorState.copy(serviceReceiverContactError = "Please enter service receiver contact")
+                if (firstError == null) firstError = "serviceReceiverContact"
                 hasError = true
-            } else {
-                errorState = errorState.copy(pumpingPointTypeError = null)
             }
+            
+            // 3. Validate Emptied Date
+            if (currentState.emptiedDate.isBlank()) {
+                errorState = errorState.copy(emptiedDateError = "Please select emptied date")
+                if (firstError == null) firstError = "emptiedDate"
+                hasError = true
+            }
+            
+            // 4. Validate Start Time
+            if (currentState.startTime.isBlank()) {
+                errorState = errorState.copy(startTimeError = "Please select start time")
+                if (firstError == null) firstError = "startTime"
+                hasError = true
+            }
+            
+            // 5. Validate End Time
+            if (currentState.endTime.isBlank()) {
+                errorState = errorState.copy(endTimeError = "Please select end time")
+                if (firstError == null) firstError = "endTime"
+                hasError = true
+            }
+            
+            // 6. Validate Additional Trip Required
+            if (currentState.additionalTripRequired.isBlank()) {
+                errorState = errorState.copy(additionalTripRequiredError = "Please select if additional trip is required")
+                if (firstError == null) firstError = "additionalTripRequired"
+                hasError = true
+            }
+            
+            // 7. Validate Desludging Vehicle
+            if (currentState.desludgingVehicleId.isEmpty()) {
+                errorState = errorState.copy(desludgingVehicleIdError = "Please select desludging vehicle")
+                if (firstError == null) firstError = "desludgingVehicle"
+                hasError = true
+            }
+            
+            // 8. Validate Sludge Type
+            if (currentState.sludgeType.isBlank()) {
+                errorState = errorState.copy(sludgeTypeError = "Please select sludge type")
+                if (firstError == null) firstError = "sludgeType"
+                hasError = true
+            }
+            
+            // 9. Validate Additional Repairing
+            if (currentState.additionalRepairingKeys.isEmpty()) {
+                errorState = errorState.copy(additionalRepairingError = "Please select at least one option")
+                if (firstError == null) firstError = "additionalRepairing"
+                hasError = true
+            }
+            
+            // ✅ Extra Cost validation removed - no longer required
+            // ✅ Receipt Number and Receipt Image validation removed - no longer required
             
             // If there are errors, update state with first error field for auto-scroll
             if (hasError) {
@@ -327,11 +469,7 @@ class EmptyingServiceFormViewModel(
             
             // Clear any previous errors and set submitting state
             _uiState.update { 
-                it.copy(
-                    desludgingVehicleIdError = null,
-                    pumpingPointTypeError = null,
-                    isSubmitting = true
-                ) 
+                it.copy(isSubmitting = true) 
             }
 
             // Try online submission first, fallback to offline storage
@@ -339,21 +477,25 @@ class EmptyingServiceFormViewModel(
                 // Get eto_id from logged-in user
                 val etoId = preferenceHelper.getEtoId()?.toString() ?: ""
                 
-                // Separate additional_repairing_id (keys only) from other_additional_repairing (Others text)
-                // Filter out "No" option and "Others" option
-                val selectedKeys = currentState.additionalRepairingKeys
+                // Database column is PostgreSQL integer[] array
+                // Send PostgreSQL literal format: "{2,4,5}" as string (database-specific format)
+                // Filter out special options: "No" (ID: 1) and "Others" (ID: 7)
+                val selectedIds = currentState.additionalRepairingKeys
                     .filter { key ->
-                        val value = currentState.additionalRepairingOptions[key] ?: key
-                        // Exclude "No" and "Others" from the integer ID list
-                        !value.contains("No", ignoreCase = true) && 
-                        !value.contains("Others", ignoreCase = true)
+                        key != "1" &&  // No
+                        key != "7"     // Others
                     }
-                    .joinToString(",")
+                    .mapNotNull { it.toIntOrNull() } // Convert to integers
                 
-                val hasOthers = currentState.additionalRepairingKeys.any { key ->
-                    val value = currentState.additionalRepairingOptions[key] ?: key
-                    value.contains("Others", ignoreCase = true)
+                // Format as PostgreSQL literal: {2,4,5}
+                val postgresArrayLiteral = if (selectedIds.isNotEmpty()) {
+                    "{${selectedIds.joinToString(",")}}"
+                } else {
+                    null
                 }
+                
+                val hasOthers = currentState.additionalRepairingKeys.contains("7")
+                // Single string value for "other_additional_repairing" (character varying)
                 val othersText = if (hasOthers && currentState.otherAdditionalRepairing.isNotEmpty()) {
                     currentState.otherAdditionalRepairing
                 } else {
@@ -365,7 +507,7 @@ class EmptyingServiceFormViewModel(
                 android.util.Log.d("EmptyingService", "sludgeType from state: '${currentState.sludgeType}'")
                 android.util.Log.d("EmptyingService", "typeOfSludge from state: '${currentState.typeOfSludge}'")
                 android.util.Log.d("EmptyingService", "additionalRepairingKeys: ${currentState.additionalRepairingKeys}")
-                android.util.Log.d("EmptyingService", "selectedKeys (filtered): '$selectedKeys'")
+                android.util.Log.d("EmptyingService", "postgresArrayLiteral: $postgresArrayLiteral")
                 
                 val request = EmptyingServiceRequest(
                     sanitation_customer_id = currentState.sanitationCustomerId,
@@ -373,14 +515,16 @@ class EmptyingServiceFormViewModel(
                     end_time = currentState.endTime,
                     volume_of_sludge = "3", // Default volume
                     amount_of_regular_payment_per_trip = currentState.regularCost,
-                    additional_trip_required = currentState.additionalTripRequired,
-                    sludge_type_a = if (currentState.sludgeType == "Mixed") "Mixed" else if (currentState.sludgeType == "Not Mixed") "Not mixed" else "",
-                    sludge_type_b = if (currentState.sludgeType == "Mixed" && currentState.typeOfSludge.isNotEmpty()) currentState.typeOfSludge else "",
+                    additional_trip_required = normalizeYesNo(currentState.additionalTripRequired),
+                    sludge_type_a = normalizeSludgeType(currentState.sludgeType),
+                    sludge_type_b = if (isMixed(currentState.sludgeType) && currentState.typeOfSludge.isNotEmpty()) normalizeTypeOfSludge(currentState.typeOfSludge) else "",
                     location_of_containment = "Around the house", // Default location
-                    presence_of_pumping_point = currentState.pumpingPointPresence.ifEmpty { null },
-                    pumping_point_type = if (currentState.pumpingPointPresence == "Yes" && currentState.pumpingPointType.isNotEmpty()) currentState.pumpingPointType else null,
-                    additional_repairing_id = selectedKeys.takeIf { it.isNotEmpty() },
+                    presence_of_pumping_point = if (currentState.pumpingPointPresence.isNotEmpty()) normalizeYesNo(currentState.pumpingPointPresence) else null,
+                    pumping_point_type = if (isYes(currentState.pumpingPointPresence) && currentState.pumpingPointType.isNotEmpty()) normalizePumpingPointType(currentState.pumpingPointType) else null,
+                    additional_repairing_id = postgresArrayLiteral,
                     other_additional_repairing = othersText,
+                    customer_type = currentState.customerType.ifEmpty { null },
+                    other_customer_type = currentState.otherCustomerType.ifEmpty { null },
                     extra_payment = currentState.extraCost,
                     receipt_number = currentState.receiptNumber,
                     comments = currentState.comments,
@@ -484,6 +628,8 @@ class EmptyingServiceFormViewModel(
                         pumpingPointPresence = draft.pumpingPointPresence,
                         pumpingPointType = draft.pumpingPointType,
                         // freeUnderPBC - READONLY: Always loaded from API via loadReadonlyData()
+                        customerType = draft.customerType,
+                        otherCustomerType = draft.otherCustomerType,
                         additionalRepairingKeys = (draft.additionalRepairingInEmptying ?: "")
                             .split(",")
                             .map { it.trim() }
@@ -577,6 +723,26 @@ class EmptyingServiceFormViewModel(
         } catch (e: Exception) {
             android.util.Log.e("EmptyingService", "Error loading additional repairing options", e)
         }
+
+        // Load customer types
+        try {
+            val customerTypesResult = repository.getCustomerTypes()
+            when (customerTypesResult) {
+                is Resource.Success -> {
+                    val customerTypeOptions = customerTypesResult.data?.data ?: emptyMap()
+                    android.util.Log.d("EmptyingService", "=== CUSTOMER TYPES LOADED ===")
+                    android.util.Log.d("EmptyingService", "Options: $customerTypeOptions")
+                    _uiState.update { it.copy(customerTypeOptions = customerTypeOptions) }
+                }
+                is Resource.Error -> {
+                    android.util.Log.e("EmptyingService", "Error loading customer types: ${customerTypesResult.message}")
+                    _uiState.update { it.copy(customerTypeOptions = emptyMap()) }
+                }
+                else -> {}
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("EmptyingService", "Exception loading customer types", e)
+        }
     }
 
     private fun convertDateToTimestamp(dateString: String): Long? {
@@ -630,6 +796,8 @@ class EmptyingServiceFormViewModel(
                 android.util.Log.d("EmptyingService", "=== READONLY DATA LOADED ===")
                 android.util.Log.d("EmptyingService", "freeServiceUnderPbc from API: ${data.freeServiceUnderPbc}")
                 android.util.Log.d("EmptyingService", "buildingPointGeomExist from API: ${data.buildingPointGeomExist}")
+                android.util.Log.d("EmptyingService", "latitude from API: ${data.latitude}")
+                android.util.Log.d("EmptyingService", "longitude from API: ${data.longitude}")
                 android.util.Log.d("EmptyingService", "additionalRepairing from API: '${data.additionalRepairing}'")
                 android.util.Log.d("EmptyingService", "Parsed keys: $additionalRepairingKeys")
                 android.util.Log.d("EmptyingService", "Available options: ${currentState.additionalRepairingOptions}")
@@ -656,6 +824,8 @@ class EmptyingServiceFormViewModel(
                     desludgingVehicleId = vehicleId,
                     selectedVehicleLicensePlate = licensePlate,
                     buildingPointGeomExist = data.buildingPointGeomExist ?: false, // ✅ Set from readonly data
+                    latitude = data.latitude?.toDoubleOrNull(), // ✅ Load GPS coordinates from API (convert string to double)
+                    longitude = data.longitude?.toDoubleOrNull(), // ✅ Load GPS coordinates from API (convert string to double)
                     // Set readonly flags
                     isApplicantNameReadonly = true,
                     isApplicantContactReadonly = true,

@@ -8,6 +8,7 @@ import com.innovative.smis.data.repository.SitePreparationRepository
 import com.innovative.smis.data.model.response.ContainmentIssuesResponse
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.DateFormatManager
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,7 +49,15 @@ data class SitePreparationFormState(
     val isLoadingDropdowns: Boolean = false,
     val emptyingReasonsList: Map<String, String> = emptyMap(),
     val containmentIssuesList: Map<String, String> = emptyMap(),
-    val isSubmitting: Boolean = false
+    val isSubmitting: Boolean = false,
+    val draftLoaded: Boolean = false, // ✅ Track if draft has been loaded to prevent API overwrites
+    
+    // Validation error fields
+    val serviceReceiverNameError: String? = null,
+    val serviceReceiverContactError: String? = null,
+    val extraPaymentRequiredError: String? = null,
+    val needRescheduleError: String? = null,
+    val firstErrorField: String? = null
 )
 
 class SitePreparationFormViewModel(
@@ -98,11 +107,11 @@ class SitePreparationFormViewModel(
         if (applicationId == 0) return
         currentApplicationId = applicationId
 
-        // Set Application ID in UI state and start loading
-        _uiState.update { it.copy(
+        // ✅ CRITICAL: Reset state when loading new application to prevent stale data
+        _uiState.value = SitePreparationFormState(
             applicationId = applicationId.toString(),
             loadingState = Resource.Loading<SitePreparationFormEntity>()
-        ) }
+        )
 
         initializeForm(applicationId)
         
@@ -110,70 +119,97 @@ class SitePreparationFormViewModel(
         loadDropdownData()
 
         // Load API data in parallel with dropdown data
+        // ✅ API data ONLY fills fields if draft has NOT been loaded
         viewModelScope.launch {
             repository.getSanitationCustomerDetails(applicationId.toString()).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         result.data?.data?.let { apiData ->
                             _uiState.update { currentState ->
-                                currentState.copy(
-                                    loadingState = Resource.Idle(), // Clear loading state
-                                    sanitationCustomerId = apiData.sanitationCustomerId,
-                                    applicantName = apiData.applicantName ?: "",
-                                    applicantContact = apiData.applicantContact ?: "",
-                                    purposeOfEmptying = getEmptyingPurposeText(apiData.purposeOfEmptying),
-                                    otherEmptyingPurpose = apiData.otherEmptyingPurpose ?: "",
-                                    everEmptied = apiData.everEmptied,
-                                    lastEmptiedYear = apiData.lastEmptiedYear?.toString() ?: "",
-                                    notEmptiedBeforeReason = apiData.notEmptiedBeforeReason ?: "",
-                                    freeServiceUnderPbc = apiData.freeServiceUnderPbc ?: false,
-                                    additionalRepairingKeys = (apiData.additionalRepairing ?: "")
-                                        .split(",")
-                                        .map { it.trim() }
-                                        .filter { it.isNotEmpty() },
-                                    otherAdditionalRepairing = apiData.otherAdditionalRepairing ?: "",
-                                    extraPaymentRequired = apiData.extraPaymentRequired,
-                                    amountOfExtraPayment = apiData.amountOfExtraPayment ?: "",
-                                    proposedEmptyingDate = apiData.proposedEmptyingDate ?: ""
-                                )
+                                // ✅ CRITICAL: Skip API updates entirely if draft is already loaded
+                                if (currentState.draftLoaded) {
+                                    // ✅ EXCEPTION: Always set sanitationCustomerId from API (readonly server field)
+                                    currentState.copy(
+                                        loadingState = Resource.Idle(),
+                                        sanitationCustomerId = apiData.sanitationCustomerId
+                                    )
+                                } else {
+                                    currentState.copy(
+                                        loadingState = Resource.Idle(),
+                                        sanitationCustomerId = apiData.sanitationCustomerId,
+                                        applicantName = apiData.applicantName ?: "",
+                                        applicantContact = apiData.applicantContact ?: "",
+                                        purposeOfEmptying = getEmptyingPurposeText(apiData.purposeOfEmptying),
+                                        otherEmptyingPurpose = apiData.otherEmptyingPurpose ?: "",
+                                        everEmptied = apiData.everEmptied,
+                                        lastEmptiedYear = apiData.lastEmptiedYear?.toString() ?: "",
+                                        notEmptiedBeforeReason = apiData.notEmptiedBeforeReason ?: "",
+                                        freeServiceUnderPbc = apiData.freeServiceUnderPbc ?: false,
+                                        additionalRepairingKeys = (apiData.additionalRepairing ?: "")
+                                            .split(",")
+                                            .map { it.trim() }
+                                            .filter { it.isNotEmpty() },
+                                        otherAdditionalRepairing = apiData.otherAdditionalRepairing ?: "",
+                                        extraPaymentRequired = apiData.extraPaymentRequired,
+                                        amountOfExtraPayment = apiData.amountOfExtraPayment ?: "",
+                                        proposedEmptyingDate = apiData.proposedEmptyingDate ?: ""
+                                    )
+                                }
                             }
                         } ?: run {
-                            // If no data, still clear loading state
                             _uiState.update { it.copy(loadingState = Resource.Idle()) }
                         }
                     }
                     is Resource.Error -> {
-                        // Handle error case
-                        _uiState.update {
-                            it.copy(
-                                loadingState = Resource.Idle()
-                            )
-                        }
+                        _uiState.update { it.copy(loadingState = Resource.Idle()) }
                     }
                     is Resource.Loading -> {
-                        // Loading state is already set when loadApplicationDetails starts
+                        // Loading state is already set
                     }
                     else -> {}
                 }
             }
         }
 
-        // Also load any existing form data
+        // Also load any existing form data (DRAFT takes priority over API)
         viewModelScope.launch {
             repository.getFormDetails(applicationId).collect { result ->
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { entity ->
                             currentFormId = entity.applicationId.toString()
-                            // Only update editable fields from saved form
+                            // ✅ CRITICAL FIX: Restore ALL editable fields from draft EXACTLY as saved
                             _uiState.update { currentState ->
                                 currentState.copy(
-                                    loadingState = Resource.Idle(), // Ensure loading state is cleared
-                                    serviceReceiverName = entity.customerName ?: currentState.serviceReceiverName,
-                                    serviceReceiverContact = entity.customerContact ?: currentState.serviceReceiverContact,
-                                    isReceiverSameAsApplicant = entity.customerName == currentState.applicantName,
+                                    loadingState = Resource.Idle(),
+                                    draftLoaded = true, // ✅ Set flag to prevent API overwrites
+                                    // ✅ Restore all fields from draft (including intentionally blank/empty values)
+                                    applicantName = entity.applicantName ?: "",
+                                    applicantContact = entity.applicantContact ?: "",
+                                    serviceReceiverName = entity.customerName ?: "",
+                                    serviceReceiverContact = entity.customerContact ?: "",
+                                    isReceiverSameAsApplicant = entity.customerName == entity.applicantName,
+                                    purposeOfEmptying = entity.purposeOfEmptying ?: "",
+                                    otherEmptyingPurpose = entity.otherEmptyingPurpose ?: "",
+                                    everEmptied = entity.everEmptied,
+                                    lastEmptiedYear = entity.lastEmptiedYear ?: "",
+                                    notEmptiedBeforeReason = entity.notEmptiedBeforeReason ?: "",
+                                    reasonForNoEmptiedDate = entity.reasonForNoEmptiedDate ?: "",
+                                    freeServiceUnderPbc = entity.freeServiceUnderPbc ?: false,
+                                    // ✅ Respect explicitly empty list (user deselected all)
+                                    additionalRepairingKeys = entity.additionalRepairing
+                                        ?.split(",")
+                                        ?.map { it.trim() }
+                                        ?.filter { it.isNotEmpty() }
+                                        ?: emptyList(),
+                                    otherAdditionalRepairing = entity.otherAdditionalRepairing ?: "",
+                                    extraPaymentRequired = entity.extraPaymentRequired,
+                                    amountOfExtraPayment = entity.amountOfExtraPayment ?: "",
+                                    proposedEmptyingDate = entity.proposedEmptyingDate ?: "",
                                     needReschedule = entity.needReschedule,
-                                    newProposedEmptyingDate = entity.newProposedEmptyingDate?.toString() ?: ""
+                                    newProposedEmptyingDate = entity.newProposedEmptyingDate?.let { 
+                                        if (it == 0L) "" else it.toString() 
+                                    } ?: ""
                                 )
                             }
                         } ?: run {
@@ -218,12 +254,20 @@ class SitePreparationFormViewModel(
     }
 
     fun onServiceReceiverNameChange(name: String) {
-        _uiState.update { it.copy(serviceReceiverName = name) }
+        _uiState.update { it.copy(
+            serviceReceiverName = name,
+            serviceReceiverNameError = null,
+            firstErrorField = null
+        ) }
         autoSaveDraft()
     }
 
     fun onServiceReceiverContactChange(contact: String) {
-        _uiState.update { it.copy(serviceReceiverContact = contact) }
+        _uiState.update { it.copy(
+            serviceReceiverContact = contact,
+            serviceReceiverContactError = null,
+            firstErrorField = null
+        ) }
         autoSaveDraft()
     }
 
@@ -232,7 +276,7 @@ class SitePreparationFormViewModel(
             state.copy(
                 isReceiverSameAsApplicant = isSame,
                 serviceReceiverName = if (isSame) state.applicantName else "",
-                serviceReceiverContact = if (isSame) state.applicantContact else ""
+                serviceReceiverContact = if (isSame) PhoneNumberFormatter.formatCambodianNumber(state.applicantContact) else ""
             )
         }
         autoSaveDraft()
@@ -269,10 +313,10 @@ class SitePreparationFormViewModel(
     }
 
     fun onAdditionalRepairingChange(selectedKeys: List<String>) {
-        // Check if "Others" is in the selection
+        // Check if "Others" is in the selection by checking the API key (not the localized label)
+        // API key is always in English, so this works for both Khmer and English
         val hasOthers = selectedKeys.any { key ->
-            val value = uiState.value.containmentIssuesList[key] ?: ""
-            value.contains("Others", ignoreCase = true)
+            key.contains("Others", ignoreCase = true)
         }
         
         _uiState.update { it.copy(
@@ -289,7 +333,11 @@ class SitePreparationFormViewModel(
     }
 
     fun onExtraPaymentRequiredChange(isRequired: Boolean) {
-        _uiState.update { it.copy(extraPaymentRequired = isRequired) }
+        _uiState.update { it.copy(
+            extraPaymentRequired = isRequired,
+            extraPaymentRequiredError = null,
+            firstErrorField = null
+        ) }
         autoSaveDraft()
     }
 
@@ -299,7 +347,11 @@ class SitePreparationFormViewModel(
     }
 
     fun onNeedRescheduleChange(needReschedule: Boolean) {
-        _uiState.update { it.copy(needReschedule = needReschedule) }
+        _uiState.update { it.copy(
+            needReschedule = needReschedule,
+            needRescheduleError = null,
+            firstErrorField = null
+        ) }
         autoSaveDraft()
     }
 
@@ -350,6 +402,69 @@ class SitePreparationFormViewModel(
 
                 repository.saveDraft(draftEntity)
             }
+        }
+    }
+
+    private fun validateForm(): Boolean {
+        val state = _uiState.value
+        var isValid = true
+        var firstError: String? = null
+        
+        // Clear all errors first
+        _uiState.update { it.copy(
+            serviceReceiverNameError = null,
+            serviceReceiverContactError = null,
+            extraPaymentRequiredError = null,
+            needRescheduleError = null,
+            firstErrorField = null
+        ) }
+        
+        // Validate Service Receiver Name (required)
+        if (state.serviceReceiverName.isBlank()) {
+            _uiState.update { it.copy(
+                serviceReceiverNameError = "Please enter service receiver name",
+                firstErrorField = firstError ?: "serviceReceiverName"
+            ) }
+            if (firstError == null) firstError = "serviceReceiverName"
+            isValid = false
+        }
+        
+        // Validate Service Receiver Contact (required)
+        if (state.serviceReceiverContact.isBlank()) {
+            _uiState.update { it.copy(
+                serviceReceiverContactError = "Please enter service receiver contact",
+                firstErrorField = firstError ?: "serviceReceiverContact"
+            ) }
+            if (firstError == null) firstError = "serviceReceiverContact"
+            isValid = false
+        }
+        
+        // Validate Extra Payment Required (required)
+        if (state.extraPaymentRequired == null) {
+            _uiState.update { it.copy(
+                extraPaymentRequiredError = "Please select if extra payment is required",
+                firstErrorField = firstError ?: "extraPaymentRequired"
+            ) }
+            if (firstError == null) firstError = "extraPaymentRequired"
+            isValid = false
+        }
+        
+        // Validate Need Reschedule (required)
+        if (state.needReschedule == null) {
+            _uiState.update { it.copy(
+                needRescheduleError = "Please select if reschedule is needed",
+                firstErrorField = firstError ?: "needReschedule"
+            ) }
+            if (firstError == null) firstError = "needReschedule"
+            isValid = false
+        }
+        
+        return isValid
+    }
+    
+    fun submitForm() {
+        if (validateForm()) {
+            saveForm()
         }
     }
 
@@ -484,9 +599,11 @@ class SitePreparationFormViewModel(
             repository.getContainmentIssues().collect { containmentResult ->
                 when (containmentResult) {
                     is Resource.Success -> {
+                        // API already provides translated labels via LanguageInterceptor (/km suffix for Khmer)
+                        val apiMap = containmentResult.data ?: emptyMap()
                         _uiState.update {
                             it.copy(
-                                containmentIssuesList = containmentResult.data ?: emptyMap(),
+                                containmentIssuesList = apiMap,
                                 isLoadingDropdowns = false
                             )
                         }

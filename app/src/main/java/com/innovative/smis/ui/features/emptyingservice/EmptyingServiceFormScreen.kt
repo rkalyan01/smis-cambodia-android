@@ -43,6 +43,7 @@ import com.innovative.smis.ui.components.ReadOnlyTextField
 import com.innovative.smis.ui.components.PhoneNumberField
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PhoneNumberFormatter
+import com.innovative.smis.util.validation.InputValidators
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -66,6 +67,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.google.android.gms.maps.CameraUpdateFactory
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +83,24 @@ fun EmptyingServiceFormScreen(
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    // BringIntoViewRequesters for scroll-to-error functionality
+    val fieldRequesters = remember {
+        mapOf(
+            "serviceReceiverName" to BringIntoViewRequester(),
+            "serviceReceiverContact" to BringIntoViewRequester(),
+            "emptiedDate" to BringIntoViewRequester(),
+            "startTime" to BringIntoViewRequester(),
+            "endTime" to BringIntoViewRequester(),
+            "additionalTripRequired" to BringIntoViewRequester(),
+            "desludgingVehicle" to BringIntoViewRequester(),
+            "sludgeType" to BringIntoViewRequester(),
+            "additionalRepairing" to BringIntoViewRequester(),
+            "extraCost" to BringIntoViewRequester(),
+            "receiptNumber" to BringIntoViewRequester(),
+            "receiptImage" to BringIntoViewRequester()
+        )
+    }
 
     // State for expandable sections
     var applicantDetailsExpanded by remember { mutableStateOf(false) }
@@ -100,22 +121,19 @@ fun EmptyingServiceFormScreen(
     // Auto-scroll to first error field when validation fails
     LaunchedEffect(uiState.firstErrorField) {
         uiState.firstErrorField?.let { errorField ->
-            // Map error fields to their approximate item index in the LazyColumn
-            // Note: Indices may vary based on collapsible sections
-            val scrollToIndex = when (errorField) {
-                "desludging_vehicle" -> 3 // Vehicle & Sludge Details section
-                "pumping_point_type" -> 3 // Same section as vehicle
-                else -> 0
-            }
-            
-            // Auto-expand the relevant section
+            // Auto-expand the relevant section based on error field
             when (errorField) {
-                "desludging_vehicle", "pumping_point_type" -> vehicleDetailsExpanded = true
+                "serviceReceiverName", "serviceReceiverContact" -> serviceDetailsExpanded = true
+                "emptiedDate", "startTime", "endTime", "additionalTripRequired" -> serviceDetailsExpanded = true
+                "desludgingVehicle", "sludgeType", "additionalRepairing" -> vehicleDetailsExpanded = true
+                "extraCost", "receiptNumber", "receiptImage" -> paymentDocumentationExpanded = true
             }
             
-            // Scroll to the item
-            coroutineScope.launch {
-                listState.animateScrollToItem(scrollToIndex)
+            // Scroll to the error field using BringIntoViewRequester
+            fieldRequesters[errorField]?.let { requester ->
+                coroutineScope.launch {
+                    requester.bringIntoView()
+                }
             }
             
             // Clear the error field indicator after scrolling
@@ -124,9 +142,31 @@ fun EmptyingServiceFormScreen(
     }
     
     // Auto-expand sections when validation errors occur
-    LaunchedEffect(uiState.desludgingVehicleIdError, uiState.pumpingPointTypeError) {
-        if (uiState.desludgingVehicleIdError != null || uiState.pumpingPointTypeError != null) {
+    LaunchedEffect(
+        uiState.serviceReceiverNameError,
+        uiState.serviceReceiverContactError,
+        uiState.emptiedDateError,
+        uiState.startTimeError,
+        uiState.endTimeError,
+        uiState.additionalTripRequiredError,
+        uiState.desludgingVehicleIdError,
+        uiState.sludgeTypeError,
+        uiState.additionalRepairingError,
+        uiState.extraCostError,
+        uiState.receiptNumberError,
+        uiState.receiptImageError
+    ) {
+        if (uiState.serviceReceiverNameError != null || uiState.serviceReceiverContactError != null ||
+            uiState.emptiedDateError != null || uiState.startTimeError != null || uiState.endTimeError != null ||
+            uiState.additionalTripRequiredError != null) {
+            serviceDetailsExpanded = true
+        }
+        if (uiState.desludgingVehicleIdError != null || uiState.sludgeTypeError != null ||
+            uiState.additionalRepairingError != null) {
             vehicleDetailsExpanded = true
+        }
+        if (uiState.extraCostError != null || uiState.receiptNumberError != null || uiState.receiptImageError != null) {
+            paymentDocumentationExpanded = true
         }
     }
 
@@ -231,15 +271,11 @@ fun EmptyingServiceFormScreen(
                 },
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Application ID - always visible
+            // Application ID - Standalone at top (not in collapsible section)
             item {
-                OutlinedTextField(
-                    value = applicationId.toString(),
-                    onValueChange = { },
-                    label = { Text(stringResource(R.string.label_application_id)) },
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors()
+                ReadOnlyTextField(
+                    label = stringResource(R.string.label_application_id),
+                    value = applicationId.toString()
                 )
             }
 
@@ -304,21 +340,68 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = uiState.serviceReceiverName,
                         onValueChange = viewModel::onServiceReceiverNameChange,
-                        label = { Text(stringResource(R.string.label_service_receiver_name)) },
+                        label = { Text(stringResource(R.string.label_service_receiver_name) + " *") },
                         enabled = !uiState.isServiceReceiverSameAsApplicant,
-                        modifier = Modifier.fillMaxWidth(),
+                        isError = uiState.serviceReceiverNameError != null,
+                        supportingText = uiState.serviceReceiverNameError?.let { { Text(it) } },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["serviceReceiverName"]!!),
                         colors = OutlinedTextFieldDefaults.colors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    PhoneNumberField(
-                        value = uiState.serviceReceiverContact,
-                        onValueChange = viewModel::onServiceReceiverContactChange,
-                        label = stringResource(R.string.label_service_receiver_contact),
-                        modifier = Modifier,
-                        enabled = !uiState.isServiceReceiverSameAsApplicant,
-                        isRequired = false
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["serviceReceiverContact"]!!)
+                    ) {
+                        PhoneNumberField(
+                            value = uiState.serviceReceiverContact,
+                            onValueChange = viewModel::onServiceReceiverContactChange,
+                            label = stringResource(R.string.label_service_receiver_contact),
+                            modifier = Modifier,
+                            enabled = !uiState.isServiceReceiverSameAsApplicant,
+                            isRequired = true
+                        )
+                        uiState.serviceReceiverContactError?.let { error ->
+                            Text(
+                                text = error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Customer Type Dropdown
+                    DropdownField(
+                        label = stringResource(R.string.label_customer_type),
+                        options = uiState.customerTypeOptions.values.toList(),
+                        selectedValue = uiState.customerTypeOptions[uiState.customerType] ?: "",
+                        onValueSelected = { selectedDisplayValue ->
+                            // Find the key for the selected display value
+                            val selectedKey = uiState.customerTypeOptions.entries
+                                .find { it.value == selectedDisplayValue }?.key ?: ""
+                            viewModel.onCustomerTypeChange(selectedKey)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    
+                    // Show "Other Customer Type" field if "Other" is selected
+                    // Check display value for both English ("other") and Khmer ("ផ្សេង")
+                    val customerTypeDisplay = uiState.customerTypeOptions[uiState.customerType] ?: ""
+                    if (customerTypeDisplay.contains("other", ignoreCase = true) || 
+                        customerTypeDisplay.contains("ផ្សេង")) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = uiState.otherCustomerType,
+                            onValueChange = viewModel::onOtherCustomerTypeChange,
+                            label = { Text(stringResource(R.string.label_other_customer_type)) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
 
@@ -344,39 +427,52 @@ fun EmptyingServiceFormScreen(
                     OutlinedTextField(
                         value = displayEmptiedDate,
                         onValueChange = { },
-                        label = { Text(stringResource(R.string.label_emptied_date)) },
+                        label = { Text(stringResource(R.string.label_emptied_date) + " *") },
                         readOnly = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        isError = uiState.emptiedDateError != null,
+                        supportingText = uiState.emptiedDateError?.let { { Text(it) } },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["emptiedDate"]!!),
                         colors = OutlinedTextFieldDefaults.colors()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     TimePickerField(
-                        label = stringResource(R.string.label_start_time),
+                        label = stringResource(R.string.label_start_time) + " *",
                         value = uiState.startTime,
                         onValueChange = viewModel::onStartTimeChange,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["startTime"]!!),
                         error = uiState.startTimeError
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     TimePickerField(
-                        label = stringResource(R.string.label_end_time),
+                        label = stringResource(R.string.label_end_time) + " *",
                         value = uiState.endTime,
                         onValueChange = viewModel::onEndTimeChange,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["endTime"]!!),
                         error = uiState.endTimeError,
                         minTime = uiState.startTime.takeIf { it.isNotEmpty() }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     RadioButtonGroupField(
-                        label = stringResource(R.string.label_additional_trip_required),
-                        options = listOf("Yes", "No"),
+                        label = stringResource(R.string.label_additional_trip_required) + " *",
+                        options = listOf(
+                            stringResource(R.string.label_yes),
+                            stringResource(R.string.label_no)
+                        ),
                         selectedValue = uiState.additionalTripRequired.replaceFirstChar { it.uppercase() },
                         onValueSelected = { value -> viewModel.onAdditionalTripRequiredChange(value.lowercase()) },
-                        error = null,
-                        modifier = Modifier.fillMaxWidth()
+                        error = uiState.additionalTripRequiredError,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["additionalTripRequired"]!!)
                     )
                 }
             }
@@ -395,26 +491,37 @@ fun EmptyingServiceFormScreen(
                         options = uiState.vehicleOptions.map { it.type },
                         onValueSelected = viewModel::onDesludgingVehicleIdChange,
                         error = uiState.desludgingVehicleIdError,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["desludgingVehicle"]!!)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Sludge Type - Radio buttons
                     RadioButtonGroupField(
-                        label = stringResource(R.string.label_sludge_type),
-                        options = listOf("Mixed", "Not Mixed"),
+                        label = stringResource(R.string.label_sludge_type) + " *",
+                        options = listOf(
+                            stringResource(R.string.option_mixed),
+                            stringResource(R.string.option_not_mixed)
+                        ),
                         selectedValue = uiState.sludgeType,
                         onValueSelected = viewModel::onSludgeTypeChange,
-                        error = null,
-                        modifier = Modifier.fillMaxWidth()
+                        error = uiState.sludgeTypeError,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["sludgeType"]!!)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Type of Sludge - Show only when "Mixed" is selected
-                    if (uiState.sludgeType == "Mixed") {
+                    // Type of Sludge - Show only when "Mixed" is selected (handles both English and Khmer values)
+                    if (uiState.sludgeType == "Mixed" || uiState.sludgeType == "លាយ") {
                         RadioButtonGroupField(
                             label = stringResource(R.string.label_type_of_sludge),
-                            options = listOf("Processing food", "Oil and fat (restaurant)", "Content of fuel"),
+                            options = listOf(
+                                stringResource(R.string.option_processing_food),
+                                stringResource(R.string.option_oil_and_fat),
+                                stringResource(R.string.option_content_of_fuel)
+                            ),
                             selectedValue = uiState.typeOfSludge,
                             onValueSelected = viewModel::onTypeOfSludgeChange,
                             error = null,
@@ -424,8 +531,12 @@ fun EmptyingServiceFormScreen(
                     }
 
                     RadioButtonGroupField(
-                        label = stringResource(R.string.label_pumping_point_type) + " *",
-                        options = listOf("Cover", "Tube", "Pierce"),
+                        label = stringResource(R.string.label_pumping_point_type),
+                        options = listOf(
+                            stringResource(R.string.option_cover),
+                            stringResource(R.string.option_tube),
+                            stringResource(R.string.option_pierce)
+                        ),
                         selectedValue = uiState.pumpingPointType,
                         onValueSelected = viewModel::onPumpingPointTypeChange,
                         error = uiState.pumpingPointTypeError,
@@ -434,20 +545,33 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Additional Repairing in Emptying - Multi-select Checkboxes
-                    MultiSelectCheckboxGroup(
-                        label = stringResource(R.string.label_additional_repairing_in_emptying),
-                        options = uiState.additionalRepairingOptions,
-                        selectedKeys = uiState.additionalRepairingKeys,
-                        onSelectionChange = viewModel::onAdditionalRepairingChange,
-                        enabled = !uiState.isAdditionalRepairingReadonly,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["additionalRepairing"]!!)
+                    ) {
+                        MultiSelectCheckboxGroup(
+                            label = stringResource(R.string.label_additional_repairing_in_emptying),
+                            options = uiState.additionalRepairingOptions,
+                            selectedKeys = uiState.additionalRepairingKeys,
+                            onSelectionChange = viewModel::onAdditionalRepairingChange,
+                            enabled = !uiState.isAdditionalRepairingReadonly,
+                            modifier = Modifier.fillMaxWidth(),
+                            isRequired = true
+                        )
+                        uiState.additionalRepairingError?.let { error ->
+                            Text(
+                                text = error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                            )
+                        }
+                    }
                     
-                    // Show "Other Additional Repairing" field if "Others" is selected
-                    if (uiState.additionalRepairingKeys.any { key ->
-                        val value = uiState.additionalRepairingOptions[key] ?: ""
-                        value.contains("Others", ignoreCase = true)
-                    }) {
+                    // Show "Other Additional Repairing" field if "Others" (ID: 7) is selected
+                    // Note: API returns numeric IDs as keys, e.g., {"7": "Others, specify"} or {"7": "ផ្សេងៗ"}
+                    if (uiState.additionalRepairingKeys.contains("7")) {
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = uiState.otherAdditionalRepairing,
@@ -491,12 +615,21 @@ fun EmptyingServiceFormScreen(
 
                     OutlinedTextField(
                         value = uiState.extraCost,
-                        onValueChange = viewModel::onExtraCostChange,
+                        onValueChange = { value ->
+                            if (!uiState.isExtraCostReadonly) {
+                                val validated = InputValidators.validateExtraPaymentAmount(value)
+                                viewModel.onExtraCostChange(validated)
+                            }
+                        },
                         label = { Text(stringResource(R.string.label_amount_of_extra_cost)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         readOnly = uiState.isExtraCostReadonly,
                         enabled = !uiState.isExtraCostReadonly,
-                        modifier = Modifier.fillMaxWidth()
+                        isError = uiState.extraCostError != null,
+                        supportingText = uiState.extraCostError?.let { { Text(it) } },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(fieldRequesters["extraCost"]!!)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -506,17 +639,35 @@ fun EmptyingServiceFormScreen(
                             value = uiState.receiptNumber,
                             onValueChange = viewModel::onReceiptNumberChange,
                             label = { Text(stringResource(R.string.label_receipt_number)) },
-                            modifier = Modifier.fillMaxWidth()
+                            isError = uiState.receiptNumberError != null,
+                            supportingText = uiState.receiptNumberError?.let { { Text(it) } },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(fieldRequesters["receiptNumber"]!!)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Image Upload Components
-                        ImagePickerComponent(
-                            label = stringResource(R.string.label_receipt_image),
-                            selectedImageUri = if (uiState.receiptImage.isNotBlank()) Uri.parse(uiState.receiptImage) else null,
-                            onImageSelected = { uri -> viewModel.onReceiptImageSelected(uri?.toString()) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(fieldRequesters["receiptImage"]!!)
+                        ) {
+                            ImagePickerComponent(
+                                label = stringResource(R.string.label_receipt_image),
+                                selectedImageUri = if (uiState.receiptImage.isNotBlank()) Uri.parse(uiState.receiptImage) else null,
+                                onImageSelected = { uri -> viewModel.onReceiptImageSelected(uri?.toString()) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            uiState.receiptImageError?.let { error ->
+                                Text(
+                                    text = error,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
@@ -536,11 +687,31 @@ fun EmptyingServiceFormScreen(
                         minLines = 3
                     )
                     
-                    // Only show location fields if building point geometry doesn't exist
-                    if (!uiState.buildingPointGeomExist) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                        // Location capture
+                    // GPS Location - always show
+                    // Check if coordinates already exist
+                    val hasCoordinates = uiState.latitude != null && uiState.longitude != null
+
+                    if (hasCoordinates) {
+                        // Show as disabled read-only fields when coordinates exist
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ReadOnlyTextField(
+                                label = stringResource(R.string.label_latitude),
+                                value = String.format("%.6f", uiState.latitude ?: 0.0),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ReadOnlyTextField(
+                                label = stringResource(R.string.label_longitude),
+                                value = String.format("%.6f", uiState.longitude ?: 0.0),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
+                        // Show editable fields and buttons when no coordinates
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -617,7 +788,7 @@ fun EmptyingServiceFormScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text(stringResource(R.string.button_update))
+                            Text(stringResource(R.string.button_submit))
                         }
                     }
                 }

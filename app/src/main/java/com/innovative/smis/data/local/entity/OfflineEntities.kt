@@ -150,9 +150,14 @@ data class TodoItemEntity(
     val applicationId: Int,
     val applicantName: String?,
     val applicantContact: String?,
+    val ownerName: String?,
+    val phoneNo: String?,
     val proposedEmptyingDate: String?,
     val status: String?,
     val applicationDatetime: String?,
+    val buildingPointGeomExist: Boolean?,
+    val longitude: String?,
+    val latitude: String?,
     val lastUpdated: Long = System.currentTimeMillis(), // Track when record was last updated
     val cacheExpiry: Long = System.currentTimeMillis() + (24 * 60 * 60 * 1000) // 24 hours cache validity
 )
@@ -163,9 +168,14 @@ fun TodoItem.toEntity(): TodoItemEntity {
         applicationId = this.applicationId,
         applicantName = this.applicantName,
         applicantContact = this.applicantContact,
+        ownerName = this.ownerName,
+        phoneNo = this.phoneNo,
         proposedEmptyingDate = this.proposedEmptyingDate,
         status = this.status ?: "",
         applicationDatetime = this.applicationDatetime,
+        buildingPointGeomExist = this.buildingPointGeomExist,
+        longitude = this.longitude,
+        latitude = this.latitude,
         lastUpdated = currentTime,
         cacheExpiry = currentTime + (24 * 60 * 60 * 1000) + 1000 // Add 1 second buffer to prevent timing issues
     )
@@ -176,9 +186,14 @@ fun TodoItemEntity.toDomainModel(): TodoItem {
         applicationId = this.applicationId,
         applicantName = this.applicantName,
         applicantContact = this.applicantContact,
+        ownerName = this.ownerName,
+        phoneNo = this.phoneNo,
         proposedEmptyingDate = this.proposedEmptyingDate,
         status = this.status,
-        applicationDatetime = this.applicationDatetime
+        applicationDatetime = this.applicationDatetime,
+        buildingPointGeomExist = this.buildingPointGeomExist,
+        longitude = this.longitude,
+        latitude = this.latitude
     )
 }
 

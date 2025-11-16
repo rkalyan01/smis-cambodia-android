@@ -7,11 +7,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -23,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,8 +41,10 @@ import com.innovative.smis.R
 import com.innovative.smis.ui.theme.SMISTheme
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.domain.model.UserRole
+import com.innovative.smis.util.constants.Languages
 import com.innovative.smis.util.constants.PrefConstant
 import com.innovative.smis.util.constants.ScreenName
+import com.innovative.smis.util.helper.LocalizationHelper
 import com.innovative.smis.util.helper.PreferenceHelper
 import org.koin.androidx.compose.koinViewModel
 
@@ -52,6 +57,7 @@ fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
 
     val emailError by loginViewModel.emailError
     val passwordError by loginViewModel.passwordError
@@ -59,7 +65,10 @@ fun LoginScreen(navController: NavController) {
 
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    val prefs = remember { PreferenceHelper(context) }
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    var currentLanguage by remember { mutableStateOf(prefs.selectedLanguage) }
 
     LaunchedEffect(loginState) {
         Log.d("LoginScreen", "Login State Changed: $loginState")
@@ -77,6 +86,13 @@ fun LoginScreen(navController: NavController) {
                     state.data.data?.let { userData ->
                         prefs.setString(PrefConstant.USER_NAME, userData.name)
                         prefs.setString(PrefConstant.USER_EMAIL, userData.email)
+
+                        // Store user role for role-based menu visibility
+                        userData.role?.let { roleList ->
+                            val roleJson = roleList.toString()
+                            prefs.setString(PrefConstant.USER_ROLE, roleJson)
+                            Log.d("LoginScreen", "Saved user role: $roleJson")
+                        }
 
                         // Store permissions for drawer navigation
                         userData.permissions?.let { permissionsList ->
@@ -120,6 +136,20 @@ fun LoginScreen(navController: NavController) {
                         focusManager.clearFocus()
                     }
             ) {
+                // Language Switcher in top right
+                IconButton(
+                    onClick = { showLanguageDialog = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = "Switch Language",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -287,6 +317,62 @@ fun LoginScreen(navController: NavController) {
                 }
             }
         }
+    }
+    
+    // Language Selection Dialog
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = {
+                Text(
+                    text = if (currentLanguage == Languages.KHMER) "ជ្រើសរើសភាសា" else "Select Language",
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column {
+                    Languages.SUPPORTED_LANGUAGES.forEach { language ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = currentLanguage == language.code,
+                                    onClick = {
+                                        currentLanguage = language.code
+                                        prefs.selectedLanguage = language.code
+                                        showLanguageDialog = false
+                                        // Apply locale using LocalizationHelper
+                                        LocalizationHelper.setLocale(context, language.code)
+                                        // Recreate activity to apply language change
+                                        (context as? android.app.Activity)?.recreate()
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = currentLanguage == language.code,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = language.nativeName,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(if (currentLanguage == Languages.KHMER) "បិទ" else "Close")
+                }
+            }
+        )
     }
 }
 

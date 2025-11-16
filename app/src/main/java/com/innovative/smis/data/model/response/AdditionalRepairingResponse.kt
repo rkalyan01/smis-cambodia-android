@@ -1,5 +1,6 @@
 package com.innovative.smis.data.model.response
 
+import com.innovative.smis.util.adapter.PostgresArrayInt
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -24,6 +25,7 @@ data class TripFilterApplication(
     @Json(name = "application_datetime") val applicationDatetime: String?,
     @Json(name = "applicant_name") val applicantName: String?,
     @Json(name = "applicant_contact") val applicantContact: String?,
+    @Json(name = "phone_no") val phoneNo: String?,
     @Json(name = "proposed_emptying_date") val proposedEmptyingDate: String?,
     @Json(name = "application_status") val applicationStatus: String?,
     @Json(name = "additional_trip_required") val additionalTripRequired: Boolean?
@@ -59,7 +61,7 @@ data class EmptyingDetailsResponse(
     @Json(name = "sludge_type_b") val sludgeTypeB: String?,
     @Json(name = "location_of_containment") val locationOfContainment: String?,
     @Json(name = "presence_of_pumping_point") val presenceOfPumpingPoint: String?,
-    @Json(name = "additional_repairing_id") val additionalRepairingId: Int?,
+    @PostgresArrayInt @Json(name = "additional_repairing_id") val additionalRepairingId: Int?,
     @Json(name = "other_additional_repairing") val otherAdditionalRepairing: String?,
     @Json(name = "extra_payment") val extraPayment: String?,
     @Json(name = "issues_during_emptying_service") val issuesDuringEmptyingService: String?,

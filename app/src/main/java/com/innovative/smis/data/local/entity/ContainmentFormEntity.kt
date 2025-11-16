@@ -33,6 +33,33 @@ data class ContainmentFormEntity(
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     fun toApiRequest(): ContainmentRequest {
+        // Convert string values to API-expected types (Boolean, Int)
+        // CRITICAL: API expects Boolean for accessibility/ever_emptied, Int for years
+        
+        val accessibilityBoolean = when (accessibility?.lowercase()) {
+            "yes", "true", "1" -> true
+            "no", "false", "0" -> false
+            else -> null
+        }
+        
+        val everEmptiedBoolean = when (everEmptied?.lowercase()) {
+            "yes", "true", "1" -> true
+            "no", "false", "0" -> false
+            else -> null
+        }
+        
+        val constructionYearInt = constructionYear?.toIntOrNull().also {
+            if (it == null && !constructionYear.isNullOrBlank()) {
+                println("WARNING: Invalid construction year: '$constructionYear' - will send null to API")
+            }
+        }
+        
+        val lastEmptiedYearInt = lastEmptiedYear?.toIntOrNull().also {
+            if (it == null && !lastEmptiedYear.isNullOrBlank()) {
+                println("WARNING: Invalid last emptied year: '$lastEmptiedYear' - will send null to API")
+            }
+        }
+        
         return ContainmentRequest(
             sanitation_customer_id = sanitationCustomerId,
             type_of_storage_tank = typeOfStorageTank,
@@ -40,10 +67,10 @@ data class ContainmentFormEntity(
             storage_tank_connection = storageTankConnection,
             other_storage_tank_connection = otherStorageTankConnection,
             size_of_storage_tank_m3 = sizeOfStorageTankM3,
-            construction_year = constructionYear,
-            accessibility = accessibility,
-            ever_emptied = everEmptied,
-            last_emptied_year = lastEmptiedYear
+            construction_year = constructionYearInt,
+            accessibility = accessibilityBoolean,
+            ever_emptied = everEmptiedBoolean,
+            last_emptied_year = lastEmptiedYearInt
         )
     }
 }

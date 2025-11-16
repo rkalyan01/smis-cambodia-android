@@ -28,7 +28,8 @@ fun DatePickerField(
     selectedDate: Long?,
     onDateSelected: (Long?) -> Unit,
     isFutureDateAllowed: Boolean = true,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isRequired: Boolean = false
 ) {
     val context = LocalContext.current
     var showDatePicker by remember { mutableStateOf(false) }
@@ -39,7 +40,7 @@ fun DatePickerField(
     OutlinedTextField(
         value = dateText,
         onValueChange = {},
-        label = { Text(label) },
+        label = { Text(if (isRequired) "$label *" else label) },
         readOnly = true,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth(),

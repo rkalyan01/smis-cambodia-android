@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -20,16 +21,19 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.innovative.smis.R
 import com.innovative.smis.data.model.request.TripEntryUiState
+import com.innovative.smis.ui.components.BilingualRadioButtonGroupField
 import com.innovative.smis.ui.components.ImagePickerComponent
 import com.innovative.smis.ui.components.RadioButtonGroupField
 import com.innovative.smis.ui.components.ReadOnlyTextField
 import com.innovative.smis.ui.components.SectionHeader
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.validation.InputValidators
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -188,8 +192,12 @@ fun AdditionalRepairingFormScreen(
 
                         OutlinedTextField(
                             value = uiState.amountOfExtraPayment,
-                            onValueChange = viewModel::onExtraPaymentChange,
+                            onValueChange = { value -> 
+                                val validated = InputValidators.validateExtraPaymentAmount(value)
+                                viewModel.onExtraPaymentChange(validated)
+                            },
                             label = { Text(stringResource(R.string.label_total_extra_payment)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -416,19 +424,10 @@ private fun TripEntryContent(
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text(
-            text = stringResource(R.string.label_trip_number, trip.tripNumber),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         OutlinedTextField(
             value = convert24HourTo12Hour(trip.startTime),
             onValueChange = {},
-            label = { Text(stringResource(R.string.label_start_time)) },
+            label = { Text(stringResource(R.string.label_start_time) + " *") },
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             trailingIcon = {
@@ -443,7 +442,7 @@ private fun TripEntryContent(
         OutlinedTextField(
             value = convert24HourTo12Hour(trip.endTime),
             onValueChange = {},
-            label = { Text(stringResource(R.string.label_end_time)) },
+            label = { Text(stringResource(R.string.label_end_time) + " *") },
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             isError = trip.timeError != null,
@@ -473,9 +472,12 @@ private fun TripEntryContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        RadioButtonGroupField(
-            label = stringResource(R.string.label_additional_trip_required),
-            options = listOf(stringResource(R.string.option_yes), stringResource(R.string.option_no)),
+        BilingualRadioButtonGroupField(
+            label = stringResource(R.string.label_additional_trip_required) + " *",
+            options = listOf(
+                "yes" to stringResource(R.string.option_yes),
+                "no" to stringResource(R.string.option_no)
+            ),
             selectedValue = trip.additionalTripRequired,
             onValueSelected = onAdditionalRequiredChange,
             error = null,

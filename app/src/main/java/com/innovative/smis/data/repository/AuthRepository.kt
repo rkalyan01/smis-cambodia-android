@@ -6,6 +6,8 @@ import com.innovative.smis.data.model.response.ApiErrorResponse
 import com.innovative.smis.data.model.response.LoginResponse
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PreferenceHelper
+import com.innovative.smis.util.session.SessionResetManager
+import com.innovative.smis.util.session.SessionResetException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -16,7 +18,8 @@ import java.io.IOException
 
 class AuthRepository(
     private val apiService: AuthApiService,
-    private val preferenceHelper: PreferenceHelper
+    private val preferenceHelper: PreferenceHelper,
+    private val sessionResetManager: SessionResetManager
 ) {
     suspend fun login(loginRequest: LoginRequest): Flow<Resource<LoginResponse>> = flow {
         emit(Resource.Loading())
@@ -25,6 +28,17 @@ class AuthRepository(
             if (response.isSuccessful && response.body() != null) {
                 val loginResponse = response.body()!!
                 if (loginResponse.status == true) {
+                    // Clear all cached data BEFORE saving new credentials
+                    // This ensures a clean slate when switching users
+                    try {
+                        sessionResetManager.clearUserSessionData()
+                    } catch (e: SessionResetException) {
+                        android.util.Log.e("AuthRepository", "Failed to clear session data: ${e.message}", e)
+                        emit(Resource.Error("Login succeeded but failed to clear previous session data. Please try again."))
+                        return@flow
+                    }
+                    
+                    // Now save the new user's credentials
                     loginResponse.token?.let { token ->
                         preferenceHelper.saveAuthToken(token)
                     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.innovative.smis.data.local.entity.EmptyingSchedulingFormEntity
 import com.innovative.smis.data.repository.EmptyingSchedulingRepository
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.util.helper.PhoneNumberFormatter
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +37,7 @@ data class EmptyingSchedulingFormState(
     val containmentIssuesOther: String = "",
     val proposeEmptyingDate: Long? = null,
     val everEmptied: Boolean? = null,
+    val isEverEmptiedReadonly: Boolean = false, // ✅ Readonly flag for ever emptied field
     val lastEmptiedYear: Int? = null,
     val lastEmptiedDate: String = "",
     val notEmptiedBeforeReason: String = "",
@@ -60,7 +62,18 @@ data class EmptyingSchedulingFormState(
     val notEmptiedReasons: Map<String, String> = emptyMap(),
     val notEmptiedReasonOther: String = "",
     val isLoadingDropdowns: Boolean = false,
-    val isSubmitting: Boolean = false
+    val isSubmitting: Boolean = false,
+    
+    // Validation error fields
+    val applicantNameError: String? = null,
+    val applicantContactError: String? = null,
+    val purposeOfEmptyingError: String? = null,
+    val purposeOfEmptyingOtherError: String? = null,
+    val proposeEmptyingDateError: String? = null,
+    val everEmptiedError: String? = null,
+    val extraPaymentRequiredError: String? = null,
+    val siteVisitRequiredError: String? = null,
+    val firstErrorField: String? = null
 )
 
 class EmptyingSchedulingFormViewModel(
@@ -192,7 +205,11 @@ class EmptyingSchedulingFormViewModel(
                                     purposeOfEmptying = apiData.purposeOfEmptying, // ✅ Preserve null
                                     applicantName = apiData.applicantName ?: "",
                                     applicantContact = apiData.applicantContact ?: "",
-                                    isPurposeOfEmptyingReadonly = !apiData.purposeOfEmptying.isNullOrBlank()
+                                    isPurposeOfEmptyingReadonly = !apiData.purposeOfEmptying.isNullOrBlank(),
+                                    // ✅ FIXED: Only readonly if there's a last emptied year (not just everEmptied value)
+                                    everEmptied = apiData.everEmptied,
+                                    lastEmptiedYear = expandYear(apiData.lastEmptiedYear),
+                                    isEverEmptiedReadonly = apiData.lastEmptiedYear != null
                                 )
                             }
                             
@@ -239,6 +256,7 @@ class EmptyingSchedulingFormViewModel(
                                     isApplicantSameAsCustomer = entity.isApplicantSameAsCustomer ?: false,
                                     freeServiceUnderPBC = entity.freeServiceUnderPbc,
                                     everEmptied = entity.everEmptied,
+                                    isEverEmptiedReadonly = false, // ✅ FIXED: Always false initially, will be set by API
                                     lastEmptiedYear = expandYear(entity.lastEmptiedYear?.toIntOrNull()),
                                     lastEmptiedDate = entity.lastEmptiedDate?.let { 
                                         SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date(it)) 
@@ -327,20 +345,20 @@ class EmptyingSchedulingFormViewModel(
     }
 
     fun onApplicantNameChange(name: String) { 
-        _uiState.update { it.copy(applicantName = name) }
+        _uiState.update { it.copy(applicantName = name, applicantNameError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     fun onApplicantContactChange(contact: String) { 
-        _uiState.update { it.copy(applicantContact = contact) }
+        _uiState.update { it.copy(applicantContact = contact, applicantContactError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     fun onPurposeOfEmptyingChange(purpose: String) { 
-        _uiState.update { it.copy(purposeOfEmptying = purpose) }
+        _uiState.update { it.copy(purposeOfEmptying = purpose, purposeOfEmptyingError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     
     fun onPurposeOfEmptyingOtherChange(other: String) {
-        _uiState.update { it.copy(purposeOfEmptyingOther = other) }
+        _uiState.update { it.copy(purposeOfEmptyingOther = other, purposeOfEmptyingOtherError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     
@@ -364,11 +382,11 @@ class EmptyingSchedulingFormViewModel(
         autoSaveDraft()
     }
     fun onProposeEmptyingDateChange(dateMillis: Long?) { 
-        _uiState.update { it.copy(proposeEmptyingDate = dateMillis) }
+        _uiState.update { it.copy(proposeEmptyingDate = dateMillis, proposeEmptyingDateError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     fun onEverEmptiedChange(emptied: Boolean) { 
-        _uiState.update { it.copy(everEmptied = emptied) }
+        _uiState.update { it.copy(everEmptied = emptied, everEmptiedError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     fun onLastEmptiedYearChange(year: Int?) { 
@@ -402,7 +420,7 @@ class EmptyingSchedulingFormViewModel(
         autoSaveDraft()
     }
     fun onExtraPaymentRequiredChange(isRequired: Boolean) { 
-        _uiState.update { it.copy(extraPaymentRequired = isRequired) }
+        _uiState.update { it.copy(extraPaymentRequired = isRequired, extraPaymentRequiredError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     fun onExtraPaymentAmountChange(amount: String) { 
@@ -414,7 +432,7 @@ class EmptyingSchedulingFormViewModel(
         autoSaveDraft()
     }
     fun onSiteVisitRequiredChange(isRequired: Boolean) { 
-        _uiState.update { it.copy(siteVisitRequired = isRequired) }
+        _uiState.update { it.copy(siteVisitRequired = isRequired, siteVisitRequiredError = null, firstErrorField = null) }
         autoSaveDraft()
     }
     
@@ -428,7 +446,7 @@ class EmptyingSchedulingFormViewModel(
             state.copy(
                 isApplicantSameAsCustomer = isSame,
                 applicantName = if (isSame) state.sanitationCustomerName ?: "" else "",
-                applicantContact = if (isSame) state.sanitationCustomerContact ?: "" else ""
+                applicantContact = if (isSame) PhoneNumberFormatter.formatCambodianNumber(state.sanitationCustomerContact) else ""
             )
         }
         autoSaveDraft()
@@ -608,7 +626,141 @@ class EmptyingSchedulingFormViewModel(
         }
     }
     
+    fun submitForm() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            
+            // Validate required fields
+            var hasError = false
+            var errorState = currentState
+            var firstError: String? = null
+            
+            // 1. Validate Applicant Name (required)
+            if (currentState.applicantName.isBlank()) {
+                errorState = errorState.copy(
+                    applicantNameError = "Applicant Name is required"
+                )
+                if (firstError == null) firstError = "applicant_name"
+                hasError = true
+            } else {
+                errorState = errorState.copy(applicantNameError = null)
+            }
+            
+            // 2. Validate Applicant Contact (required)
+            if (currentState.applicantContact.isBlank()) {
+                errorState = errorState.copy(
+                    applicantContactError = "Applicant Contact is required"
+                )
+                if (firstError == null) firstError = "applicant_contact"
+                hasError = true
+            } else {
+                errorState = errorState.copy(applicantContactError = null)
+            }
+            
+            // 3. Validate Purpose of Emptying (required)
+            if (currentState.purposeOfEmptying.isNullOrBlank()) {
+                errorState = errorState.copy(
+                    purposeOfEmptyingError = "Purpose of Emptying is required"
+                )
+                if (firstError == null) firstError = "purpose_of_emptying"
+                hasError = true
+            } else {
+                errorState = errorState.copy(purposeOfEmptyingError = null)
+                
+                // 4. Validate "Other" reason (conditional - only if "Other" is selected)
+                val purposeDisplayValue = currentState.emptyingReasons[currentState.purposeOfEmptying] ?: currentState.purposeOfEmptying
+                if (purposeDisplayValue?.contains("Other", ignoreCase = true) == true && currentState.purposeOfEmptyingOther.isBlank()) {
+                    errorState = errorState.copy(
+                        purposeOfEmptyingOtherError = "Please specify other reason"
+                    )
+                    if (firstError == null) firstError = "purpose_of_emptying_other"
+                    hasError = true
+                } else {
+                    errorState = errorState.copy(purposeOfEmptyingOtherError = null)
+                }
+            }
+            
+            // 5. Validate Propose Emptying Date (required)
+            if (currentState.proposeEmptyingDate == null) {
+                errorState = errorState.copy(
+                    proposeEmptyingDateError = "Propose Emptying Date is required"
+                )
+                if (firstError == null) firstError = "propose_emptying_date"
+                hasError = true
+            } else {
+                errorState = errorState.copy(proposeEmptyingDateError = null)
+            }
+            
+            // 6. Validate Ever Emptied Before (required)
+            if (currentState.everEmptied == null) {
+                errorState = errorState.copy(
+                    everEmptiedError = "Ever Emptied Before is required"
+                )
+                if (firstError == null) firstError = "ever_emptied"
+                hasError = true
+            } else {
+                errorState = errorState.copy(everEmptiedError = null)
+            }
+            
+            // 7. Validate Extra Payment Required (required)
+            if (currentState.extraPaymentRequired == null) {
+                errorState = errorState.copy(
+                    extraPaymentRequiredError = "Extra Payment Required is required"
+                )
+                if (firstError == null) firstError = "extra_payment_required"
+                hasError = true
+            } else {
+                errorState = errorState.copy(extraPaymentRequiredError = null)
+            }
+            
+            // 8. Validate Site Visit Required (required)
+            if (currentState.siteVisitRequired == null) {
+                errorState = errorState.copy(
+                    siteVisitRequiredError = "Site Visit Required is required"
+                )
+                if (firstError == null) firstError = "site_visit_required"
+                hasError = true
+            } else {
+                errorState = errorState.copy(siteVisitRequiredError = null)
+            }
+            
+            // If there are errors, update state with first error field for auto-scroll
+            if (hasError) {
+                _uiState.update { 
+                    errorState.copy(
+                        isSubmitting = false,
+                        firstErrorField = firstError
+                    ) 
+                }
+                return@launch
+            }
+            
+            // Clear all errors and proceed with submission
+            _uiState.update { 
+                it.copy(
+                    applicantNameError = null,
+                    applicantContactError = null,
+                    purposeOfEmptyingError = null,
+                    purposeOfEmptyingOtherError = null,
+                    proposeEmptyingDateError = null,
+                    everEmptiedError = null,
+                    extraPaymentRequiredError = null,
+                    siteVisitRequiredError = null,
+                    firstErrorField = null,
+                    isSubmitting = true
+                ) 
+            }
+            
+            // Continue with actual form submission
+            saveDraftInternal(isSubmit = true)
+        }
+    }
+    
     fun saveDraft() {
+        saveDraftInternal(isSubmit = false)
+    }
+    
+    private fun saveDraftInternal(isSubmit: Boolean) {
         viewModelScope.launch {
             // Set submitting state to true
             _uiState.update { it.copy(isSubmitting = true) }

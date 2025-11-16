@@ -41,8 +41,7 @@ class SettingsViewModel(
         val syncResult: String? = null,
         val databaseSizeMB: Double = 0.0,
         val isClearingCache: Boolean = false,
-        val cacheCleared: Boolean = false,
-        val shouldLogout: Boolean = false
+        val cacheCleared: Boolean = false
     )
 
     init {
@@ -373,33 +372,4 @@ class SettingsViewModel(
         }
     }
 
-    fun logout() {
-        viewModelScope.launch {
-            try {
-                Log.d("SettingsViewModel", "Logging out user...")
-                
-                // Clear all user preferences and auth data
-                preferenceHelper.clearAll()
-                
-                // Clear ALL database tables to ensure no residual user data persists
-                database.clearAllTables()
-                
-                Log.d("SettingsViewModel", "All user data and database cleared successfully")
-                
-                // Signal to navigate to login
-                _uiState.value = _uiState.value.copy(shouldLogout = true)
-                
-            } catch (e: Exception) {
-                Log.e("SettingsViewModel", "Failed to logout", e)
-                _uiState.value = _uiState.value.copy(
-                    message = if (_uiState.value.selectedLanguage == Languages.KHMER)
-                        "កំហុសក្នុងការចាកចេញ" else "Failed to logout"
-                )
-            }
-        }
-    }
-
-    fun resetLogoutFlag() {
-        _uiState.value = _uiState.value.copy(shouldLogout = false)
-    }
 }

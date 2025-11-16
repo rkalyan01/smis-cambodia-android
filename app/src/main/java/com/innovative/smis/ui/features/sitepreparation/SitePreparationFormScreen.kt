@@ -2,6 +2,9 @@ package com.innovative.smis.ui.features.sitepreparation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.Icons
@@ -31,9 +34,11 @@ import com.innovative.smis.ui.components.PhoneNumberField
 import com.innovative.smis.ui.components.PostponeDialog
 import com.innovative.smis.ui.components.PostponeData
 import com.innovative.smis.ui.components.DatePickerField
+import com.innovative.smis.ui.components.YesNoRadioGroup
 import com.innovative.smis.ui.components.disabledTextFieldColors
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PhoneNumberFormatter
+import com.innovative.smis.util.validation.InputValidators
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,9 +56,28 @@ fun SitePreparationFormScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showPostponeDialog by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    
+    // Create BringIntoViewRequesters for each required field
+    val serviceReceiverNameRequester = remember { BringIntoViewRequester() }
+    val serviceReceiverContactRequester = remember { BringIntoViewRequester() }
+    val extraPaymentRequiredRequester = remember { BringIntoViewRequester() }
+    val needRescheduleRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(applicationId) {
         viewModel.loadApplicationDetails(applicationId)
+    }
+    
+    // Scroll to first error field when validation fails using BringIntoViewRequester
+    LaunchedEffect(uiState.firstErrorField) {
+        uiState.firstErrorField?.let { errorField ->
+            when (errorField) {
+                "serviceReceiverName" -> serviceReceiverNameRequester.bringIntoView()
+                "serviceReceiverContact" -> serviceReceiverContactRequester.bringIntoView()
+                "extraPaymentRequired" -> extraPaymentRequiredRequester.bringIntoView()
+                "needReschedule" -> needRescheduleRequester.bringIntoView()
+            }
+        }
     }
 
     val saveResult by viewModel.saveResult.collectAsState(null)
@@ -116,16 +140,12 @@ fun SitePreparationFormScreen(
                     IconButton(
                         onClick = { 
                             onNavigateToContainment(applicationId, uiState.sanitationCustomerId)
-                        },
-                        enabled = uiState.sanitationCustomerId != null
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Inventory,
                             contentDescription = stringResource(R.string.cd_containment),
-                            tint = if (uiState.sanitationCustomerId != null) 
-                                MaterialTheme.colorScheme.onSurface 
-                            else 
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -153,6 +173,7 @@ fun SitePreparationFormScreen(
             }
             else -> {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -176,7 +197,7 @@ fun SitePreparationFormScreen(
 
                     // Applicant Information
                     item {
-                        FormSectionHeader("Applicant Information")
+                        FormSectionHeader(stringResource(R.string.section_applicant_information))
                     }
                     
                     // Sanitation Customer ID (readonly)
@@ -236,7 +257,7 @@ fun SitePreparationFormScreen(
 
                     // Additional Repairing (editable dropdown)
                     item {
-                        FormSectionHeader("Additional Services")
+                        FormSectionHeader(stringResource(R.string.section_additional_services))
                     }
                     item {
                         if (uiState.isLoadingDropdowns) {
@@ -257,11 +278,9 @@ fun SitePreparationFormScreen(
                             )
                         }
                     }
-                    // Show "Others" input field if "Others" is selected for additional repairing
-                    if (uiState.additionalRepairingKeys.any { key ->
-                        val value = uiState.containmentIssuesList[key] ?: ""
-                        value.contains("Others", ignoreCase = true)
-                    }) {
+                    // Show "Others" input field if "Others" (ID: 7) is selected for additional repairing
+                    // Note: API returns numeric IDs as keys, e.g., {"7": "Others, specify"} or {"7": "ផ្សេងៗ"}
+                    if (uiState.additionalRepairingKeys.contains("7")) {
                         item {
                             OutlinedTextField(
                                 value = uiState.otherAdditionalRepairing,
@@ -274,14 +293,27 @@ fun SitePreparationFormScreen(
 
                     // Payment Information (editable)
                     item {
-                        FormSectionHeader("Payment Information")
+                        FormSectionHeader(stringResource(R.string.section_payment_information))
                     }
                     item {
-                        YesNoRadioGroup(
-                            label = stringResource(R.string.label_extra_payment_required),
-                            selectedOption = uiState.extraPaymentRequired,
-                            onOptionSelected = viewModel::onExtraPaymentRequiredChange
-                        )
+                        Column(
+                            modifier = Modifier.bringIntoViewRequester(extraPaymentRequiredRequester)
+                        ) {
+                            YesNoRadioGroup(
+                                label = stringResource(R.string.label_extra_payment_required),
+                                selectedOption = uiState.extraPaymentRequired,
+                                onOptionSelected = viewModel::onExtraPaymentRequiredChange,
+                                isRequired = true
+                            )
+                            uiState.extraPaymentRequiredError?.let { error ->
+                                Text(
+                                    text = error,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
+                        }
                     }
 
                     // Extra Payment Amount (editable if required)
@@ -289,9 +321,12 @@ fun SitePreparationFormScreen(
                         item {
                             OutlinedTextField(
                                 value = uiState.amountOfExtraPayment,
-                                onValueChange = viewModel::onAmountOfExtraPaymentChange,
+                                onValueChange = { value -> 
+                                    val validated = InputValidators.validateExtraPaymentAmount(value)
+                                    viewModel.onAmountOfExtraPaymentChange(validated)
+                                },
                                 label = { Text(stringResource(R.string.label_amount_of_extra_payment)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -299,7 +334,7 @@ fun SitePreparationFormScreen(
 
                     // Receiver Information (renamed from Customer Information)
                     item {
-                        FormSectionHeader("Receiver Information")
+                        FormSectionHeader(stringResource(R.string.section_receiver_information))
                     }
                     item {
                         Row(
@@ -318,9 +353,13 @@ fun SitePreparationFormScreen(
                         OutlinedTextField(
                             value = if (uiState.isReceiverSameAsApplicant) uiState.applicantName else uiState.serviceReceiverName,
                             onValueChange = viewModel::onServiceReceiverNameChange,
-                            label = { Text(stringResource(R.string.label_service_receiver_name)) },
+                            label = { Text(stringResource(R.string.label_service_receiver_name) + " *") },
+                            isError = uiState.serviceReceiverNameError != null,
+                            supportingText = uiState.serviceReceiverNameError?.let { { Text(it) } },
                             enabled = !uiState.isReceiverSameAsApplicant,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(serviceReceiverNameRequester)
                         )
                     }
                     item {
@@ -335,20 +374,34 @@ fun SitePreparationFormScreen(
                                 colors = disabledTextFieldColors()
                             )
                         } else {
-                            PhoneNumberField(
-                                value = uiState.serviceReceiverContact,
-                                onValueChange = viewModel::onServiceReceiverContactChange,
-                                label = stringResource(R.string.label_service_receiver_contact),
-                                modifier = Modifier,
-                                enabled = true,
-                                isRequired = false
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .bringIntoViewRequester(serviceReceiverContactRequester)
+                            ) {
+                                PhoneNumberField(
+                                    value = uiState.serviceReceiverContact,
+                                    onValueChange = viewModel::onServiceReceiverContactChange,
+                                    label = stringResource(R.string.label_service_receiver_contact),
+                                    modifier = Modifier,
+                                    enabled = true,
+                                    isRequired = true
+                                )
+                                uiState.serviceReceiverContactError?.let { error ->
+                                    Text(
+                                        text = error,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
                     // Scheduling Information
                     item {
-                        FormSectionHeader("Scheduling Information")
+                        FormSectionHeader(stringResource(R.string.section_scheduling_information))
                     }
                     item {
                         // Display proposedEmptyingDate in user's preferred format
@@ -373,11 +426,24 @@ fun SitePreparationFormScreen(
                         )
                     }
                     item {
-                        YesNoRadioGroup(
-                            label = stringResource(R.string.label_need_reschedule),
-                            selectedOption = uiState.needReschedule,
-                            onOptionSelected = viewModel::onNeedRescheduleChange
-                        )
+                        Column(
+                            modifier = Modifier.bringIntoViewRequester(needRescheduleRequester)
+                        ) {
+                            YesNoRadioGroup(
+                                label = stringResource(R.string.label_need_reschedule),
+                                selectedOption = uiState.needReschedule,
+                                onOptionSelected = viewModel::onNeedRescheduleChange,
+                                isRequired = true
+                            )
+                            uiState.needRescheduleError?.let { error ->
+                                Text(
+                                    text = error,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
+                        }
                     }
 
                     // New Proposed Emptying Date (if reschedule is yes)
@@ -430,7 +496,7 @@ fun SitePreparationFormScreen(
                             
                             // Submit Button
                             Button(
-                                onClick = { viewModel.saveForm() },
+                                onClick = { viewModel.submitForm() },
                                 enabled = !uiState.isSubmitting,
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -508,41 +574,6 @@ fun ReadOnlyTextField(label: String, value: String) {
             disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
     )
-}
-
-@Composable
-fun YesNoRadioGroup(
-    label: String,
-    selectedOption: Boolean?,
-    onOptionSelected: (Boolean) -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = selectedOption == true,
-                    onClick = { onOptionSelected(true) }
-                )
-                Text(stringResource(R.string.label_yes), modifier = Modifier.padding(start = 4.dp))
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = selectedOption == false,
-                    onClick = { onOptionSelected(false) }
-                )
-                Text(stringResource(R.string.label_no), modifier = Modifier.padding(start = 4.dp))
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

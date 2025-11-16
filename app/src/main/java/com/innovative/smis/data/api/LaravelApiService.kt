@@ -184,6 +184,13 @@ interface LaravelApiService {
         @Path("eto_id") etoId: Int
     ): Response<DesludgingVehicleListResponse>
 
+    /**
+     * Get customer types
+     * GET /api/emptyings/show-customer-type
+     */
+    @GET("emptyings/show-customer-type")
+    suspend fun getCustomerTypes(): Response<SimpleDropdownResponse>
+
     // =====================================
     // SITE PREPARATION ENDPOINTS
     // =====================================

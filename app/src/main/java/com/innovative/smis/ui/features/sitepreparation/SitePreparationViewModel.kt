@@ -88,8 +88,13 @@ class SitePreparationViewModel(
                                     applicationDatetime = app.application_datetime,
                                     applicantName = app.applicant_name,
                                     applicantContact = app.applicant_contact,
+                                    phoneNo = app.phone_no,
                                     proposedEmptyingDate = app.proposed_emptying_date,
-                                    status = app.status
+                                    status = app.status,
+                                    buildingPointGeomExist = app.building_point_geom_exist,
+                                    longitude = app.longitude,
+                                    latitude = app.latitude,
+                                    ownerName = app.owner_name
                                 )
                             } ?: emptyList()
                             

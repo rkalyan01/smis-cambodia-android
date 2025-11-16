@@ -11,8 +11,8 @@ data class ContainmentRequest(
     @Json(name = "storage_tank_connection") val storage_tank_connection: String?,
     @Json(name = "other_storage_tank_connection") val other_storage_tank_connection: String?,
     @Json(name = "size_of_storage_tank_m3") val size_of_storage_tank_m3: String?,
-    @Json(name = "construction_year") val construction_year: String?,
-    @Json(name = "accessibility") val accessibility: String?,
-    @Json(name = "ever_emptied") val ever_emptied: String?,
-    @Json(name = "last_emptied_year") val last_emptied_year: String?
+    @Json(name = "construction_year") val construction_year: Int?,
+    @Json(name = "accessibility") val accessibility: Boolean?,
+    @Json(name = "ever_emptied") val ever_emptied: Boolean?,
+    @Json(name = "last_emptied_year") val last_emptied_year: Int?
 )

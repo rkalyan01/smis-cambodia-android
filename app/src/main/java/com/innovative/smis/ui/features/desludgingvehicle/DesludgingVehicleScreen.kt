@@ -33,15 +33,23 @@ import com.innovative.smis.data.model.response.VehicleResponse
 import com.innovative.smis.util.localization.LocalizationManager
 import org.koin.androidx.compose.koinViewModel
 
-enum class VehicleStatus(val displayName: String, val color: Color, val apiValue: String) {
-    ACTIVE("Active", Color(0xFF28A745), "active"),
-    UNDER_MAINTENANCE("Under Maintenance", Color(0xFFFFC107), "under-maintenance"),
-    INACTIVE("Inactive", Color(0xFFDC3545), "inactive");
+enum class VehicleStatus(val color: Color, val apiValue: String) {
+    ACTIVE(Color(0xFF28A745), "active"),
+    UNDER_MAINTENANCE(Color(0xFFFFC107), "under-maintenance"),
+    INACTIVE(Color(0xFFDC3545), "inactive");
 
     companion object {
         fun fromApiValue(value: String?): VehicleStatus {
             return values().find { it.apiValue == value } ?: INACTIVE
         }
+    }
+}
+
+fun VehicleStatus.labelResId(): Int {
+    return when (this) {
+        VehicleStatus.ACTIVE -> R.string.status_active
+        VehicleStatus.UNDER_MAINTENANCE -> R.string.status_under_maintenance
+        VehicleStatus.INACTIVE -> R.string.status_inactive
     }
 }
 
@@ -68,7 +76,7 @@ fun DesludgingVehicleScreen(
     // Handle update success
     LaunchedEffect(uiState.updateSuccess) {
         if (uiState.updateSuccess) {
-            snackbarHostState.showSnackbar("Vehicle status updated successfully")
+            snackbarHostState.showSnackbar(context.getString(R.string.message_vehicle_status_updated))
             viewModel.clearUpdateSuccess()
         }
     }
@@ -91,7 +99,7 @@ fun DesludgingVehicleScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Desludging Vehicles",
+                        stringResource(R.string.nav_desludging_vehicles),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -156,7 +164,7 @@ fun DesludgingVehicleScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
-                                    text = "Vehicle Status Overview",
+                                    text = stringResource(R.string.label_vehicle_status_overview),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -169,21 +177,21 @@ fun DesludgingVehicleScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     VehicleStatusChip(
-                                        title = "Active",
+                                        title = stringResource(R.string.status_active),
                                         count = stats["active"] ?: 0,
                                         icon = Icons.Default.CheckCircle,
                                         color = VehicleStatus.ACTIVE.color,
                                         modifier = Modifier.weight(1f)
                                     )
                                     VehicleStatusChip(
-                                        title = "Under Maintenance",
+                                        title = stringResource(R.string.status_under_maintenance),
                                         count = stats["under-maintenance"] ?: 0,
                                         icon = Icons.Default.Build,
                                         color = VehicleStatus.UNDER_MAINTENANCE.color,
                                         modifier = Modifier.weight(1f)
                                     )
                                     VehicleStatusChip(
-                                        title = "Inactive",
+                                        title = stringResource(R.string.status_inactive),
                                         count = stats["inactive"] ?: 0,
                                         icon = Icons.Default.Block,
                                         color = VehicleStatus.INACTIVE.color,
@@ -346,7 +354,7 @@ fun VehicleCard(
                             )
                         }
                         Text(
-                            text = vehicleStatus.displayName,
+                            text = stringResource(vehicleStatus.labelResId()),
                             style = MaterialTheme.typography.labelSmall,
                             color = vehicleStatus.color,
                             fontWeight = FontWeight.Medium
@@ -386,7 +394,7 @@ fun VehicleCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Capacity: $capacity",
+                        text = stringResource(R.string.label_capacity, capacity),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -462,7 +470,7 @@ fun StatusUpdateDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = status.displayName,
+                            text = stringResource(status.labelResId()),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -544,13 +552,13 @@ fun EmptyVehiclesState(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "No vehicles available",
+            text = stringResource(R.string.message_no_vehicles),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "Vehicles will appear here once they are added to the system.",
+            text = stringResource(R.string.message_no_vehicles_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

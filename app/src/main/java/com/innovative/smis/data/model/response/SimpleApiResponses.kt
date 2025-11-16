@@ -40,7 +40,9 @@ data class EmptyingReadonlyData(
     @Json(name = "other_additional_repairing") val otherAdditionalRepairing: String?,
     @Json(name = "extra_payment_required") val extraPaymentRequired: Boolean,
     @Json(name = "amount_of_extra_payment") val amountOfExtraPayment: String?,
-    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?
+    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?,
+    @Json(name = "latitude") val latitude: String?,
+    @Json(name = "longitude") val longitude: String?
 )
 
 @JsonClass(generateAdapter = true)

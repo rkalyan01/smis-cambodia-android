@@ -12,8 +12,10 @@ data class EmptyingServiceRequest(
     val location_of_containment: String?,
     val presence_of_pumping_point: String?,
     val pumping_point_type: String?,
-    val additional_repairing_id: String?,
-    val other_additional_repairing: String?,
+    val additional_repairing_id: String?, // PostgreSQL literal format: "{2,4,5}" (database: integer[])
+    val other_additional_repairing: String?, // Single string value (database: character varying)
+    val customer_type: String?, // Customer type ID
+    val other_customer_type: String?, // Text when "Other" is selected
     val extra_payment: String?,
     val receipt_number: String?,
     val comments: String?,

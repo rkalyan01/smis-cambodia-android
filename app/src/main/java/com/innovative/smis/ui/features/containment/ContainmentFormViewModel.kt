@@ -47,20 +47,62 @@ class ContainmentFormViewModel(
                         result.data?.let { containment ->
                             isUpdateMode = true
                             _uiState.update { currentState ->
+                                // Helper to resolve key from API value (handles both IDs and legacy display values)
+                                fun resolveStorageTypeKey(apiValue: String?): Pair<String, String> {
+                                    if (apiValue.isNullOrEmpty()) return "" to ""
+                                    // Check if it's already a key
+                                    if (currentState.storageTypeOptions.containsKey(apiValue)) {
+                                        return apiValue to (currentState.storageTypeOptions[apiValue] ?: "")
+                                    }
+                                    // Legacy data: reverse lookup to find key from display value
+                                    val key = currentState.storageTypeOptions.entries.find { it.value == apiValue }?.key ?: apiValue
+                                    return key to (currentState.storageTypeOptions[key] ?: apiValue)
+                                }
+                                
+                                fun resolveStorageConnectionKey(apiValue: String?): Pair<String, String> {
+                                    if (apiValue.isNullOrEmpty()) return "" to ""
+                                    // Check if it's already a key
+                                    if (currentState.storageConnectionOptions.containsKey(apiValue)) {
+                                        return apiValue to (currentState.storageConnectionOptions[apiValue] ?: "")
+                                    }
+                                    // Legacy data: reverse lookup to find key from display value
+                                    val key = currentState.storageConnectionOptions.entries.find { it.value == apiValue }?.key ?: apiValue
+                                    return key to (currentState.storageConnectionOptions[key] ?: apiValue)
+                                }
+                                
+                                // Helper to normalize legacy Yes/No values and booleans to keys
+                                fun normalizeYesNoKey(value: Any?): String {
+                                    return when (value) {
+                                        is Boolean -> if (value) "yes" else "no"
+                                        is String -> when (value.trim().lowercase()) {
+                                            "yes", "ចាស", "true", "y" -> "yes"
+                                            "no", "ទេ", "false", "n" -> "no"
+                                            else -> ""
+                                        }
+                                        else -> ""
+                                    }
+                                }
+                                
+                                val (storageTypeKey, storageTypeValue) = resolveStorageTypeKey(containment.type_of_storage_tank)
+                                val (storageConnectionKey, storageConnectionValue) = resolveStorageConnectionKey(containment.storage_tank_connection)
+                                
+                                val accessibilityKey = normalizeYesNoKey(containment.accessibility)
+                                val everEmptiedKey = normalizeYesNoKey(containment.ever_emptied)
+                                
                                 currentState.copy(
                                     toiletConnection = "Storage Tank", // Default value
-                                    selectedStorageTypeKey = containment.type_of_storage_tank ?: "",
-                                    selectedStorageType = currentState.storageTypeOptions[containment.type_of_storage_tank] ?: "",
+                                    selectedStorageTypeKey = storageTypeKey,
+                                    selectedStorageType = storageTypeValue,
                                     otherTypeOfStorageTank = containment.other_type_of_storage_tank ?: "",
-                                    selectedStorageConnectionKey = containment.storage_tank_connection ?: "",
-                                    selectedStorageConnection = currentState.storageConnectionOptions[containment.storage_tank_connection] ?: "",
+                                    selectedStorageConnectionKey = storageConnectionKey,
+                                    selectedStorageConnection = storageConnectionValue,
                                     otherStorageTankConnection = containment.other_storage_tank_connection ?: "",
                                     sizeOfStorageTankM3 = containment.size_of_storage_tank_m3 ?: "",
                                     constructionYear = containment.construction_year?.toString() ?: "",
-                                    accessibilityKey = containment.accessibility?.let { if (it) "yes" else "no" } ?: "",
-                                    accessibility = containment.accessibility?.let { if (it) "Yes" else "No" } ?: "",
-                                    everEmptiedKey = containment.ever_emptied?.let { if (it) "yes" else "no" } ?: "",
-                                    everEmptied = containment.ever_emptied?.let { if (it) "Yes" else "No" } ?: "",
+                                    accessibilityKey = accessibilityKey,
+                                    accessibility = accessibilityKey,
+                                    everEmptiedKey = everEmptiedKey,
+                                    everEmptied = everEmptiedKey,
                                     lastEmptiedYear = containment.last_emptied_year?.toString() ?: "",
                                     hasExistingData = true,
                                     isLoading = false

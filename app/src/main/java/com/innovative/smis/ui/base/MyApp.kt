@@ -11,15 +11,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.NavHost
 import androidx.navigation.NavController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.sync.Mutex
 import com.innovative.smis.ui.components.AppNavigationDrawer
 import kotlinx.coroutines.launch
 import com.innovative.smis.ui.features.buildingsurvey.BuildingSurveyScreen
@@ -112,136 +112,152 @@ private fun MainAppScreen(topLevelNavController: NavController) {
     val context = LocalContext.current
     val activity = context as? Activity
     
-    // Create the UI action lock to prevent race conditions
-    val isActionInProgress = remember { AtomicBoolean(false) }
-    
-    // 🔧 MIUI FIX: Track last navigation time to prevent rapid back presses
-    // MIUI's DisplayFeatureHal triggers black screen on rapid navigation even without edge-to-edge
-    val lastNavigationTime = remember { AtomicLong(0L) }
+    // 🔧 FIX: Use Mutex instead of AtomicBoolean for lifecycle-safe locking
+    val drawerMutex = remember { Mutex() }
+    val backMutex = remember { Mutex() }
     
     // Track current destination to handle back button
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
     
-    // 🔧 FIX: Add composition delay protection
-    // Prevents clicks during screen recomposition (fixes black screen on fast navigation + fast click)
-    var isScreenReady by remember { mutableStateOf(false) }
+    // 🔧 FIX: Use LifecycleEventObserver to properly observe destination lifecycle changes
+    // derivedStateOf doesn't observe lifecycle - it reads once and never updates!
+    var isDestinationStable by remember { mutableStateOf(false) }
     
-    // Reset screen ready state on ANY backstack change (not just route change)
-    // This fixes the issue when clicking the same route from drawer (e.g., Dashboard → Dashboard)
-    LaunchedEffect(currentBackStackEntry) {
-        isScreenReady = false
-        android.util.Log.d("MainAppScreen", "🔄 Navigation detected - route: $currentRoute, entry: ${currentBackStackEntry?.id} - blocking UI for 200ms")
-        kotlinx.coroutines.delay(200) // Wait for screen to fully compose
-        isScreenReady = true
-        android.util.Log.d("MainAppScreen", "✅ Screen ready: $currentRoute - UI interactions enabled")
+    // Observe lifecycle events and update stability state
+    DisposableEffect(currentBackStackEntry) {
+        val entry = currentBackStackEntry
+        
+        if (entry == null) {
+            isDestinationStable = false
+            android.util.Log.w("MainAppScreen", "📍 No destination entry - marking unstable")
+            return@DisposableEffect onDispose { }
+        }
+        
+        val observer = LifecycleEventObserver { _, event ->
+            val wasStable = isDestinationStable
+            // Consider STARTED and above as stable (MIUI toggles between STARTED/RESUMED frequently)
+            isDestinationStable = entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+            
+            if (wasStable != isDestinationStable) {
+                android.util.Log.d("MainAppScreen", "📍 Lifecycle event: $event, state: ${entry.lifecycle.currentState}, stable: $isDestinationStable, route: $currentRoute")
+            }
+        }
+        
+        entry.lifecycle.addObserver(observer)
+        
+        // Set initial state
+        isDestinationStable = entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        android.util.Log.d("MainAppScreen", "📍 Initial state: ${entry.lifecycle.currentState}, stable: $isDestinationStable, route: $currentRoute")
+        
+        onDispose {
+            entry.lifecycle.removeObserver(observer)
+            android.util.Log.d("MainAppScreen", "📍 Removed lifecycle observer for route: $currentRoute")
+        }
     }
     
-    // Create a STABLE onMenuClick lambda that checks screen readiness
+    // 🔧 FIX: Automatically close drawer when destination becomes unstable
+    LaunchedEffect(isDestinationStable) {
+        if (!isDestinationStable && drawerState.isOpen) {
+            android.util.Log.w("MainAppScreen", "⚠️ Destination became unstable - force closing drawer")
+            drawerState.close()
+        }
+    }
+    
+    // Create a STABLE onMenuClick lambda that uses lifecycle-safe locking
     val stableOnMenuClick: () -> Unit = {
-        android.util.Log.d("MainAppScreen", "🍔 Menu click - isScreenReady=$isScreenReady, isActionInProgress=${isActionInProgress.get()}")
-        if (isScreenReady && isActionInProgress.compareAndSet(false, true)) {
+        android.util.Log.d("MainAppScreen", "🍔 Menu click - isDestinationStable=$isDestinationStable")
+        
+        // Only execute if destination is stable (prevents black/white screen)
+        if (isDestinationStable) {
             scope.launch {
-                try {
-                    if (drawerState.isClosed) {
-                        android.util.Log.d("MainAppScreen", "📂 Opening drawer...")
-                        drawerState.open()
+                // Use mutex to prevent concurrent drawer operations
+                if (drawerMutex.tryLock()) {
+                    try {
+                        if (drawerState.isClosed) {
+                            android.util.Log.d("MainAppScreen", "📂 Opening drawer...")
+                            drawerState.open()
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainAppScreen", "❌ Error opening drawer: ${e.message}", e)
+                    } finally {
+                        drawerMutex.unlock()
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("MainAppScreen", "❌ Error opening drawer: ${e.message}", e)
-                } finally {
-                    isActionInProgress.set(false)
+                } else {
+                    android.util.Log.w("MainAppScreen", "⚠️ Menu click blocked - Drawer action already in progress")
                 }
             }
         } else {
-            android.util.Log.w("MainAppScreen", "⚠️ Menu click blocked - Screen not ready or action in progress")
+            android.util.Log.w("MainAppScreen", "⚠️ Menu click blocked - Destination not stable/resumed")
         }
     }
     
-    // Handle back button press with atomic lock + navigation throttling
+    // Handle back button press with lifecycle-safe locking + MIUI protection
     BackHandler(enabled = true) {
-        // 🔧 MIUI FIX: Throttle rapid back presses to prevent DisplayFeatureHal black screen
-        val currentTime = System.currentTimeMillis()
-        val lastTime = lastNavigationTime.get()
-        val timeSinceLastNav = currentTime - lastTime
-        
-        if (timeSinceLastNav < 300) {
-            // Ignore back presses within 300ms of last navigation
-            android.util.Log.d("MainAppScreen", "⚠️ Back press ignored - too soon after last navigation ($timeSinceLastNav ms)")
+        // 🔧 MIUI FIX: Enhanced protection using MiuiInputGuard (500ms throttle)
+        if (!com.innovative.smis.util.helper.MiuiInputGuard.shouldAllowBack()) {
+            android.util.Log.d("MainAppScreen", "⚠️ Back button blocked by MiuiInputGuard throttle")
             return@BackHandler
         }
         
-        if (isActionInProgress.compareAndSet(false, true)) {
-            when {
-                // If drawer is open, close it
-                drawerState.isOpen -> {
-                    scope.launch {
-                        try {
+        // Early return if destination is not stable (prevents issues during navigation)
+        if (!isDestinationStable && currentRoute != ScreenName.Dashboard) {
+            android.util.Log.w("MainAppScreen", "⚠️ Back button blocked - Destination not stable during transition")
+            return@BackHandler
+        }
+        
+        scope.launch {
+            // Use mutex to prevent concurrent back operations
+            if (backMutex.tryLock()) {
+                try {
+                    when {
+                        // If drawer is open, close it
+                        drawerState.isOpen -> {
+                            android.util.Log.d("MainAppScreen", "🔙 Closing drawer")
                             drawerState.close()
-                        } finally {
-                            isActionInProgress.set(false)
+                        }
+                        // If on Dashboard (root), minimize app
+                        currentRoute == ScreenName.Dashboard -> {
+                            android.util.Log.d("MainAppScreen", "🔙 On Dashboard - minimizing app")
+                            activity?.moveTaskToBack(true)
+                        }
+                        // Check if there's something to pop
+                        navController.previousBackStackEntry != null && currentRoute != ScreenName.Dashboard -> {
+                            android.util.Log.d("MainAppScreen", "🔙 Popping back stack from $currentRoute")
+                            navController.popBackStack()
+                        }
+                        // Fallback case - navigate to dashboard
+                        else -> {
+                            android.util.Log.d("MainAppScreen", "🔙 Fallback - navigating to Dashboard")
+                            navController.navigate(ScreenName.Dashboard) {
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainAppScreen", "❌ Error handling back press: ${e.message}", e)
+                } finally {
+                    backMutex.unlock()
                 }
-                // If on Dashboard (root), minimize app
-                currentRoute == ScreenName.Dashboard -> {
-                    activity?.moveTaskToBack(true)
-                    isActionInProgress.set(false)
-                }
-                // Check if there's something to pop
-                navController.previousBackStackEntry != null && currentRoute != ScreenName.Dashboard -> {
-                    try {
-                        lastNavigationTime.set(currentTime) // Update navigation time
-                        navController.popBackStack()
-                    } finally {
-                        isActionInProgress.set(false)
-                    }
-                }
-                // Fallback case
-                else -> {
-                    try {
-                        lastNavigationTime.set(currentTime) // Update navigation time
-                        navController.navigate(ScreenName.Dashboard) {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                        }
-                    } finally {
-                        isActionInProgress.set(false)
-                    }
-                }
+            } else {
+                android.util.Log.w("MainAppScreen", "⚠️ Back button blocked - Navigation already in progress")
             }
         }
     }
 
-    // 🔧 FIX: Block pointer input during composition instead of using overlay
-    // This prevents black screen issues while still blocking rapid clicks
-    val pointerModifier = if (!isScreenReady) {
-        Modifier.pointerInput(Unit) {
-            // Consume all pointer events during composition
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent()
-                    android.util.Log.d("MainAppScreen", "⛔ Pointer event blocked - screen composing")
-                    // Consume the event without passing it through
-                }
-            }
-        }
-    } else {
-        Modifier
-    }
+    // 🔧 FIX: Removed pointer input blocking that was causing black/white screens
+    // Instead, rely on isScreenReady checks in individual click handlers
     
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(pointerModifier) // Apply pointer blocking conditionally
     ) {
-        // AppNavigationDrawer - gestures gated on screen readiness
+        // AppNavigationDrawer - gestures gated on destination lifecycle
         AppNavigationDrawer(
             navController = navController,
             topLevelNavController = topLevelNavController,
             drawerState = drawerState,
-            gesturesEnabled = true,
-            isScreenReady = isScreenReady, // 🔧 FIX: Pass screen ready state to drawer
-            isActionInProgress = isActionInProgress,
+            gesturesEnabled = isDestinationStable, // Only allow swipe when destination is stable
             onMenuClick = stableOnMenuClick
         ) {
             // The NavHost is INSIDE the drawer's content

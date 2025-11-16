@@ -247,7 +247,11 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.label_application_id_hash, todoItem.applicationId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(todoItem.applicantName ?: stringResource(R.string.message_name_not_provided), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = todoItem.applicantName ?: todoItem.ownerName ?: stringResource(R.string.message_name_not_provided),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Spacer(Modifier.width(8.dp))
                 StatusBadge(text = statusText, color = statusColor)
@@ -279,11 +283,32 @@ private fun ApplicationTaskCard(todoItem: TodoItem, context: Context, navControl
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(todoItem.applicantContact)}"))
-                        context.startActivity(intent)
-                    }) {
-                        Icon(Icons.Outlined.Call, stringResource(R.string.cd_call_applicant), tint = MaterialTheme.colorScheme.primary)
+                    IconButton(
+                        onClick = {
+                            val contact = todoItem.applicantContact ?: todoItem.phoneNo
+                            contact?.let { rawPhone ->
+                                val formattedPhone = PhoneNumberFormatter.formatForDialing(rawPhone)
+                                android.util.Log.d("TodoListDial", "Raw: '$rawPhone' -> Formatted: '$formattedPhone'")
+                                if (formattedPhone.isNotBlank()) {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedPhone"))
+                                    context.startActivity(intent)
+                                } else {
+                                    android.util.Log.e("TodoListDial", "Formatted phone is blank!")
+                                }
+                            } ?: run {
+                                android.util.Log.e("TodoListDial", "No phone number available - applicantContact: '${todoItem.applicantContact}', phoneNo: '${todoItem.phoneNo}'")
+                            }
+                        },
+                        enabled = !todoItem.applicantContact.isNullOrBlank() || !todoItem.phoneNo.isNullOrBlank()
+                    ) {
+                        Icon(
+                            Icons.Outlined.Call, 
+                            stringResource(R.string.cd_call_applicant), 
+                            tint = if (todoItem.applicantContact.isNullOrBlank() && todoItem.phoneNo.isNullOrBlank()) 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            else 
+                                MaterialTheme.colorScheme.primary
+                        )
                     }
 //                    IconButton(onClick = { /* TODO: Open map with location */ }) {
 //                        Icon(Icons.Outlined.LocationOn, "View on Map", tint = MaterialTheme.colorScheme.primary)

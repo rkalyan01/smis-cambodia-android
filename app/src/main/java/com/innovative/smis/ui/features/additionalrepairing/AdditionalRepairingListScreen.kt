@@ -157,7 +157,7 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
                                 }
                             }
                         } else {
-                            items(uiState.applications, key = { it.id }) { application ->
+                            items(uiState.applications, key = { it.emptyingId ?: it.id }) { application ->
                                 AdditionalRepairingCard(
                                     application = application,
                                     context = context,
@@ -263,12 +263,13 @@ private fun AdditionalRepairingCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = application.applicantContact ?: "N/A",
+                            text = application.applicantContact ?: application.phoneNo ?: "N/A",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.clickable {
-                                application.applicantContact?.let { phone ->
-                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(phone)}"))
+                                val phone = application.applicantContact ?: application.phoneNo
+                                phone?.let {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(it)}"))
                                     context.startActivity(intent)
                                 }
                             }

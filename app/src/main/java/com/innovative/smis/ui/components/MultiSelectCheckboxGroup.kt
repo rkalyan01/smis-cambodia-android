@@ -14,17 +14,18 @@ fun MultiSelectCheckboxGroup(
     selectedKeys: List<String>,
     onSelectionChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isRequired: Boolean = false
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = label,
+            text = if (isRequired) "$label *" else label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         
-        options.forEach { (key, displayValue) ->
+        options.forEach { (key, label) ->
             val isChecked = selectedKeys.contains(key)
             
             Row(
@@ -48,7 +49,7 @@ fun MultiSelectCheckboxGroup(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = displayValue,
+                    text = label,
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (enabled) {
                         MaterialTheme.colorScheme.onSurface

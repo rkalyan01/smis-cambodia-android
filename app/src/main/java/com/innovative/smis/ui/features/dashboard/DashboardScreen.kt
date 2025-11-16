@@ -159,29 +159,26 @@ fun DashboardScreen(
                     QuickActionsSection(navController = navController)
                 }
                 item {
+                    android.util.Log.d("DashboardScreen", "🎯 Rendering Applications header")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.nav_applications),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                item {
                     android.util.Log.d("DashboardScreen", "🎯 Rendering TaskFilters")
                     TaskFilters(
                         selectedStatus = uiState.selectedStatus,
                         onStatusSelected = viewModel::setStatusFilter
                     )
-                }
-                item {
-                    android.util.Log.d("DashboardScreen", "🎯 Rendering Task List header")
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(stringResource(R.string.nav_todo_list), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { 
-                            navController.navigate(ScreenName.TaskManagement)
-                        }) {
-                            Text(stringResource(R.string.action_view_all))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(16.dp))
-                        }
-                    }
                 }
                 when (val state = uiState.applicationLoadingState) {
                     is Resource.Loading -> {
@@ -484,7 +481,7 @@ private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navContr
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.label_application_id_hash, todoItem.applicationId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
-                            todoItem.applicantName ?: stringResource(R.string.message_name_not_provided), 
+                            text = todoItem.applicantName ?: todoItem.ownerName ?: stringResource(R.string.message_name_not_provided),
                             style = MaterialTheme.typography.bodyMedium, 
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -493,8 +490,6 @@ private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navContr
                     LocalStatusBadge(text = todoItem.status ?: "", color = statusColor)
                     Icon(Icons.Default.ExpandMore, if (expanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand), modifier = Modifier.rotate(rotationAngle))
                 }
-                Spacer(Modifier.height(8.dp))
-                WorkflowProgressIndicator(status = todoItem.status)
             }
             AnimatedVisibility(visible = expanded) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -511,34 +506,59 @@ private fun DashboardTodoItemCard(todoItem: TodoItem, context: Context, navContr
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
                         onClick = {
-                            todoItem.applicantContact?.let { contact ->
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(contact)}"))
-                                context.startActivity(intent)
+                            val contact = todoItem.applicantContact ?: todoItem.phoneNo
+                            contact?.let { rawPhone ->
+                                val formattedPhone = PhoneNumberFormatter.formatForDialing(rawPhone)
+                                android.util.Log.d("DashboardDial", "Raw: '$rawPhone' -> Formatted: '$formattedPhone'")
+                                if (formattedPhone.isNotBlank()) {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedPhone"))
+                                    context.startActivity(intent)
+                                } else {
+                                    android.util.Log.e("DashboardDial", "Formatted phone is blank!")
+                                }
+                            } ?: run {
+                                android.util.Log.e("DashboardDial", "No phone number available - applicantContact: '${todoItem.applicantContact}', phoneNo: '${todoItem.phoneNo}'")
                             }
                         },
-                        enabled = !todoItem.applicantContact.isNullOrBlank()
+                        enabled = !todoItem.applicantContact.isNullOrBlank() || !todoItem.phoneNo.isNullOrBlank()
                     ) {
                         Icon(
                             Icons.Outlined.Call, 
                             stringResource(R.string.cd_call_applicant), 
-                            tint = if (todoItem.applicantContact.isNullOrBlank()) 
+                            tint = if (todoItem.applicantContact.isNullOrBlank() && todoItem.phoneNo.isNullOrBlank()) 
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             else 
                                 MaterialTheme.colorScheme.primary
                         )
                     }
-//                    IconButton(onClick = { /* TODO: Open map with location */ }) {
-//                        Icon(Icons.Outlined.LocationOn, "View on Map", tint = MaterialTheme.colorScheme.primary)
-//                    }
-                }
-                // Only show form button for specific statuses
-                val shouldShowFormButton = when (todoItem.status?.lowercase()) {
-                    "initiated", "scheduled", "site-preparation" -> true
-                    else -> false
-                }
-                if (shouldShowFormButton) {
-                    FilledIconButton(onClick = onOpenFormClick) {
-                        Icon(Icons.Outlined.EditNote, stringResource(R.string.cd_open_form))
+                    IconButton(
+                        onClick = {
+                            val lat = todoItem.latitude
+                            val lon = todoItem.longitude
+                            if (!lat.isNullOrBlank() && !lon.isNullOrBlank()) {
+                                val mapUri = Uri.parse("http://maps.google.com/maps?daddr=$lat,$lon")
+                                val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
+                                if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                    context.startActivity(mapIntent)
+                                } else {
+                                    android.widget.Toast.makeText(context, "No map application found", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        enabled = todoItem.buildingPointGeomExist == true && 
+                                  !todoItem.latitude.isNullOrBlank() && 
+                                  !todoItem.longitude.isNullOrBlank()
+                    ) {
+                        Icon(
+                            Icons.Outlined.LocationOn, 
+                            stringResource(R.string.cd_view_on_map), 
+                            tint = if (todoItem.buildingPointGeomExist == true && 
+                                      !todoItem.latitude.isNullOrBlank() && 
+                                      !todoItem.longitude.isNullOrBlank())
+                                MaterialTheme.colorScheme.primary
+                            else 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
                     }
                 }
             }
@@ -554,7 +574,7 @@ fun LocalStatusBadge(text: String, color: Color) {
         "initiated" -> stringResource(R.string.filter_initiated)
         "scheduled" -> stringResource(R.string.filter_scheduled)
         "rescheduled" -> stringResource(R.string.filter_rescheduled)
-        "site-preparation" -> stringResource(R.string.filter_site_preparation)
+        "site-preparation" -> stringResource(R.string.filter_site_visited)
         "emptied" -> stringResource(R.string.filter_emptied)
         "completed" -> stringResource(R.string.filter_completed)
         "cancelled" -> stringResource(R.string.filter_cancelled)
@@ -588,7 +608,7 @@ fun TaskFilters(
     onStatusSelected: (String) -> Unit
 ) {
     // Map of status keys to their string resource IDs
-    val statusFiltersMap = mapOf(
+    val statusFiltersMap = linkedMapOf(
         "All" to R.string.filter_all,
         "Today" to R.string.filter_today,
         "Urgent" to R.string.filter_urgent,
@@ -597,9 +617,7 @@ fun TaskFilters(
         "Rescheduled" to R.string.filter_rescheduled,
         "Site-Preparation" to R.string.filter_site_preparation,
         "Emptied" to R.string.filter_emptied,
-        "Completed" to R.string.filter_completed,
-        "Cancelled" to R.string.filter_cancelled,
-        "Reassigned" to R.string.filter_reassigned
+        "Completed" to R.string.filter_completed
     )
 
     // ✅ FIX: Changed from LazyRow to Row with horizontalScroll()
@@ -739,78 +757,5 @@ fun IdleState() {
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-data class WorkflowStage(
-    val step: Int,
-    val totalSteps: Int,
-    val stageName: String,
-    val isCompleted: Boolean
-)
-
-fun getWorkflowStage(status: String?): WorkflowStage {
-    return when (status?.lowercase()) {
-        // Stage 1: Emptying Scheduling
-        "initiated" -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
-        "pending" -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
-        
-        // Stage 2: Site Preparation
-        "scheduled" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
-        "rescheduled" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
-        "reassigned" -> WorkflowStage(2, 4, "workflow_stage_site_preparation", false)
-        
-        // Stage 3: Emptying Service
-        "site-preparation" -> WorkflowStage(3, 4, "workflow_stage_emptying_service", false)
-        
-        // Stage 4: Completed
-        "emptied" -> WorkflowStage(4, 4, "workflow_stage_completed", true)
-        "completed" -> WorkflowStage(4, 4, "workflow_stage_completed", true)
-        
-        // Cancelled/Terminal states - show as cancelled at stage 1
-        "cancelled" -> WorkflowStage(0, 4, "workflow_stage_cancelled", false)
-        
-        // Unknown/Default - assume early stage
-        else -> WorkflowStage(1, 4, "workflow_stage_scheduling", false)
-    }
-}
-
-@Composable
-fun WorkflowProgressIndicator(status: String?, modifier: Modifier = Modifier) {
-    val workflowStage = getWorkflowStage(status)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val completedColor = Color(0xFF28A745)
-    val inactiveColor = MaterialTheme.colorScheme.outlineVariant
-    val dotColor = if (workflowStage.isCompleted) completedColor else primaryColor
-    
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.label_progress),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
-        )
-        
-        repeat(workflowStage.totalSteps) { index ->
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(
-                        color = if (index < workflowStage.step) dotColor else inactiveColor,
-                        shape = RoundedCornerShape(50)
-                    )
-            )
-        }
-        
-        Text(
-            text = stringResource(R.string.workflow_progress_format, workflowStage.step, workflowStage.totalSteps),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }

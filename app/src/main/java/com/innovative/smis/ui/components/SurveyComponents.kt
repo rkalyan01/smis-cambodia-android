@@ -163,3 +163,59 @@ fun RadioButtonGroupField(
         }
     }
 }
+
+@Composable
+fun BilingualRadioButtonGroupField(
+    label: String,
+    options: List<Pair<String, String>>,
+    selectedValue: String,
+    onValueSelected: (String) -> Unit,
+    error: String?,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        
+        Column(
+            modifier = Modifier.selectableGroup()
+        ) {
+            options.forEach { (value, displayLabel) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selectedValue.equals(value, ignoreCase = true),
+                            onClick = { onValueSelected(value) },
+                            role = Role.RadioButton
+                        )
+                        .padding(vertical = 0.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selectedValue.equals(value, ignoreCase = true),
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = displayLabel,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+        
+        error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+}

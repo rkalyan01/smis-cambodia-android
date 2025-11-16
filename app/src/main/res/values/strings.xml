@@ -145,7 +145,7 @@
     <string name="label_start_time">Start Time</string>
     <string name="label_end_time">End Time</string>
     <string name="label_additional_trip_required">Additional Trip Required</string>
-    <string name="label_desludging_vehicle_id">Desludging Vehicle ID *</string>
+    <string name="label_desludging_vehicle_id">Desludging Vehicle</string>
     <string name="label_sludge_type">Sludge Type</string>
     <string name="label_type_of_sludge">Type of Sludge</string>
     <string name="label_pumping_point_type">Pumping Point Type *</string>
@@ -156,8 +156,10 @@
     <string name="label_additional_repairing_in_emptying">Additional Repairing in Emptying</string>
     <string name="label_other_additional_repairing_emptying">Other Additional Repairing</string>
     <string name="label_free_under_pbc">Free Under PBC</string>
+    <string name="label_customer_type">Customer Type</string>
+    <string name="label_other_customer_type">Other Customer Type</string>
     <string name="label_amount_regular_cost">Amount of Regular Cost</string>
-    <string name="label_amount_extra_cost">Amount of Extra Cost</string>
+    <string name="label_amount_extra_cost">Amount of Extra Payment</string>
     <string name="label_receipt_number">Receipt Number</string>
     <string name="label_receipt_image">Receipt Image</string>
     <string name="label_picture_of_emptying">Picture of Emptying</string>
@@ -179,7 +181,7 @@
     <string name="label_trip_number">Trip %d</string>
     <string name="label_amount_regular_payment">Amount of Regular Payment</string>
     <string name="label_total_amount_regular_payment">Total Amount of Regular Payment</string>
-    <string name="label_total_extra_payment">Total Extra Payment</string>
+    <string name="label_total_extra_payment">Total Extra Payment ($)</string>
     <string name="button_submitting_trip">Submitting Trip...</string>
     <string name="button_loading_payment_details">Loading Payment Details...</string>
     <string name="button_submitting_payment">Submitting Payment...</string>
@@ -248,6 +250,7 @@
     <string name="cd_refresh">Refresh</string>
     <string name="cd_my_location">My Location</string>
     <string name="cd_location_pin">Location Pin</string>
+    <string name="cd_view_on_map">View on map</string>
     <string name="cd_navigate_back">Navigate back</string>
     <string name="cd_smis_logo">SMIS Logo</string>
     <string name="cd_warning">Warning</string>
@@ -301,7 +304,7 @@
     <string name="label_owner_name_khmer">Owner Name (Khmer) *</string>
     <string name="label_name_respondent">Name of Respondent (English)</string>
     <string name="label_households_served">Households Served *</string>
-    <string name="label_applied_on">Applied On</string>
+    <string name="label_applied_on">Application Date</string>
     <string name="label_ever_emptied_before">Ever Emptied Before?</string>
     <string name="label_ever_emptied_tank">Ever Emptied the Storage Tank (Yes/No)</string>
     <string name="label_experience_issues">Experience issues with containment?</string>
@@ -339,7 +342,7 @@
     <string name="label_area_name">Area Name</string>
     <string name="label_other_storage_tank_connection">Other Storage Tank Connection</string>
     <string name="label_other_type_storage_tank">Other Type of Storage Tank</string>
-    <string name="label_amount_extra_payment_estimation">Amount of Extra Payment (Estimation)</string>
+    <string name="label_amount_extra_payment_estimation">Amount of Extra Payment (Estimation) ($)</string>
     <!-- Map & Location -->
     <string name="map_title">Map</string>
     <string name="map_type">Map Type</string>
@@ -370,15 +373,23 @@
     <string name="label_application_id_hash">Application ID #%d</string>
     <!-- Desludging Vehicle -->
     <string name="title_update_vehicle_status">Update Vehicle Status</string>
+    <string name="label_vehicle_status_overview">Vehicle Status Overview</string>
     <string name="status_active">Active</string>
     <string name="status_inactive">Inactive</string>
     <string name="status_under_maintenance">Under Maintenance</string>
+    <string name="message_no_vehicles">No vehicles available</string>
+    <string name="message_no_vehicles_description">Vehicles will appear here once they are added to the system.</string>
+    <string name="message_vehicle_status_updated">Vehicle status updated successfully</string>
+    <string name="label_capacity">Capacity: %s</string>
     <!-- Postpone Dialog Extra Labels -->
     <string name="label_postpone_from">Postpone From (Current Date)</string>
     <string name="label_postpone_until">Postpone Until (New Date)</string>
     <string name="label_reason">Reason</string>
     <string name="label_remark">Remark</string>
     <string name="button_postpone">Postpone</string>
+    <!-- Postpone Reason Options -->
+    <string name="postpone_reason_eto">Rescheduled due to ETO</string>
+    <string name="postpone_reason_customer">Rescheduled due to Customers</string>
     <!-- Logout Dialog -->
     <string name="dialog_logout_title">Logout</string>
     <string name="button_logout_without_syncing">Logout Without Syncing</string>
@@ -405,10 +416,12 @@
     <string name="filter_all">All</string>
     <string name="filter_today">Today</string>
     <string name="filter_urgent">Urgent</string>
+    <string name="filter_on_demand">On-Demand</string>
     <string name="filter_initiated">Initiated</string>
     <string name="filter_scheduled">Scheduled</string>
     <string name="filter_rescheduled">Rescheduled</string>
     <string name="filter_site_preparation">Site-Preparation</string>
+    <string name="filter_site_visited">Site-Visited</string>
     <string name="filter_emptied">Emptied</string>
     <string name="filter_completed">Completed</string>
     <string name="filter_cancelled">Cancelled</string>
@@ -457,7 +470,7 @@
     <string name="label_please_specify_other_issue">Please Specify Other Issue</string>
     <string name="screen_emptying_scheduling">Emptying Scheduling</string>
     <string name="label_amount_of_regular_cost">Amount of Regular Cost</string>
-    <string name="label_amount_of_extra_cost">Amount of Extra Cost</string>
+    <string name="label_amount_of_extra_cost">Amount of Extra Payment ($)</string>
     <string name="screen_emptying_service">Emptying Service</string>
     <string name="action_logout">Logout</string>
     <string name="title_layer_options">Layer Options</string>
@@ -475,7 +488,7 @@
     <string name="button_clear_cache">Clear Cache</string>
     <string name="setting_date_format">Date Format</string>
     <string name="screen_site_preparation_form">Site Preparation Form</string>
-    <string name="label_amount_of_extra_payment">Amount of Extra Payment</string>
+    <string name="label_amount_of_extra_payment">Amount of Extra Payment ($)</string>
     <string name="checkbox_receiver_same_as_applicant">Receiver same as applicant</string>
     <string name="button_saving">Saving...</string>
     <string name="button_submitting">Submitting...</string>
@@ -528,6 +541,9 @@
     <string name="form_notes">Notes</string>
     <string name="form_additional_comments">Additional Comments</string>
     <string name="nav_todo_list">To-Do List</string>
+    <string name="nav_applications">Applications</string>
+    <string name="common_yes">Yes</string>
+    <string name="common_no">No</string>
     <string name="action_refresh">Refresh</string>
     <string name="status_unknown">Unknown</string>
     <string name="message_name_not_provided">Name not provided</string>
@@ -614,6 +630,7 @@
     <string name="nav_site_preparation">Site Preparation</string>
     <string name="nav_emptying_service">Emptying Service</string>
     <string name="nav_emptying_scheduling">Emptying Scheduling</string>
+    <string name="nav_additional_trips">Additional Trips</string>
     
     <!-- Status strings -->
     <string name="status_draft">Draft</string>
@@ -634,9 +651,54 @@
     <!-- Form action strings -->
     <string name="action_saving">Saving...</string>
     <string name="action_submitting">Submitting...</string>
-    <string name="label_customer_phone">Customer Phone</string>
+    <string name="label_customer_phone">Customer Contact</string>
     <string name="label_site_visit_required">Site Visit Required?</string>
     
     <!-- Offline map -->
     <string name="offline_map">Offline Map</string>
+    
+    <!-- Building Survey - Form Labels -->
+    <string name="label_section_building_location">A. Building Location Information</string>
+    <string name="label_section_building_information">B. Building Information</string>
+    <string name="label_section_toilet_information">C. Toilet Information</string>
+    <string name="label_section_containment_information">D. Containment Information</string>
+    <string name="label_sangkat">Sangkat</string>
+    <string name="label_road_code">Road Code</string>
+    <string name="label_respondent_name">Name of Respondent (English)</string>
+    <string name="label_gender_respondent">Gender of Respondent</string>
+    <string name="label_structure_type">Structure Type</string>
+    <string name="label_is_main_building">Is Main Building</string>
+    <string name="label_water_supply">Water Supply</string>
+    <string name="label_containment_present_onsite">Containment Present Onsite</string>
+    <string name="label_type_of_storage_tank">Type of Storage Tank</string>
+    <string name="label_storage_tank_connection">Storage Tank Connection</string>
+    <string name="label_vacutug_accessible">Vacutug Accessible</string>
+    <string name="label_sanitation_system">Sanitation System</string>
+    <string name="label_technology">Technology</string>
+    <string name="label_compliance">Compliance</string>
+    
+    <!-- Building Survey - Storage Tank Connection Options -->
+    <string name="storage_connection_lined_open_drain">Lined Open Drain</string>
+    <string name="storage_connection_unlined_open_drain">Unlined Open Drain</string>
+    <string name="storage_connection_sewer_with_manhole">Sewer with Manhole</string>
+    <string name="storage_connection_sewer_without_manhole">Sewer without Manhole</string>
+    
+    <!-- Building Survey - Building Use Options -->
+    <string name="building_use_government">Government</string>
+    <string name="building_use_private_commercial">Private (Commercial)</string>
+    <string name="building_use_private_institutional">Private (Institutional)</string>
+    <string name="building_use_private_residential">Private (Residential)</string>
+    
+    <!-- Containment Form Labels -->
+    <string name="section_storage_tank_information">Storage Tank Information</string>
+    <string name="label_storage_tank_type">Storage Tank Type</string>
+    <string name="label_storage_tank_outlet_connection">Storage Tank Outlet Connection</string>
+    <string name="section_tank_specifications">Tank Specifications</string>
+    <string name="section_accessibility_history">Accessibility &amp; History</string>
+    <string name="label_accessible_to_desludging_vehicle">Accessible to Desludging Vehicle (Yes/No)</string>
+    <string name="label_ever_emptied_storage_tank">Ever Emptied the Storage Tank (Yes/No)</string>
+    
+    <!-- Emptying Scheduling Form Options -->
+    <string name="option_accessible">Accessible</string>
+    <string name="option_not_accessible">Not Accessible</string>
 </resources>

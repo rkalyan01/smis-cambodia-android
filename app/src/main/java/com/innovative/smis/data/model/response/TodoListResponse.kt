@@ -16,11 +16,16 @@ data class TodoItem(
     @Json(name = "application_datetime") val applicationDatetime: String?,
     @Json(name = "applicant_name") val applicantName: String?,
     @Json(name = "applicant_contact") val applicantContact: String?,
+    @Json(name = "owner_name") val ownerName: String?,
+    @Json(name = "phone_no") val phoneNo: String?,
     @Json(name = "proposed_emptying_date") val proposedEmptyingDate: String?,
     @Json(name = "application_status") val status: String? = "Initiated",
     @Json(name = "application_type") val applicationType: String? = null,
     @Json(name = "purpose_of_emptying_request") val purposeOfEmptyingRequest: Int? = null,
-    @Json(name = "urgency") val urgency: String? = null
+    @Json(name = "urgency") val urgency: String? = null,
+    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean? = null,
+    @Json(name = "longitude") val longitude: String? = null,
+    @Json(name = "latitude") val latitude: String? = null
 )
 
 enum class TodoStatus(val value: String, val displayName: String) {
@@ -52,5 +57,7 @@ data class TodoFilter(
     val status: String? = null,
     val isToday: Boolean = false,
     val isThisWeek: Boolean = false,
-    val isThisMonth: Boolean = false
+    val isThisMonth: Boolean = false,
+    val applicationType: String? = null,
+    val urgency: String? = null
 )

@@ -58,6 +58,7 @@ fun EmptyingSchedulingScreen(navController: NavController, onMenuClick: (() -> U
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by remember { mutableStateOf(false) }
+    var isInitialLoad by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         val message = navController.currentBackStackEntry
@@ -86,12 +87,16 @@ fun EmptyingSchedulingScreen(navController: NavController, onMenuClick: (() -> U
         }
     }
 
-    // Additional refresh mechanism: Always refresh when returning from navigation
+    // Additional refresh mechanism: Refresh when returning from navigation (skip initial load)
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { backStackEntry ->
             // Check if we're the current destination and became visible
             if (backStackEntry.destination.route?.contains("emptying_scheduling") == true) {
-                viewModel.refreshList()
+                if (isInitialLoad) {
+                    isInitialLoad = false
+                } else {
+                    viewModel.refreshList()
+                }
             }
         }
     }
@@ -238,7 +243,11 @@ private fun ApplicationTaskCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.label_application_id_hash, todoItem.applicationId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(todoItem.applicantName ?: stringResource(R.string.message_name_not_provided), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = todoItem.applicantName ?: todoItem.ownerName ?: stringResource(R.string.message_name_not_provided),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Spacer(Modifier.width(8.dp))
                 StatusBadge(text = statusText, color = statusColor)
@@ -261,7 +270,8 @@ private fun ApplicationTaskCard(
                             text = date
                         )
                     }
-                    todoItem.applicantContact?.let { contact ->
+                    val contact = todoItem.applicantContact ?: todoItem.phoneNo
+                            contact?.let {
                         InfoRow(
                             icon = Icons.Outlined.Phone,
                             label = "Contact",
@@ -279,27 +289,60 @@ private fun ApplicationTaskCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
                         onClick = {
-                            todoItem.applicantContact?.let { contact ->
-                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${PhoneNumberFormatter.formatForDialing(contact)}"))
-                                context.startActivity(intent)
+                            val contact = todoItem.applicantContact ?: todoItem.phoneNo
+                            contact?.let { rawPhone ->
+                                val formattedPhone = PhoneNumberFormatter.formatForDialing(rawPhone)
+                                android.util.Log.d("EmptyingSchedulingDial", "Raw: '$rawPhone' -> Formatted: '$formattedPhone'")
+                                if (formattedPhone.isNotBlank()) {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedPhone"))
+                                    context.startActivity(intent)
+                                } else {
+                                    android.util.Log.e("EmptyingSchedulingDial", "Formatted phone is blank!")
+                                }
+                            } ?: run {
+                                android.util.Log.e("EmptyingSchedulingDial", "No phone number available - applicantContact: '${todoItem.applicantContact}', phoneNo: '${todoItem.phoneNo}'")
                             }
                         },
-                        enabled = !todoItem.applicantContact.isNullOrBlank()
+                        enabled = !todoItem.applicantContact.isNullOrBlank() || !todoItem.phoneNo.isNullOrBlank()
                     ) { 
                         Icon(
                             Icons.Outlined.Call, 
                             "Call Applicant", 
-                            tint = if (todoItem.applicantContact.isNullOrBlank()) 
+                            tint = if (todoItem.applicantContact.isNullOrBlank() && todoItem.phoneNo.isNullOrBlank()) 
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             else 
                                 MaterialTheme.colorScheme.primary
                         ) 
                     }
-//                    IconButton(onClick = {
-//                        val mapUri = Uri.parse("geo:0,0?q=${Uri.encode(todoItem.applicantName)}")
-//                        val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
-//                        context.startActivity(mapIntent)
-//                    }) { Icon(Icons.Outlined.LocationOn, "View on Map", tint = MaterialTheme.colorScheme.primary) }
+                    IconButton(
+                        onClick = {
+                            val lat = todoItem.latitude
+                            val lon = todoItem.longitude
+                            if (!lat.isNullOrBlank() && !lon.isNullOrBlank()) {
+                                val mapUri = Uri.parse("http://maps.google.com/maps?daddr=$lat,$lon")
+                                val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
+                                if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                    context.startActivity(mapIntent)
+                                } else {
+                                    android.widget.Toast.makeText(context, "No map application found", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        enabled = todoItem.buildingPointGeomExist == true && 
+                                  !todoItem.latitude.isNullOrBlank() && 
+                                  !todoItem.longitude.isNullOrBlank()
+                    ) { 
+                        Icon(
+                            Icons.Outlined.LocationOn, 
+                            "Get Directions", 
+                            tint = if (todoItem.buildingPointGeomExist == true && 
+                                      !todoItem.latitude.isNullOrBlank() && 
+                                      !todoItem.longitude.isNullOrBlank())
+                                MaterialTheme.colorScheme.primary
+                            else 
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        ) 
+                    }
                 }
                 FilledIconButton(onClick = onOpenFormClick) { Icon(Icons.Outlined.EditNote, "Open Form") }
             }

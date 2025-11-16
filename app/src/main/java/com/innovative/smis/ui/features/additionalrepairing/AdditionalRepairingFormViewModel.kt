@@ -546,8 +546,8 @@ class AdditionalRepairingFormViewModel(
     }
 
     private fun validatePayment(): Boolean {
-        val state = _uiState.value
-        return state.receiptNumber.isNotEmpty() || state.receiptImageUri != null
+        // ✅ Receipt Number and Receipt Image validation removed - no longer required
+        return true
     }
 
     fun saveDraft() {

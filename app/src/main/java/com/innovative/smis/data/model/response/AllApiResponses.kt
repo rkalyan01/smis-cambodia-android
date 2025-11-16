@@ -21,6 +21,7 @@ data class UserData(
     @Json(name = "email") val email: String,
     @Json(name = "id") val id: Int,
     @Json(name = "eto_id") val etoId: Int,
+    @Json(name = "role") val role: List<String>?,
     @Json(name = "permissions") val permissions: List<UserPermission>?
 )
 
@@ -80,10 +81,15 @@ data class Application(
     @Json(name = "application_status") val status: String,
     @Json(name = "applicant_name") val applicant_name: String?,
     @Json(name = "applicant_contact") val applicant_contact: String?,
+    @Json(name = "phone_no") val phone_no: String?,
     @Json(name = "application_datetime") val application_datetime: String?,
     @Json(name = "proposed_emptying_date") val proposed_emptying_date: String?,
     @Json(name = "address") val address: String?,
-    @Json(name = "application_type") val application_type: String?
+    @Json(name = "application_type") val application_type: String?,
+    @Json(name = "building_point_geom_exist") val building_point_geom_exist: Boolean?,
+    @Json(name = "longitude") val longitude: String?,
+    @Json(name = "latitude") val latitude: String?,
+    @Json(name = "owner_name") val owner_name: String?
 )
 
 @JsonClass(generateAdapter = true)

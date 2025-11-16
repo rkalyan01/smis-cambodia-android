@@ -80,18 +80,18 @@ class ContainmentRepository(
         formData: ContainmentFormUiState
     ): Resource<Unit> {
         return try {
-            // Create entity from form data
+            // Create entity from form data - FIXED: Use key values instead of display values
             val entity = ContainmentFormEntity(
                 sanitationCustomerId = sanitationCustomerId,
                 applicationId = applicationId,
-                typeOfStorageTank = formData.selectedStorageType,
-                otherTypeOfStorageTank = if (formData.selectedStorageType == "Other") formData.otherTypeOfStorageTank else null,
-                storageTankConnection = formData.selectedStorageConnection,
-                otherStorageTankConnection = if (formData.selectedStorageConnection == "Other") formData.otherStorageTankConnection else null,
+                typeOfStorageTank = formData.selectedStorageTypeKey,
+                otherTypeOfStorageTank = if (formData.selectedStorageType.contains("Other", ignoreCase = true)) formData.otherTypeOfStorageTank else null,
+                storageTankConnection = formData.selectedStorageConnectionKey,
+                otherStorageTankConnection = if (formData.selectedStorageConnection.contains("Other", ignoreCase = true)) formData.otherStorageTankConnection else null,
                 sizeOfStorageTankM3 = formData.sizeOfStorageTankM3.takeIf { it.isNotEmpty() },
                 constructionYear = formData.constructionYear.takeIf { it.isNotEmpty() },
-                accessibility = formData.accessibility.takeIf { it.isNotEmpty() },
-                everEmptied = formData.everEmptied.takeIf { it.isNotEmpty() },
+                accessibility = formData.accessibilityKey.takeIf { it.isNotEmpty() },
+                everEmptied = formData.everEmptiedKey.takeIf { it.isNotEmpty() },
                 lastEmptiedYear = if (formData.everEmptiedKey == "yes") formData.lastEmptiedYear.takeIf { it.isNotEmpty() } else null,
                 syncStatus = "PENDING",
                 updatedAt = System.currentTimeMillis()
@@ -280,8 +280,8 @@ class ContainmentRepository(
                         otherStorageTankConnection = networkData.other_storage_tank_connection,
                         sizeOfStorageTankM3 = networkData.size_of_storage_tank_m3,
                         constructionYear = networkData.construction_year?.toString(),
-                        accessibility = networkData.accessibility?.let { if (it) "Yes" else "No" },
-                        everEmptied = networkData.ever_emptied?.let { if (it) "Yes" else "No" },
+                        accessibility = networkData.accessibility?.let { if (it) "yes" else "no" },
+                        everEmptied = networkData.ever_emptied?.let { if (it) "yes" else "no" },
                         lastEmptiedYear = networkData.last_emptied_year?.toString(),
                         syncStatus = "SYNCED"
                     )

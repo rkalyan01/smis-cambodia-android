@@ -29,7 +29,7 @@ fun PostponeDialog(
     isLoading: Boolean = false
 ) {
     val context = LocalContext.current
-    var reason by remember { mutableStateOf("") }
+    var selectedReasonKey by remember { mutableStateOf("") }
     var remark by remember { mutableStateOf("") }
     var postponeUntil by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -49,11 +49,23 @@ fun PostponeDialog(
         }
     }
     
-    // Reason options
+    // Reason options - API keys and display labels
+    // CRITICAL: API always expects English values, display shows localized text
+    data class ReasonOption(val apiValue: String, val displayLabel: String)
+    
     val reasonOptions = listOf(
-        "Rescheduled due to ETO",
-        "Rescheduled due to Customers"
+        ReasonOption(
+            apiValue = "Rescheduled due to ETO",
+            displayLabel = stringResource(R.string.postpone_reason_eto)
+        ),
+        ReasonOption(
+            apiValue = "Rescheduled due to Customers",
+            displayLabel = stringResource(R.string.postpone_reason_customer)
+        )
     )
+    
+    // Get display label for selected reason
+    val selectedReasonDisplay = reasonOptions.find { it.apiValue == selectedReasonKey }?.displayLabel ?: ""
     
     Dialog(
         onDismissRequest = onDismiss,
@@ -116,7 +128,7 @@ fun PostponeDialog(
                     onExpandedChange = { reasonExpanded = it }
                 ) {
                     OutlinedTextField(
-                        value = reason,
+                        value = selectedReasonDisplay,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.label_reason)) },
@@ -132,9 +144,9 @@ fun PostponeDialog(
                     ) {
                         reasonOptions.forEach { option ->
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = { Text(option.displayLabel) },
                                 onClick = {
-                                    reason = option
+                                    selectedReasonKey = option.apiValue
                                     reasonExpanded = false
                                 }
                             )
@@ -199,19 +211,19 @@ fun PostponeDialog(
                     
                     Button(
                         onClick = {
-                            if (reason.isNotBlank() && postponeUntil.isNotBlank()) {
+                            if (selectedReasonKey.isNotBlank() && postponeUntil.isNotBlank()) {
                                 onPostpone(
                                     PostponeData(
                                         postponeFrom = currentDate ?: "",
                                         postponeUntil = postponeUntil,
-                                        reason = reason,
+                                        reason = selectedReasonKey,
                                         remark = remark
                                     )
                                 )
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        enabled = !isLoading && reason.isNotBlank() && postponeUntil.isNotBlank()
+                        enabled = !isLoading && selectedReasonKey.isNotBlank() && postponeUntil.isNotBlank()
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(

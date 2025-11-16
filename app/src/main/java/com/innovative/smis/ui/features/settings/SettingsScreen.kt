@@ -208,31 +208,6 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
                 )
             }
 
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Logout,
-                    title = stringResource(R.string.nav_logout),
-                    subtitle = stringResource(R.string.message_logout_subtitle),
-                    onClick = { viewModel.logout() },
-                    textColor = MaterialTheme.colorScheme.error
-                )
-            }
-        }
-    }
-
-    // Handle logout navigation
-    LaunchedEffect(uiState.shouldLogout) {
-        if (uiState.shouldLogout) {
-            // Navigate to login screen and clear back stack
-            navController.navigate("login") {
-                popUpTo(0) { inclusive = true }
-            }
-            // Reset flag to prevent re-navigation on configuration changes
-            viewModel.resetLogoutFlag()
         }
     }
 

@@ -36,15 +36,26 @@ class TodoListRepository(
                 emit(Resource.Error("HTTP ${response.code()}: ${response.message()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Network error occurred"))
+            android.util.Log.e("TodoListRepository", "❌ Error: ${e.javaClass.simpleName} - ${e.message}", e)
+            // ✅ Simple, user-friendly message for all errors
+            emit(Resource.Error("Could not connect to server"))
         }
     }
 
     fun getFilteredTodoItems(filter: TodoFilter): Flow<Resource<List<TodoItem>>> = flow {
         emit(Resource.Loading())
 
+        // Check if filter is for "Urgent" or "On-Demand" applications
+        val isUrgentFilter = filter.status?.equals("Urgent", ignoreCase = true) == true
+        val isOnDemandFilter = filter.status?.equals("On-Demand", ignoreCase = true) == true
+
         // First check for existing cached data based on the filter
-        val localDataFlow = if (filter.status == null) { // null means "All"
+        // For special filters (On-Demand, Urgent), retrieve all items and filter in memory
+        val localDataFlow = if (isUrgentFilter || isOnDemandFilter) {
+            dao.getValidCachedApplications().map { entities ->
+                entities.map { it.toDomainModel() }
+            }
+        } else if (filter.status == null) { // null means "All"
             dao.getValidCachedApplications().map { entities ->
                 entities.map { it.toDomainModel() }
             }
@@ -59,12 +70,27 @@ class TodoListRepository(
             localDataFlow.first()
         }
         
+        // Apply filtering based on filter type
+        var filteredInitialData = initialData
+        
+        // Apply On-Demand filter (applicationType = "On-Demand")
+        if (isOnDemandFilter) {
+            filteredInitialData = filteredInitialData.filter { 
+                it.applicationType?.equals("On-Demand", ignoreCase = true) == true 
+            }
+        }
+        
+        // Apply Urgent filter (urgency = "yes" AND applicationType = "On-Demand")
+        if (isUrgentFilter) {
+            filteredInitialData = filteredInitialData.filter { 
+                it.urgency?.equals("yes", ignoreCase = true) == true &&
+                it.applicationType?.equals("On-Demand", ignoreCase = true) == true
+            }
+        }
+        
         // Apply date filtering to cached data if needed
-        val filteredInitialData = if (filter.isToday) {
-            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            initialData.filter { it.proposedEmptyingDate == todayStr }
-        } else {
-            initialData
+        if (filter.isToday) {
+            filteredInitialData = filteredInitialData.filter { matchesToday(it) }
         }
         
         if (filteredInitialData.isNotEmpty()) {
@@ -78,25 +104,29 @@ class TodoListRepository(
             val apiUrgency: String?
             val apiApplicationType: String?
 
-            // Check if filter is for "Urgent" applications
-            val isUrgentFilter = filter.status?.equals("Urgent", ignoreCase = true) == true
-
             if (isUrgentFilter) {
-                // For Urgent filter: use API endpoint with urgency=yes and application_type=On-Demand
+                // For Urgent filter: urgency=yes and application_type=On-Demand
                 apiStatus = null
                 apiFromDate = null
                 apiToDate = null
                 apiUrgency = "yes"
                 apiApplicationType = "On-Demand"
-            } else if (filter.isToday) {
-                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            } else if (isOnDemandFilter) {
+                // For On-Demand filter: application_type=On-Demand only
                 apiStatus = null
-                apiFromDate = todayStr
-                apiToDate = todayStr
+                apiFromDate = null
+                apiToDate = null
+                apiUrgency = null
+                apiApplicationType = "On-Demand"
+            } else if (filter.isToday) {
+                // For Today filter: no date range sent to API, we'll filter locally by status-aware date matching
+                apiStatus = null
+                apiFromDate = null
+                apiToDate = null
                 apiUrgency = null
                 apiApplicationType = null
             } else {
-                apiStatus = if (filter.status.equals("All", true)) null else filter.status
+                apiStatus = if (filter.status?.equals("All", true) == true) null else filter.status
                 apiFromDate = filter.dateFrom
                 apiToDate = filter.dateTo
                 apiUrgency = null
@@ -106,8 +136,8 @@ class TodoListRepository(
             // Get eto_id from preferences
             val etoId = preferenceHelper.getEtoId()?.toString()
 
-            val response = if (isUrgentFilter) {
-                // Use the new getFilteredApplications endpoint for urgent
+            val response = if (isUrgentFilter || isOnDemandFilter) {
+                // Use the filtered endpoint with urgency and/or applicationType parameters
                 apiService.getFilteredApplications(
                     status = null,
                     etoId = etoId,
@@ -142,7 +172,13 @@ class TodoListRepository(
 
                     // Return filtered data from the updated cache
                     val currentTime = System.currentTimeMillis()
-                    val cachedItems = if (filter.status == null) { // null means "All"
+                    
+                    // For special filters (On-Demand, Urgent), retrieve all items and filter in memory
+                    // since these filters are based on applicationType/urgency, not workflow status
+                    val cachedItems = if (isUrgentFilter || isOnDemandFilter) {
+                        android.util.Log.d("TodoListRepository", "🔍 Retrieving ALL cached applications for special filter (currentTime: $currentTime)")
+                        dao.getValidCachedApplications(currentTime).first()
+                    } else if (filter.status == null) { // null means "All"
                         android.util.Log.d("TodoListRepository", "🔍 Retrieving ALL cached applications (currentTime: $currentTime)")
                         dao.getValidCachedApplications(currentTime).first()
                     } else {
@@ -164,12 +200,30 @@ class TodoListRepository(
                     val domainItems = cachedItems.map { it.toDomainModel() }
                     android.util.Log.d("TodoListRepository", "🔄 Converted ${cachedItems.size} entities to ${domainItems.size} domain models")
                     
+                    // Apply filtering based on filter type
+                    var filteredDomainItems = domainItems
+                    
+                    // Apply On-Demand filter (applicationType = "On-Demand")
+                    if (isOnDemandFilter) {
+                        filteredDomainItems = filteredDomainItems.filter { 
+                            it.applicationType?.equals("On-Demand", ignoreCase = true) == true 
+                        }
+                        android.util.Log.d("TodoListRepository", "🔍 On-Demand filter: ${filteredDomainItems.size} items")
+                    }
+                    
+                    // Apply Urgent filter (urgency = "yes" AND applicationType = "On-Demand")
+                    if (isUrgentFilter) {
+                        filteredDomainItems = filteredDomainItems.filter { 
+                            it.urgency?.equals("yes", ignoreCase = true) == true &&
+                            it.applicationType?.equals("On-Demand", ignoreCase = true) == true
+                        }
+                        android.util.Log.d("TodoListRepository", "🔍 Urgent filter: ${filteredDomainItems.size} items")
+                    }
+                    
                     // Apply date filtering if needed
-                    val filteredDomainItems = if (filter.isToday) {
-                        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                        domainItems.filter { it.proposedEmptyingDate == todayStr }
-                    } else {
-                        domainItems
+                    if (filter.isToday) {
+                        filteredDomainItems = filteredDomainItems.filter { matchesToday(it) }
+                        android.util.Log.d("TodoListRepository", "🔍 Today filter: ${filteredDomainItems.size} items")
                     }
                     
                     filteredDomainItems
@@ -183,18 +237,10 @@ class TodoListRepository(
                 emit(Resource.Error(errorMessage, filteredInitialData))
             }
 
-        } catch (e: IOException) {
-            android.util.Log.e("TodoListRepository", "❌ IOException occurred: ${e.javaClass.simpleName} - ${e.message}", e)
-            val errorMsg = when {
-                e is javax.net.ssl.SSLException -> "SSL Certificate error: ${e.message}"
-                e.message?.contains("Unable to resolve host") == true -> "Cannot connect to server. Check internet connection."
-                e.message?.contains("timeout") == true -> "Connection timeout. Server may be slow or unreachable."
-                else -> "Network error: ${e.message}"
-            }
-            emit(Resource.Error("$errorMsg Displaying cached data.", filteredInitialData))
         } catch (e: Exception) {
-            android.util.Log.e("TodoListRepository", "❌ Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
-            emit(Resource.Error(e.message ?: "An unknown error occurred.", filteredInitialData))
+            android.util.Log.e("TodoListRepository", "❌ Error occurred: ${e.javaClass.simpleName} - ${e.message}", e)
+            // ✅ Simple, user-friendly message for all errors
+            emit(Resource.Error("Could not connect to server. Showing saved data.", filteredInitialData))
         }
     }
 
@@ -224,6 +270,30 @@ class TodoListRepository(
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             proposedEmptyingDate == today
         } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Helper function to check if a TodoItem matches today's date.
+     * For "Initiated" status: uses application_datetime
+     * For other statuses: uses proposed_emptying_date
+     */
+    private fun matchesToday(item: TodoItem): Boolean {
+        return try {
+            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            
+            // For "Initiated" status, use application_datetime
+            if (item.status?.equals("Initiated", ignoreCase = true) == true) {
+                // application_datetime is in format "yyyy-MM-dd HH:mm:ss", extract date part
+                val applicationDate = item.applicationDatetime?.substring(0, 10)
+                return applicationDate == todayStr
+            }
+            
+            // For all other statuses, use proposed_emptying_date
+            return item.proposedEmptyingDate == todayStr
+        } catch (e: Exception) {
+            android.util.Log.w("TodoListRepository", "Error matching date for item ${item.applicationId}: ${e.message}")
             false
         }
     }

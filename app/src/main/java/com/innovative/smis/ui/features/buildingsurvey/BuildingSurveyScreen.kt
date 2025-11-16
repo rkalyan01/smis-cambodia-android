@@ -107,21 +107,22 @@ private fun BuildingSurveyFormContent(
     onSubmit: () -> Unit
 ) {
     // A. Building Location Information
-    SectionHeader("A. Building Location Information")
+    SectionHeader(stringResource(R.string.label_section_building_location))
     
     OutlinedTextFieldWithError(
         value = state.bin.ifEmpty { bin ?: "" },
         onValueChange = { onStateChange(state.copy(bin = it)) },
-        label = "BIN (Building Identification Number)",
+        label = stringResource(R.string.label_bin),
         error = state.binError,
         enabled = bin.isNullOrEmpty(), // Read-only if BIN provided
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        isRequired = true
     )
     
     Spacer(modifier = Modifier.height(8.dp))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Sangkat",
+        label = stringResource(R.string.label_sangkat),
         options = state.sangkats.map { it.sangkatName },
         selectedValue = state.sangkat,
         onValueSelected = { onStateChange(state.copy(sangkat = it)) },
@@ -140,7 +141,7 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(8.dp))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Road Code",
+        label = stringResource(R.string.label_road_code),
         options = state.roadCodes.map { it.roadCode },
         selectedValue = state.roadCode,
         onValueSelected = { onStateChange(state.copy(roadCode = it)) },
@@ -150,20 +151,21 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(16.dp))
 
     // B. Building Information
-    SectionHeader("B. Building Information")
+    SectionHeader(stringResource(R.string.label_section_building_information))
     
     OutlinedTextFieldWithError(
         value = state.respondentName,
         onValueChange = { onStateChange(state.copy(respondentName = it)) },
-        label = "Name of Respondent (English)",
+        label = stringResource(R.string.label_respondent_name),
         error = state.respondentNameError,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        isRequired = true
     )
     
     Spacer(modifier = Modifier.height(8.dp))
     
     RadioButtonGroup(
-        title = "Gender of Respondent",
+        title = stringResource(R.string.label_gender_respondent),
         options = RespondentGender.values().map { it.displayName },
         selectedValue = state.respondentGender?.displayName ?: "",
         onValueSelected = { selectedGender ->
@@ -206,7 +208,7 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(8.dp))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Structure Type",
+        label = stringResource(R.string.label_structure_type),
         options = state.structureTypes.map { it.type },
         selectedValue = state.structureType,
         onValueSelected = { onStateChange(state.copy(structureType = it)) },
@@ -216,7 +218,7 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(8.dp))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Functional Use",
+        label = stringResource(R.string.label_functional_use),
         options = state.functionalUses.map { it.type },
         selectedValue = state.functionalUse,
         onValueSelected = { onStateChange(state.copy(functionalUse = it)) },
@@ -226,7 +228,7 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(8.dp))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Building Use",
+        label = stringResource(R.string.label_building_use),
         options = state.buildingUses.map { it.type },
         selectedValue = state.buildingUse,
         onValueSelected = { onStateChange(state.copy(buildingUse = it)) },
@@ -321,7 +323,7 @@ private fun BuildingSurveyFormContent(
         
         // Water Supply dropdown using enum
         com.innovative.smis.ui.components.DropdownField(
-            label = "Water Supply",
+            label = stringResource(R.string.label_water_supply),
             options = WaterSupply.values().map { it.displayName },
             selectedValue = state.waterSupply?.displayName ?: "",
             onValueSelected = { selectedSupply: String ->
@@ -335,10 +337,10 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(16.dp))
 
     // C. Toilet Information
-    SectionHeader("C. Toilet Information")
+    SectionHeader(stringResource(R.string.label_section_toilet_information))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Defecation Place",
+        label = stringResource(R.string.label_defecation_place),
         options = state.defecationPlaces.map { it.type },
         selectedValue = state.defecationPlace,
         onValueSelected = { onStateChange(state.copy(defecationPlace = it)) },
@@ -375,7 +377,7 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(8.dp))
     
     com.innovative.smis.ui.components.DropdownField(
-        label = "Toilet Connection",
+        label = stringResource(R.string.label_toilet_connection),
         options = state.toiletConnections.map { it.type },
         selectedValue = state.toiletConnection,
         onValueSelected = { onStateChange(state.copy(toiletConnection = it)) },
@@ -385,7 +387,7 @@ private fun BuildingSurveyFormContent(
     Spacer(modifier = Modifier.height(16.dp))
 
     // D. Containment Information
-    SectionHeader("D. Containment Information")
+    SectionHeader(stringResource(R.string.label_section_containment_information))
     
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -396,7 +398,7 @@ private fun BuildingSurveyFormContent(
             onCheckedChange = { onStateChange(state.copy(containmentPresentOnsite = it)) }
         )
         Text(
-            text = "Containment Present Onsite",
+            text = stringResource(R.string.label_containment_present_onsite),
             modifier = Modifier.padding(start = 8.dp)
         )
     }
@@ -405,7 +407,7 @@ private fun BuildingSurveyFormContent(
         Spacer(modifier = Modifier.height(8.dp))
         
         DropdownField(
-            label = "Type of Storage Tank",
+            label = stringResource(R.string.label_type_of_storage_tank),
             options = state.storageTankTypes.map { it.type },
             selectedValue = state.typeOfStorageTank,
             onValueSelected = { onStateChange(state.copy(typeOfStorageTank = it)) },
@@ -415,7 +417,7 @@ private fun BuildingSurveyFormContent(
         Spacer(modifier = Modifier.height(8.dp))
         
         DropdownField(
-            label = "Storage Tank Connection",
+            label = stringResource(R.string.label_storage_tank_connection),
             options = state.storageTankConnections.map { it.type },
             selectedValue = state.storageTankConnection,
             onValueSelected = { onStateChange(state.copy(storageTankConnection = it)) },

@@ -85,10 +85,15 @@ class ApplicationRepositoryImpl(
                 status = status,
                 applicant_name = "Updated Application",
                 applicant_contact = null,
+                phone_no = null,
                 application_datetime = null,
                 proposed_emptying_date = null,
                 address = "Updated Address",
-                application_type = null
+                application_type = null,
+                building_point_geom_exist = null,
+                longitude = null,
+                latitude = null,
+                owner_name = null
             )
             emit(Resource.Success(application))
         } catch (e: Exception) {

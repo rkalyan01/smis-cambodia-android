@@ -76,15 +76,8 @@ class EmptyingServiceRepository(
             android.util.Log.d("EmptyingRepo", "Original request service_receiver_name: '${request.service_receiver_name}'")
             android.util.Log.d("EmptyingRepo", "Original request service_receiver_contact: '${request.service_receiver_contact}'")
             
-            // ✅ CRITICAL FIX: Convert multi-select additional_repairing_id to single value
-            // Database column is integer type, can only accept single value, not comma-separated
-            val singleAdditionalRepairing = request.additional_repairing_id
-                ?.split(",")
-                ?.firstOrNull()
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() && it != "Others" }
-            
-            android.util.Log.d("EmptyingRepo", "Converted additional_repairing_id from '${request.additional_repairing_id}' to '$singleAdditionalRepairing'")
+            // Note: additional_repairing_id is now a List<Int>, no conversion needed
+            // Keep the list as-is for PostgreSQL array column
             
             // ✅ CRITICAL FIX: Map presence_of_pumping_point to database enum values
             // Database expects: "Yes (Cover, Tube, Pierce)" or "No (need to pierce the tank)"
@@ -102,7 +95,6 @@ class EmptyingServiceRepository(
                 extra_payment = request.extra_payment?.takeIf { it.isNotBlank() } ?: "0",
                 eto_id = request.eto_id?.takeIf { it.isNotBlank() } ?: etoId,
                 desludging_vehicle_id = request.desludging_vehicle_id?.takeIf { it.isNotBlank() } ?: "1",
-                additional_repairing_id = singleAdditionalRepairing, // Use only first selected value
                 presence_of_pumping_point = mappedPumpingPointPresence, // Use mapped database enum value
                 receipt_image_base64 = request.receipt_image_base64?.let { convertUriToBase64(it) },
                 picture_of_emptying_base64 = request.picture_of_emptying_base64?.let { convertUriToBase64(it) }
@@ -223,6 +215,8 @@ class EmptyingServiceRepository(
                 pumpingPointPresence = formData.pumpingPointPresence,
                 pumpingPointType = formData.pumpingPointType,
                 freeUnderPBC = formData.freeUnderPBC,
+                customerType = formData.customerType,
+                otherCustomerType = formData.otherCustomerType,
                 additionalRepairingInEmptying = formData.additionalRepairingKeys.joinToString(","),
                 otherAdditionalRepairing = formData.otherAdditionalRepairing,
                 regularCost = formData.regularCost,
@@ -270,6 +264,8 @@ class EmptyingServiceRepository(
                 pumpingPointPresence = formData.pumpingPointPresence,
                 pumpingPointType = formData.pumpingPointType,
                 freeUnderPBC = formData.freeUnderPBC,
+                customerType = formData.customerType,
+                otherCustomerType = formData.otherCustomerType,
                 additionalRepairingInEmptying = formData.additionalRepairingKeys.joinToString(","),
                 otherAdditionalRepairing = formData.otherAdditionalRepairing,
                 regularCost = formData.regularCost,
@@ -374,6 +370,23 @@ class EmptyingServiceRepository(
             Resource.Error("Network error loading repairing options")
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unknown error loading repairing options")
+        }
+    }
+
+    suspend fun getCustomerTypes(): Resource<SimpleDropdownResponse> {
+        return try {
+            val response = apiService.getCustomerTypes()
+            if (response.isSuccessful) {
+                response.body()?.let { customerTypeData ->
+                    Resource.Success(customerTypeData)
+                } ?: Resource.Error("No customer type data received")
+            } else {
+                Resource.Error("Failed to load customer types: ${response.message()}")
+            }
+        } catch (e: IOException) {
+            Resource.Error("Network error loading customer types")
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error loading customer types")
         }
     }
 
