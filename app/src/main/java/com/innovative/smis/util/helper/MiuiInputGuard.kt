@@ -27,13 +27,18 @@ import androidx.activity.ComponentActivity
 object MiuiInputGuard {
 
     private const val TAG = "MiuiInputGuard"
-    private const val MAX_TAPS = 2          // Block 2nd+ tap burst (MIUI mistouch prevention triggers on double-tap)
-    private const val TAP_WINDOW_MS = 300L  // Increased to catch slower double-taps
+    private const val TAP_WINDOW_MS = 300L  // Window to detect rapid taps
+    private const val SWIPE_THRESHOLD_DP = 10f  // Movement distance to consider it a swipe (not finger drift)
+    private const val SAME_POSITION_THRESHOLD_DP = 20f  // Distance to consider taps in "same location" (reduced to avoid blocking drawer swipes)
     private const val BACK_PRESS_DELAY = 500L // Prevent rapid back spam
 
-    private var tapCount = 0
     private var lastTapTime = 0L
+    private var lastTapX = 0f             // Position of last confirmed tap
+    private var lastTapY = 0f             // Position of last confirmed tap
     private var lastBackPress = 0L
+    private var touchStartX = 0f          // Current gesture starting X
+    private var touchStartY = 0f          // Current gesture starting Y
+    private var isSwipeGesture = false    // True if movement exceeds threshold
 
     /**
      * Check if device is MIUI / HyperOS
@@ -63,30 +68,71 @@ object MiuiInputGuard {
      */
     fun attachTapInterceptor(activity: ComponentActivity) {
         val deviceType = if (isMiuiDevice()) "MIUI/HyperOS" else "Android"
-        Log.d(TAG, "🔧 $deviceType device — enabling rapid tap guard for ALL devices")
+        Log.d(TAG, "🔧 $deviceType device — enabling position-based rapid tap guard")
+        
+        // Calculate thresholds in pixels from DP
+        val density = activity.resources.displayMetrics.density
+        val swipeThresholdPx = SWIPE_THRESHOLD_DP * density
+        val samePositionThresholdPx = SAME_POSITION_THRESHOLD_DP * density
 
         activity.window.decorView.post {
             activity.window.decorView.setOnTouchListener { _: View, event: MotionEvent ->
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    val now = SystemClock.elapsedRealtime()
-
-                    tapCount = if (now - lastTapTime < TAP_WINDOW_MS) {
-                        tapCount + 1
-                    } else {
-                        1
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        val now = SystemClock.elapsedRealtime()
+                        
+                        // Store starting position of current gesture
+                        touchStartX = event.x
+                        touchStartY = event.y
+                        isSwipeGesture = false
+                        
+                        // Check if this is a rapid double-tap in the SAME LOCATION
+                        // (Different locations = not a double-tap, e.g., drawer swipe from edge)
+                        if (now - lastTapTime < TAP_WINDOW_MS) {
+                            val distanceFromLastTap = kotlin.math.sqrt(
+                                (event.x - lastTapX) * (event.x - lastTapX) +
+                                (event.y - lastTapY) * (event.y - lastTapY)
+                            )
+                            
+                            if (distanceFromLastTap < samePositionThresholdPx) {
+                                Log.w(TAG, "⚠️ Rapid double-tap blocked (distance: ${distanceFromLastTap.toInt()}px < ${samePositionThresholdPx.toInt()}px)")
+                                return@setOnTouchListener true // Consume to prevent black screen
+                            } else {
+                                Log.d(TAG, "✅ Different location tap allowed (distance: ${distanceFromLastTap.toInt()}px)")
+                            }
+                        }
                     }
-                    lastTapTime = now
-
-                    if (tapCount >= MAX_TAPS) {
-                        Log.w(TAG, "⚠️ Rapid taps blocked to prevent MIUI black-screen bug (tap #$tapCount)")
-                        return@setOnTouchListener true // Consume event
+                    
+                    MotionEvent.ACTION_MOVE -> {
+                        // Calculate movement distance from starting position
+                        val deltaX = kotlin.math.abs(event.x - touchStartX)
+                        val deltaY = kotlin.math.abs(event.y - touchStartY)
+                        
+                        // If movement exceeds threshold, it's a swipe (not finger drift)
+                        if (!isSwipeGesture && (deltaX > swipeThresholdPx || deltaY > swipeThresholdPx)) {
+                            isSwipeGesture = true
+                        }
+                    }
+                    
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        val now = SystemClock.elapsedRealtime()
+                        
+                        if (!isSwipeGesture) {
+                            // Tap gesture completed (not a swipe) - record position and time
+                            lastTapX = touchStartX
+                            lastTapY = touchStartY
+                            lastTapTime = now
+                            Log.d(TAG, "👆 Tap recorded at (${touchStartX.toInt()}, ${touchStartY.toInt()})")
+                        }
+                        
+                        isSwipeGesture = false
                     }
                 }
-                false // Let normal events through
+                false // Let all events through (unless blocked above)
             }
         }
         
-        Log.d(TAG, "✅ Rapid tap interception active on $deviceType")
+        Log.d(TAG, "✅ Position-based tap guard active on $deviceType (same location: ${samePositionThresholdPx.toInt()}px)")
     }
 
     /**

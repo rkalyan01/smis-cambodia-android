@@ -28,12 +28,41 @@ import com.innovative.smis.util.constants.ScreenName
 import com.innovative.smis.util.helper.PreferenceHelper
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
+import com.innovative.smis.util.navigation.navigateSafe
+import com.innovative.smis.util.ui.clickableDebounced
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.os.Build
 
+/**
+ * ⚡ MIUI FIX: Close drawer instantly on MIUI/HyperOS to prevent black screen
+ * 
+ * Black screen on MIUI is caused by ModalNavigationDrawer's closing animation
+ * conflicting with MIUI's GPU compositor. By using snapTo() instead of close(),
+ * we skip the animation and prevent the black frame issue.
+ * 
+ * Reference: Compose Material3 issues #345213882, #341897716
+ */
+private suspend fun DrawerState.closeSafely() {
+    if (!isClosed) {
+        // Check if device is Xiaomi/Redmi/POCO (MIUI/HyperOS)
+        val isMIUI = Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
+                     Build.MANUFACTURER.equals("Redmi", ignoreCase = true) ||
+                     Build.MANUFACTURER.equals("POCO", ignoreCase = true)
+        
+        if (isMIUI) {
+            // Instant close (no animation) on MIUI to prevent black screen
+            android.util.Log.d("NavigationDrawer", "⚡ MIUI detected - using instant drawer close")
+            snapTo(DrawerValue.Closed)
+        } else {
+            // Animated close on other devices
+            close()
+        }
+    }
+}
 
 data class DrawerItem(
     val id: String,
@@ -210,11 +239,9 @@ fun AppNavigationDrawer(
             ModalDrawerSheet(
                 modifier = Modifier.width(300.dp)
             ) {
-                // 🔧 FIX: Only render drawer content when destination is stable (gesturesEnabled = true)
-                // This prevents black screen when drawer opens during navigation transitions
-                if (gesturesEnabled) {
-                    android.util.Log.d("NavigationDrawer", "Rendering DrawerContent - userName: $userName, languageCode: $languageCode, visibleItems: ${visibleItems.size}")
-                    DrawerContent(
+                // Always render drawer content - safe navigation handles lifecycle checks
+                android.util.Log.d("NavigationDrawer", "Rendering DrawerContent - userName: $userName, languageCode: $languageCode, visibleItems: ${visibleItems.size}")
+                DrawerContent(
                     userName = userName ?: "User",
                     userEmail = userEmail ?: "",
                     currentLanguage = currentLanguage ?: "English",
@@ -223,18 +250,14 @@ fun AppNavigationDrawer(
                         android.util.Log.d("NavigationDrawer", "📍 Drawer item clicked: $route, currentRoute: ${navController.currentDestination?.route}")
                         scope.launch {
                             try {
-                                // CRITICAL: Wait for drawer to fully close before navigating
-                                if (drawerState.isOpen) {
-                                    drawerState.close()
-                                }
-                                // This ensures the animation completes before the next screen is built
+                                // ⚡ MIUI FIX: Close drawer safely (instant on MIUI, animated on others)
+                                drawerState.closeSafely()
+                                // Wait for close to complete
                                 snapshotFlow { drawerState.isClosed }.first { it }
                                 
                                 android.util.Log.d("NavigationDrawer", "🧭 Navigating to: $route")
-                                navController.navigate(route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                                // Use safe navigation to prevent race conditions
+                                navController.navigateSafe(route)
                             } catch (e: Exception) {
                                 android.util.Log.e("NavigationDrawer", "Navigation error: ${e.message}")
                             }
@@ -243,16 +266,13 @@ fun AppNavigationDrawer(
                     onSettingsClick = {
                         scope.launch {
                             try {
-                                // CRITICAL: Wait for drawer to fully close before navigating
-                                if (drawerState.isOpen) {
-                                    drawerState.close()
-                                }
-                                // This ensures the animation completes before the next screen is built
+                                // ⚡ MIUI FIX: Close drawer safely (instant on MIUI, animated on others)
+                                drawerState.closeSafely()
+                                // Wait for close to complete
                                 snapshotFlow { drawerState.isClosed }.first { it }
                                 
-                                navController.navigate(ScreenName.Settings) {
-                                    launchSingleTop = true
-                                }
+                                // Use safe navigation to prevent race conditions
+                                navController.navigateSafe(ScreenName.Settings)
                             } catch (e: Exception) {
                                 android.util.Log.e("NavigationDrawer", "Settings navigation error: ${e.message}")
                             }
@@ -261,10 +281,9 @@ fun AppNavigationDrawer(
                     onLogoutClick = {
                         scope.launch {
                             try {
-                                // CRITICAL: Wait for drawer to fully close before navigating
-                                if (drawerState.isOpen) {
-                                    drawerState.close()
-                                }
+                                // ⚡ MIUI FIX: Close drawer safely (instant on MIUI, animated on others)
+                                drawerState.closeSafely()
+                                // Wait for close to complete
                                 snapshotFlow { drawerState.isClosed }.first { it }
                                 
                                 // Clear authentication data
@@ -283,10 +302,6 @@ fun AppNavigationDrawer(
                         }
                     }
                 )
-                } else {
-                    // Show empty drawer sheet while destination is transitioning
-                    android.util.Log.w("NavigationDrawer", "⚠️ Drawer content blocked - destination not stable")
-                }
             }
         },
         content = {
@@ -406,7 +421,7 @@ private fun DrawerMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
+            .clickableDebounced(debounceTime = 500L) { onClick() },
         color = if (isDestructive) {
             MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
         } else {

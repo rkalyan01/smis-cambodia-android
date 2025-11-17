@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
+import com.innovative.smis.util.navigation.navigateSafe
 import com.innovative.smis.ui.features.logout.LogoutBottomSheet
 import com.innovative.smis.ui.features.dashboard.LogoutViewModel
 import com.innovative.smis.util.common.Resource
@@ -78,6 +79,9 @@ fun DashboardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val currentLanguage = remember { LocalizationManager.getCurrentLanguage(context) }
     val languageCode = remember(currentLanguage) { LocalizationManager.getLanguageCode(currentLanguage) }
+    
+    // ✅ REMOVED: Delay logic moved to DeferredScreen wrapper in MyApp.kt
+    // This prevents duplicate delays and ensures consistent behavior across all heavy screens
 
     // Debug: Log UI state changes
     LaunchedEffect(uiState) {
@@ -209,7 +213,7 @@ fun DashboardScreen(
                                             else -> null
                                         }
                                         route?.let {
-                                            navController.navigate(it)
+                                            navController.navigateSafe(it)
                                         }
                                         Unit
                                     }
@@ -243,7 +247,7 @@ fun DashboardScreen(
                                             else -> null
                                         }
                                         route?.let {
-                                            navController.navigate(it)
+                                            navController.navigateSafe(it)
                                         }
                                         Unit
                                     }
@@ -358,7 +362,7 @@ fun QuickActionsSection(
                 color = MaterialTheme.colorScheme.primary,
                 stepNumber = "Step 1",
                 modifier = Modifier.weight(1f), 
-                onClick = { navController.navigate("emptying_scheduling") }
+                onClick = { navController.navigateSafe("emptying_scheduling") }
             )
             QuickActionCard(
                 title = stringResource(R.string.card_site_preparation), 
@@ -366,7 +370,7 @@ fun QuickActionsSection(
                 color = Color(0xFF7B1FA2),
                 stepNumber = "Step 2",
                 modifier = Modifier.weight(1f), 
-                onClick = { navController.navigate("site_preparation") }
+                onClick = { navController.navigateSafe("site_preparation") }
             )
         }
         Row(
@@ -379,7 +383,7 @@ fun QuickActionsSection(
                 color = Color(0xFF1976D2),
                 stepNumber = "Step 3",
                 modifier = Modifier.weight(1f), 
-                onClick = { navController.navigate("emptying_service") }
+                onClick = { navController.navigateSafe("emptying_service") }
             )
             QuickActionCard(
                 title = stringResource(R.string.card_additional_trips), 
@@ -387,7 +391,7 @@ fun QuickActionsSection(
                 color = Color(0xFFFF6F00),
                 stepNumber = "Step 4",
                 modifier = Modifier.weight(1f), 
-                onClick = { navController.navigate("additional_repairing") }
+                onClick = { navController.navigateSafe("additional_repairing") }
             )
         }
     }

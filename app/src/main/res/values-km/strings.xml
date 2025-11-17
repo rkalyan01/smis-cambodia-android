@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Name -->
-    <string name="app_name">SMIS BETA</string>
+    <string name="app_name">SMIS DEV</string>
     <!-- Navigation -->
     <string name="nav_dashboard">ផ្ទាំងគ្រប់គ្រង</string>
     <string name="nav_map">ផែនទី</string>

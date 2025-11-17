@@ -15,8 +15,8 @@ android {
         applicationId = "com.innovative.smis"
         minSdk = 24
         targetSdk = 35
-        versionCode = 30
-        versionName = "1.0.30"
+        versionCode = 31
+        versionName = "1.0.31"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -24,7 +24,7 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "BASE_URL", "\"https://smis-beta.muninfosys.com/api/\"")
+        buildConfigField("String", "BASE_URL", "\"https://smis-11.innovativesolution.com.np/api/\"")
         buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
     }
 
@@ -35,7 +35,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"https://smis-beta.muninfosys.com/api/\"")
+            buildConfigField("String", "BASE_URL", "\"https://smis-11.innovativesolution.com.np/api/\"")
         }
     }
 

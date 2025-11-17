@@ -8,6 +8,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -16,6 +18,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.innovative.smis.ui.base.MyApp
 import com.innovative.smis.ui.theme.SMISTheme
 import com.innovative.smis.util.permission.PermissionManager
@@ -37,8 +41,8 @@ class MainActivity : ComponentActivity() {
             Log.d("MIUI-FIX", "🔧 MIUI/HyperOS detected - disabling edge-to-edge")
         }
         
-        // Attach enhanced rapid tap interceptor (blocks 3+ taps in 150ms)
-        MiuiInputGuard.attachTapInterceptor(this)
+        // Note: Tap interceptor removed - black screen was a navigation race condition,
+        // not a touch event issue. Fixed by using safe navigation and debounced clicks.
 
         setContent {
             SMISTheme {
@@ -68,33 +72,33 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun PermissionAwareApp() {
         val context = LocalContext.current
+        
+        // ✅ FIX: Add specific Loading state to prevent FOUC (Flash of Unverified Content)
+        // This prevents MyApp from rendering before permission check completes
+        var isCheckingPermissions by remember { mutableStateOf(true) }
         var permissionsGranted by remember { mutableStateOf(false) }
         var showPermissionDialog by remember { mutableStateOf(false) }
         var missingPermissions by remember { mutableStateOf<List<String>>(emptyList()) }
 
-        // Create permission launcher
         val permissionLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             Log.d("MainActivity", "Permission result received: $permissions")
-            // Handle permission results
             val deniedPermissions = permissions.filter { !it.value }.keys
             if (deniedPermissions.isEmpty()) {
                 Log.d("MainActivity", "All permissions granted")
-                // All permissions granted - refresh permission state
                 permissionsGranted = true
                 showPermissionDialog = false
             } else {
                 Log.d("MainActivity", "Some permissions denied: $deniedPermissions")
-                // Some permissions denied - show dialog again if needed
                 permissionsGranted = false
-                showPermissionDialog = false
+                showPermissionDialog = false // Or keep true to force them
             }
         }
 
         // ✅ PERFORMANCE: Check permissions on IO thread to avoid main thread blocking
         LaunchedEffect(Unit) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 val hasAllPermissions = PermissionManager.hasAllPermissions(context)
                 val missing = if (!hasAllPermissions) {
                     PermissionManager.getMissingPermissions(context)
@@ -102,8 +106,7 @@ class MainActivity : ComponentActivity() {
                     emptyList()
                 }
 
-                // Switch back to main thread to update UI
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     Log.d("MainActivity", "Initial permission check - hasAllPermissions: $hasAllPermissions")
                     if (!hasAllPermissions) {
                         Log.d("MainActivity", "Missing permissions: $missing")
@@ -114,13 +117,27 @@ class MainActivity : ComponentActivity() {
                         showPermissionDialog = false
                         permissionsGranted = true
                     }
+                    // ✅ Only now do we allow UI to render (prevents FOUC and frame skips)
+                    isCheckingPermissions = false
+                    Log.d("MainActivity", "🚀 Permission check complete - isCheckingPermissions set to false")
                 }
             }
         }
 
-        // Show permission dialog if needed
+        // 1. Render LOADING first (prevents MyApp from initializing too early)
+        if (isCheckingPermissions) {
+            Log.d("MainActivity", "⏳ Showing loading screen during permission check")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            )
+            return
+        }
+
+        // 2. Render Dialog if needed
         if (showPermissionDialog && missingPermissions.isNotEmpty() && !permissionsGranted) {
-            Log.d("MainActivity", "Showing permission dialog")
+            Log.d("MainActivity", "📋 Showing permission dialog")
             PermissionDialog(
                 missingPermissions = missingPermissions,
                 onGrantPermissions = {
@@ -129,13 +146,15 @@ class MainActivity : ComponentActivity() {
                 },
                 onDismiss = {
                     Log.d("MainActivity", "Permission dialog dismissed")
+                    // If dismissed without granting, user proceeds (logic based on your previous code)
                     showPermissionDialog = false
                 }
             )
         }
 
-        // Main App - only show if permissions are granted or dialog is dismissed
-        if (permissionsGranted || !showPermissionDialog) {
+        // 3. Render Main App ONLY if checking is done AND dialog is not blocking
+        if (!showPermissionDialog) {
+            Log.d("MainActivity", "✅ Rendering MyApp - permission check complete and dialog not showing")
             MyApp()
         }
     }
