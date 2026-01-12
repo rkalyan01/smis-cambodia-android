@@ -10,7 +10,7 @@ data class SitePreparationFormRequest(
     @Json(name = "site_prep_date") val sitePrepDate: String?,
     @Json(name = "customer_name") val customerName: String,
     @Json(name = "customer_contact") val customerContact: String,
-    @Json(name = "additional_repairing") val additionalRepairing: String?,
+    @Json(name = "additional_repairing_id") val additionalRepairingId: String?,
     @Json(name = "other_additional_repairing") val otherAdditionalRepairing: String?,
     @Json(name = "extra_payment_required") val extraPaymentRequired: String?,
     @Json(name = "amount_of_extra_payment") val amountOfExtraPayment: String?,

@@ -27,6 +27,7 @@ data class EmptyingServiceFormUiState(
     // Personnel Information
     val applicantName: String = "",
     val applicantContact: String = "",
+    val customerContactList: List<String> = emptyList(), // Parsed list of all customer contacts
     val serviceReceiverName: String = "",
     val serviceReceiverContact: String = "",
     val isServiceReceiverSameAsApplicant: Boolean = false,
@@ -160,5 +161,5 @@ fun EmptyingServiceFormUiState.isLocationCaptured(): Boolean {
 }
 
 fun EmptyingServiceFormUiState.hasImagesUploaded(): Boolean {
-    return receiptImage.isNotEmpty() && pictureOfEmptying.isNotEmpty()
+    return receiptImage.isNotEmpty()
 }

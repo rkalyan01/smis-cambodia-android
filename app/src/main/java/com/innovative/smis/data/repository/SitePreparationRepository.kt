@@ -498,18 +498,34 @@ class SitePreparationRepository(
 
     suspend fun postponeApplication(
         applicationId: Int,
+        postponeType: String,
         postponeFrom: String,
-        postponeUntil: String,
+        postponeTo: String,
         reason: String,
         remark: String
     ): Resource<Unit> {
         return try {
-            val request = PostponeRequest(
-                postponeFrom = postponeFrom,
-                postponeUntil = postponeUntil,
-                reason = reason,
-                remark = remark
-            )
+            val request = if (postponeType.equals("Prepone", ignoreCase = true)) {
+                PostponeRequest(
+                    type = postponeType,
+                    preponeFrom = postponeFrom,
+                    preponeTo = postponeTo,
+                    postponeFrom = null,
+                    postponeTo = null,
+                    reason = reason,
+                    remark = remark
+                )
+            } else {
+                PostponeRequest(
+                    type = postponeType,
+                    postponeFrom = postponeFrom,
+                    postponeTo = postponeTo,
+                    preponeFrom = null,
+                    preponeTo = null,
+                    reason = reason,
+                    remark = remark
+                )
+            }
             val response = postponeApiService.postponeApplication(
                 applicationId = applicationId,
                 postponeAt = "Site-Preparation",

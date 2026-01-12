@@ -243,4 +243,13 @@ interface TodoItemDao {
     
     @Query("UPDATE applications SET status = :newStatus WHERE applicationId = :applicationId")
     suspend fun updateApplicationStatus(applicationId: Int, newStatus: String)
+
+    @Transaction
+    suspend fun replaceApplicationsByStatus(status: String, newItems: List<TodoItemEntity>) {
+        deleteApplicationsByStatus(status)
+        upsertAll(newItems)
+    }
+
+    @Query("DELETE FROM applications WHERE status = :status")
+    suspend fun deleteApplicationsByStatus(status: String)
 }

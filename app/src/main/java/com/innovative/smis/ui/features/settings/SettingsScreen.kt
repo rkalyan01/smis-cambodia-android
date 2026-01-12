@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.settings
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,10 +22,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.innovative.smis.BuildConfig
-import com.innovative.smis.R
 import com.innovative.smis.util.constants.Languages
 import com.innovative.smis.util.helper.PreferenceHelper
+import com.innovative.smis.BuildConfig
 import com.innovative.smis.util.localization.LocalizationManager
 import com.innovative.smis.util.localization.StringResources
 import org.koin.androidx.compose.koinViewModel
@@ -39,7 +40,7 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showDateFormatDialog by remember { mutableStateOf(false) }
-    
+
     // Restart activity when language changes
     LaunchedEffect(shouldRestartActivity) {
         if (shouldRestartActivity) {
@@ -105,7 +106,7 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
                 SettingsItem(
                     icon = Icons.Default.CalendarMonth,
                     title = stringResource(R.string.settings_date_format),
-                    subtitle = uiState.dateFormat.displayName,
+                    subtitle = uiState.dateFormat.getDisplayName(context),
                     onClick = { showDateFormatDialog = true }
                 )
             }
@@ -147,7 +148,7 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
                     } else {
                         stringResource(R.string.settings_tap_to_test_sync)
                     },
-                    onClick = { 
+                    onClick = {
                         if (!uiState.isSyncing) {
                             viewModel.testManualSync()
                         }
@@ -185,7 +186,7 @@ fun SettingsScreen(navController: NavController, onMenuClick: (() -> Unit)? = nu
                     } else {
                         stringResource(R.string.settings_clear_cache_description)
                     },
-                    onClick = { 
+                    onClick = {
                         if (!uiState.isClearingCache) {
                             viewModel.clearCache()
                         }
@@ -464,6 +465,7 @@ fun DateFormatOption(
     currentDateFormat: PreferenceHelper.DateFormat,
     onDateFormatSelected: (PreferenceHelper.DateFormat) -> Unit
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -480,7 +482,7 @@ fun DateFormatOption(
             onClick = { onDateFormatSelected(format) }
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = format.displayName)
+        Text(text = format.getDisplayName(context))
     }
 }
 

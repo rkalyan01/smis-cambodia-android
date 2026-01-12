@@ -1,10 +1,9 @@
 package com.innovative.smis.ui.components
 
-import android.content.Context
+import com.innovative.smis.R
+import com.innovative.smis.ui.components.FormValidation
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -14,29 +13,19 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material3.*
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.innovative.smis.R
 import com.innovative.smis.util.helper.PhoneNumberFormatter
 
 /**
  * Appends an asterisk (*) to the label if the field is required
- * Improves accessibility by adding semantic information for screen readers
  */
 fun labelWithAsterisk(label: String, isRequired: Boolean): String {
     return if (isRequired) "$label *" else label
@@ -55,47 +44,36 @@ fun OutlinedTextFieldWithError(
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     isRequired: Boolean = false
 ) {
-    Column(modifier = modifier) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(labelWithAsterisk(label, isRequired)) },
-            isError = error != null,
-            enabled = enabled,
-            singleLine = singleLine,
-            maxLines = maxLines,
-            trailingIcon = if (error != null) {
-                {
-                    Icon(
-                        imageVector = Icons.Default.Error,
-                        contentDescription = stringResource(R.string.cd_error),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            } else null,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (error != null) {
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-            )
-        }
-    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(labelWithAsterisk(label, isRequired)) },
+        isError = error != null,
+        enabled = enabled,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        modifier = modifier.fillMaxWidth(),
+        supportingText = if (error != null) {
+            {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp
+                )
+            }
+        } else null,
+        trailingIcon = if (error != null) {
+            {
+                Icon(
+                    imageVector = Icons.Filled.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        } else null
+    )
 }
 
-/**
- * Phone number input field with Cambodian phone number validation and call functionality
- * 
- * Features:
- * - Real-time validation for Cambodian phone numbers
- * - Call button when number is valid
- * - Error display with localized messages
- * - Phone keyboard type
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhoneNumberField(
@@ -104,11 +82,16 @@ fun PhoneNumberField(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    isRequired: Boolean = false
+    isRequired: Boolean = false,
+    errorMessage: String? = null
 ) {
     val context = LocalContext.current
     val validationResult = FormValidation.validateCambodianPhone(value, isRequired)
-    
+
+    val hasInternalError = !validationResult.isValid && value.isNotBlank()
+    val hasExternalError = errorMessage != null
+    val isErrorState = hasInternalError || hasExternalError
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -116,16 +99,16 @@ fun PhoneNumberField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
-        isError = !validationResult.isValid && value.isNotBlank(),
-        supportingText = {
-            if (!validationResult.isValid && value.isNotBlank()) {
+        isError = isErrorState,
+        supportingText = if (isErrorState) {
+            {
                 Text(
-                    text = validationResult.errorMessage ?: "",
+                    text = if (hasInternalError) validationResult.errorMessage ?: "" else errorMessage ?: "",
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 12.sp
                 )
             }
-        },
+        } else null,
         trailingIcon = {
             if (value.isNotEmpty() && validationResult.isValid) {
                 IconButton(
@@ -141,9 +124,9 @@ fun PhoneNumberField(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-            } else if (!validationResult.isValid && value.isNotBlank()) {
+            } else if (isErrorState) {
                 Icon(
-                    imageVector = Icons.Default.Error,
+                    imageVector = Icons.Filled.Error,
                     contentDescription = stringResource(R.string.cd_error),
                     tint = MaterialTheme.colorScheme.error
                 )
@@ -165,52 +148,51 @@ fun DropdownField(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it && enabled }
-        ) {
-            OutlinedTextField(
-                value = selectedValue,
-                onValueChange = { },
-                label = { Text(label) },
-                isError = error != null,
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = stringResource(R.string.cd_dropdown)
-                    )
-                },
-                readOnly = true,
-                enabled = enabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onValueSelected(option)
-                            expanded = false
-                        }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it && enabled },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedValue,
+            onValueChange = { },
+            label = { Text(label) },
+            isError = error != null,
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = stringResource(R.string.cd_dropdown)
+                )
+            },
+            readOnly = true,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+            supportingText = if (error != null) {
+                {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
                     )
                 }
-            }
-        }
+            } else null
+        )
 
-        if (error != null) {
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-            )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onValueSelected(option)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
@@ -260,23 +242,26 @@ fun YesNoRadioGroup(
     isRequired: Boolean = false
 ) {
     Column(modifier = modifier) {
+        // FIXED: Use SemiBold for title
         Text(
             text = labelWithAsterisk(label, isRequired),
             fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp) // Reduced padding
         )
 
-        Row {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp) // FIXED: Tighter height
                     .selectable(
                         selected = selectedOption == true,
                         enabled = enabled,
+                        role = androidx.compose.ui.semantics.Role.RadioButton,
                         onClick = { if (enabled) onOptionSelected(true) }
-                    )
-                    .padding(horizontal = 8.dp, vertical = 0.dp),
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -291,17 +276,19 @@ fun YesNoRadioGroup(
                     color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
+
             Row(
                 modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp) // FIXED: Tighter height
                     .selectable(
                         selected = selectedOption == false,
                         enabled = enabled,
+                        role = androidx.compose.ui.semantics.Role.RadioButton,
                         onClick = { if (enabled) onOptionSelected(false) }
-                    )
-                    .padding(horizontal = 8.dp, vertical = 0.dp),
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -338,6 +325,49 @@ fun RadioGroup(
 }
 
 @Composable
+fun RadioButtonGroup(
+    title: String,
+    options: List<String>,
+    selectedValue: String,
+    onValueSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        options.forEach { option ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(30.dp)
+                    .selectable(
+                        selected = (selectedValue == option),
+                        role = androidx.compose.ui.semantics.Role.RadioButton,
+                        onClick = { onValueSelected(option) }
+                    )
+                    .padding(horizontal = 0.dp), // Removed horizontal padding for alignment
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (selectedValue == option),
+                    onClick = { onValueSelected(option) }
+                )
+                Spacer(modifier = Modifier.width(0.dp))
+                Text(
+                    text = option,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun CheckboxWithLabel(
     label: String,
     checked: Boolean,
@@ -345,7 +375,7 @@ fun CheckboxWithLabel(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().height(40.dp), // FIXED: Consistent height
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
@@ -384,7 +414,7 @@ fun FormErrorCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Error,
+                imageVector = Icons.Filled.Error,
                 contentDescription = "Error",
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(24.dp)
@@ -394,47 +424,6 @@ fun FormErrorCard(
                 text = message,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-        }
-    }
-}
-
-@Composable
-fun RadioButtonGroup(
-    title: String,
-    options: List<String>,
-    selectedValue: String,
-    onValueSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = title,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        options.forEach { option ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = (selectedValue == option),
-                        onClick = { onValueSelected(option) }
-                    )
-                    .padding(horizontal = 8.dp, vertical = 0.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = (selectedValue == option),
-                    onClick = { onValueSelected(option) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = option,
-                    fontSize = 14.sp
-                )
-            }
         }
     }
 }
@@ -449,48 +438,48 @@ fun DropdownMenuField(
     onOptionSelected: (key: String, value: String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    isRequired: Boolean = false
+    isRequired: Boolean = false,
+    placeholder: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    
-    // Always derive display value from key to ensure correct translation
+
     val displayValue = options[selectedKey] ?: selectedValue
 
-    Column(modifier = modifier) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it && enabled }
-        ) {
-            OutlinedTextField(
-                value = displayValue,
-                onValueChange = { },
-                label = { Text(labelWithAsterisk(label, isRequired)) },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = stringResource(R.string.cd_dropdown)
-                    )
-                },
-                readOnly = true,
-                enabled = enabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-            )
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it && enabled },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = displayValue,
+            onValueChange = { },
+            label = { Text(labelWithAsterisk(label, isRequired)) },
+            placeholder = if (placeholder != null && displayValue.isEmpty()) { { Text(placeholder) } } else null,
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = stringResource(R.string.cd_dropdown)
+                )
+            },
+            readOnly = true,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+        )
 
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                options.forEach { (key, value) ->
-                    DropdownMenuItem(
-                        text = { Text(value) },
-                        onClick = {
-                            onOptionSelected(key, value)
-                            expanded = false
-                        }
-                    )
-                }
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (key, value) ->
+                DropdownMenuItem(
+                    text = { Text(value) },
+                    onClick = {
+                        onOptionSelected(key, value)
+                        expanded = false
+                    }
+                )
             }
         }
     }

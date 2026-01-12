@@ -50,7 +50,7 @@ data class EmptyingSchedulingFormEntity(
     val yearOfInstallation: String?,
     val containmentAccessibility: String?,
     val locationOfContainment: String?,
-    val pumpingPointPresence: Boolean?,
+    val pumpingPointPresence: String?,
     val containmentIssues: String?,
     val containmentIssuesOther: String?, // For "Others" specification
 
@@ -181,6 +181,8 @@ fun EmptyingSchedulingFormEntity.toApiRequest(): com.innovative.smis.data.model.
             "Not Accessible" -> "no"
             else -> "no"
         },
+        locationOfContainment = this.locationOfContainment,
+        presenceOfPumpingPoint = this.pumpingPointPresence,
         everEmptied = if (this.everEmptied == true) "yes" else "no",
         lastEmptiedYear = this.lastEmptiedYear?.let { "$it-01-01" },
         issuesWithContainment = this.containmentIssues,

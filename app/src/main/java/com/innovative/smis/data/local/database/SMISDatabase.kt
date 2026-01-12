@@ -25,7 +25,7 @@ import com.innovative.smis.data.local.entity.*
         ContainmentFormEntity::class,
         AdditionalRepairingFormEntity::class
     ],
-    version = 26,
+    version = 27,
     exportSchema = false
 )
 
@@ -55,7 +55,7 @@ abstract class SMISDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_NAME = "smis_database"
-        const val DATABASE_VERSION = 26
+        const val DATABASE_VERSION = 27
     }
 }
 

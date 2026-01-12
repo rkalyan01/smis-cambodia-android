@@ -20,6 +20,8 @@ import com.innovative.smis.data.api.BuildingSurveyApiService
 import com.innovative.smis.data.api.EmptyingApiService
 import com.innovative.smis.data.api.LaravelApiService
 import com.innovative.smis.data.api.ContainmentApiService
+import com.innovative.smis.data.api.DesludgingVehicleApiService
+import com.innovative.smis.data.api.EtoApiService
 import com.innovative.smis.data.local.MemoryTaskDao
 import com.innovative.smis.data.local.dao.EmptyingSchedulingFormDao
 import com.innovative.smis.data.local.dao.SitePreparationFormDao
@@ -37,6 +39,7 @@ import com.innovative.smis.data.repository.BuildingSurveyRepository
 import com.innovative.smis.data.repository.EmptyingRepository
 import com.innovative.smis.data.repository.ContainmentRepository
 import com.innovative.smis.domain.repository.TaskRepository
+import com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingFormViewModel
 import com.innovative.smis.ui.features.buildingsurvey.BuildingSurveyViewModel
 import com.innovative.smis.ui.features.dashboard.DashboardViewModel
 import com.innovative.smis.ui.features.emptying.EmptyingFormViewModel
@@ -45,6 +48,7 @@ import com.innovative.smis.ui.features.login.LoginViewModel
 import com.innovative.smis.ui.features.map.MapViewModel
 import com.innovative.smis.ui.features.todolist.TodoListViewModel
 import com.innovative.smis.ui.features.emptyingscheduling.EmptyingSchedulingViewModel
+import com.innovative.smis.ui.features.etolicense.EtoLicenseViewModel
 import com.innovative.smis.util.helper.PreferenceHelper
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -87,7 +91,8 @@ val appModule = module {
     viewModel { com.innovative.smis.ui.features.buildingsurvey.ComprehensiveSurveyViewModel() }
     viewModel { com.innovative.smis.ui.features.desludgingvehicle.DesludgingVehicleViewModel(get(), get()) }
     viewModel { com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingListViewModel(get(), get()) }
-    viewModel { com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingFormViewModel(get()) }
+    viewModel { AdditionalRepairingFormViewModel(get()) }
+    viewModel { EtoLicenseViewModel(get(), get()) }
 }
 
 val databaseModule = module {
@@ -207,6 +212,8 @@ val repositoryModule = module {
         )
     }
 
+    single { EtoLicenseRepository(get()) }
+
 }
 
 val networkModule = module {
@@ -249,10 +256,11 @@ val networkModule = module {
     single<EmptyingSchedulingApiService> { get<Retrofit>().create(EmptyingSchedulingApiService::class.java) }
     single<SitePreparationApiService> { get<Retrofit>().create(SitePreparationApiService::class.java) }
     single<EmptyingServiceApiService> { get<Retrofit>().create(EmptyingServiceApiService::class.java) }
-    single<com.innovative.smis.data.api.DesludgingVehicleApiService> { get<Retrofit>().create(com.innovative.smis.data.api.DesludgingVehicleApiService::class.java) }
-    single<com.innovative.smis.data.api.LaravelApiService> { get<Retrofit>().create(com.innovative.smis.data.api.LaravelApiService::class.java) }
+    single<DesludgingVehicleApiService> { get<Retrofit>().create(DesludgingVehicleApiService::class.java) }
+    single<LaravelApiService> { get<Retrofit>().create(LaravelApiService::class.java) }
+    single<EtoApiService> { get<Retrofit>().create(EtoApiService::class.java) }
 
-    single<com.innovative.smis.data.repository.ApplicationRepository> {
-        com.innovative.smis.data.repository.ApplicationRepositoryImpl(apiService = get<ApiService>())
+    single<ApplicationRepository> {
+        ApplicationRepositoryImpl(apiService = get<ApiService>())
     }
 }

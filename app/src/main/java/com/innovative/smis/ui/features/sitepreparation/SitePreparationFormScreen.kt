@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.sitepreparation
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,7 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.ui.components.DropdownMenuField
 import com.innovative.smis.ui.components.MultiSelectCheckboxGroup
 import com.innovative.smis.ui.components.PhoneNumberField
@@ -42,6 +43,8 @@ import com.innovative.smis.util.validation.InputValidators
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import com.innovative.smis.ui.components.ValidatedTextField
+import com.innovative.smis.ui.components.ValidatedPhoneNumberField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,8 +186,8 @@ fun SitePreparationFormScreen(
                                 keyboardController?.hide()
                             })
                         },
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp)
                 ) {
 
                     // Application ID (readonly at top)
@@ -216,19 +219,57 @@ fun SitePreparationFormScreen(
                     }
                     item {
                         OutlinedTextField(
-                            value = PhoneNumberFormatter.formatForDisplay(uiState.applicantContact),
+                            value = if (uiState.customerContactList.isNotEmpty()) uiState.customerContactList.joinToString(", ") else PhoneNumberFormatter.formatForDisplay(uiState.applicantContact),
                             onValueChange = { },
                             label = { Text(stringResource(R.string.label_applicant_contact)) },
                             readOnly = true,
                             enabled = false,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             ),
                             trailingIcon = {
-                                if (uiState.applicantContact.isNotEmpty()) {
+                                if (uiState.customerContactList.isNotEmpty()) {
+                                    Box {
+                                        var showCallDropdown by remember { mutableStateOf(false) }
+
+                                        IconButton(
+                                            onClick = {
+                                                if (uiState.customerContactList.size > 1) {
+                                                    showCallDropdown = true
+                                                } else {
+                                                    val formattedNumber = PhoneNumberFormatter.formatForDialing(uiState.customerContactList.first())
+                                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
+                                                    context.startActivity(intent)
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Phone,
+                                                contentDescription = stringResource(R.string.cd_call_applicant),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+
+                                        DropdownMenu(
+                                            expanded = showCallDropdown,
+                                            onDismissRequest = { showCallDropdown = false }
+                                        ) {
+                                            uiState.customerContactList.forEach { number ->
+                                                DropdownMenuItem(
+                                                    text = { Text(number) },
+                                                    onClick = {
+                                                        showCallDropdown = false
+                                                        val formattedNumber = PhoneNumberFormatter.formatForDialing(number)
+                                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
+                                                        context.startActivity(intent)
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (uiState.applicantContact.isNotEmpty()) {
                                     IconButton(
                                         onClick = {
                                             val formattedNumber = PhoneNumberFormatter.formatForDialing(uiState.applicantContact)
@@ -280,7 +321,12 @@ fun SitePreparationFormScreen(
                     }
                     // Show "Others" input field if "Others" (ID: 7) is selected for additional repairing
                     // Note: API returns numeric IDs as keys, e.g., {"7": "Others, specify"} or {"7": "ផ្សេងៗ"}
-                    if (uiState.additionalRepairingKeys.contains("7")) {
+                    // Show "Others" input field if selected option contains "Other" or "ផ្សេងៗ" or logic implies it
+                    val showOtherInput = uiState.additionalRepairingKeys.any { key ->
+                        val label = uiState.containmentIssuesList[key]
+                        label?.contains("Other", ignoreCase = true) == true || label?.contains("ផ្សេងៗ") == true || key == "7"
+                    }
+                    if (showOtherInput) {
                         item {
                             OutlinedTextField(
                                 value = uiState.otherAdditionalRepairing,
@@ -349,42 +395,30 @@ fun SitePreparationFormScreen(
                             Text(stringResource(R.string.checkbox_receiver_same_as_applicant))
                         }
                     }
+                    val isNameEditable = !uiState.isReceiverSameAsApplicant || uiState.applicantName.isNullOrBlank()
+                    val isContactEditable = !uiState.isReceiverSameAsApplicant || uiState.applicantContact.isNullOrBlank()
                     item {
-                        OutlinedTextField(
-                            value = if (uiState.isReceiverSameAsApplicant) uiState.applicantName else uiState.serviceReceiverName,
+                        ValidatedTextField(
+                            value = uiState.serviceReceiverName, // ViewModel logic handles population
                             onValueChange = viewModel::onServiceReceiverNameChange,
-                            label = { Text(stringResource(R.string.label_service_receiver_name) + " *") },
-                            isError = uiState.serviceReceiverNameError != null,
-                            supportingText = uiState.serviceReceiverNameError?.let { { Text(it) } },
-                            enabled = !uiState.isReceiverSameAsApplicant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bringIntoViewRequester(serviceReceiverNameRequester)
+                            label = stringResource(R.string.label_service_receiver_name),
+                            errorMessage = uiState.serviceReceiverNameError,
+                            enabled = isNameEditable,
+                            isRequired = true,
+                            modifier = Modifier.bringIntoViewRequester(serviceReceiverNameRequester)
                         )
                     }
                     item {
-                        if (uiState.isReceiverSameAsApplicant) {
-                            // Disabled state - show existing contact
-                            OutlinedTextField(
-                                value = uiState.applicantContact,
-                                onValueChange = {},
-                                label = { Text(stringResource(R.string.label_service_receiver_contact)) },
-                                enabled = false,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = disabledTextFieldColors()
-                            )
-                        } else {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .bringIntoViewRequester(serviceReceiverContactRequester)
-                            ) {
-                                PhoneNumberField(
-                                    value = uiState.serviceReceiverContact,
-                                    onValueChange = viewModel::onServiceReceiverContactChange,
+                        Column(modifier = Modifier.bringIntoViewRequester(serviceReceiverContactRequester)) {
+                            if (uiState.isReceiverSameAsApplicant && uiState.customerContactList.size > 1) {
+                                val contactOptions = uiState.customerContactList.associateWith { it }
+                                DropdownMenuField(
                                     label = stringResource(R.string.label_service_receiver_contact),
-                                    modifier = Modifier,
-                                    enabled = true,
+                                    selectedValue = uiState.serviceReceiverContact,
+                                    selectedKey = uiState.serviceReceiverContact,
+                                    options = contactOptions,
+                                    onOptionSelected = { _, value -> viewModel.onServiceReceiverContactChange(value) },
+                                    modifier = Modifier.fillMaxWidth(),
                                     isRequired = true
                                 )
                                 uiState.serviceReceiverContactError?.let { error ->
@@ -395,6 +429,15 @@ fun SitePreparationFormScreen(
                                         modifier = Modifier.padding(start = 16.dp, top = 4.dp)
                                     )
                                 }
+                            } else {
+                                ValidatedPhoneNumberField(
+                                    value = uiState.serviceReceiverContact,
+                                    onValueChange = viewModel::onServiceReceiverContactChange,
+                                    label = stringResource(R.string.label_service_receiver_contact),
+                                    errorMessage = uiState.serviceReceiverContactError,
+                                    enabled = isContactEditable,
+                                    isRequired = true
+                                )
                             }
                         }
                     }
@@ -526,8 +569,9 @@ fun SitePreparationFormScreen(
             onDismiss = { showPostponeDialog = false },
             onPostpone = { postponeData ->
                 viewModel.postponeApplication(
+                    postponeType = postponeData.postponeType,
                     postponeFrom = postponeData.postponeFrom,
-                    postponeUntil = postponeData.postponeUntil,
+                    postponeTo = postponeData.postponeTo,
                     reason = postponeData.reason,
                     remark = postponeData.remark,
                     onSuccess = {
@@ -557,7 +601,9 @@ fun FormSectionHeader(title: String) {
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 4.dp)
     )
 }
 
@@ -570,7 +616,7 @@ fun ReadOnlyTextField(label: String, value: String) {
         enabled = false,
         modifier = Modifier.fillMaxWidth(),
         colors = OutlinedTextFieldDefaults.colors(
-            disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+            disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
             disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
     )

@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.additionalrepairing
 
+import com.innovative.smis.R
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -12,14 +14,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import com.innovative.smis.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,27 +49,27 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
         }
     }
 
-    LaunchedEffect(Unit) {
-        val message = navController.currentBackStackEntry
-            ?.savedStateHandle
-            ?.get<String>("snackbar_message")
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
 
-        val shouldRefresh = navController.currentBackStackEntry
-            ?.savedStateHandle
-            ?.get<Boolean>("should_refresh_list")
+    // Observe snackbar messages from other screens
+    val snackbarMessage by savedStateHandle?.getStateFlow<String?>("snackbar_message", null)
+        ?.collectAsStateWithLifecycle() ?: mutableStateOf(null)
 
-        if (message != null) {
-            snackbarHostState.showSnackbar(message)
-            navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.set("snackbar_message", null)
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            savedStateHandle?.set("snackbar_message", null)
         }
+    }
 
-        if (shouldRefresh == true) {
+    // Observe refresh trigger from other screens (e.g. AdditionalRepairingForm)
+    val shouldRefresh by savedStateHandle?.getStateFlow("should_refresh_list", false)
+        ?.collectAsStateWithLifecycle() ?: mutableStateOf(false)
+
+    LaunchedEffect(shouldRefresh) {
+        if (shouldRefresh) {
             viewModel.refreshList()
-            navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.set("should_refresh_list", null)
+            savedStateHandle?.set("should_refresh_list", false)
         }
     }
 
@@ -96,15 +98,11 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .pullToRefresh(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = viewModel::refreshList,
-                    enabled = true
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            state = pullToRefreshState,
+            onRefresh = viewModel::refreshList,
+            modifier = Modifier.padding(paddingValues)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -176,7 +174,7 @@ fun AdditionalRepairingListScreen(navController: NavController, onMenuClick: (()
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(32.dp),
-                                contentAlignment = Alignment.Center
+                                    contentAlignment = Alignment.Center
                             ) {
                                 Text(stringResource(R.string.status_ready_to_load))
                             }

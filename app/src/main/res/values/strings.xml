@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Name -->
-    <string name="app_name">SMIS DEV</string>
+    <string name="app_name">SMIS BETA</string>
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_map">Map</string>
@@ -210,7 +210,8 @@
     <!-- Date Picker -->
     <string name="cd_select_date">Select date</string>
     <!-- Postpone Dialog -->
-    <string name="dialog_postpone_title">Postpone Application</string>
+    <string name="dialog_postpone_title">Reschedule</string>
+    <string name="dialog_postpone_type">Type</string>
     <string name="dialog_postpone_message">Select a new date to postpone this application:</string>
     <string name="label_postpone_date">Postpone Date</string>
     <string name="button_confirm_postpone">Confirm Postpone</string>
@@ -382,8 +383,12 @@
     <string name="message_vehicle_status_updated">Vehicle status updated successfully</string>
     <string name="label_capacity">Capacity: %s</string>
     <!-- Postpone Dialog Extra Labels -->
-    <string name="label_postpone_from">Postpone From (Current Date)</string>
-    <string name="label_postpone_until">Postpone Until (New Date)</string>
+    <string name="label_postpone">Postpone</string>
+    <string name="label_prepone">Prepone</string>
+    <string name="label_postpone_from">Postpone From</string>
+    <string name="label_prepone_from">Prepone From</string>
+    <string name="label_postpone_to">Postpone To</string>
+    <string name="label_prepone_to">Prepone To</string>
     <string name="label_reason">Reason</string>
     <string name="label_remark">Remark</string>
     <string name="button_postpone">Postpone</string>
@@ -701,4 +706,13 @@
     <!-- Emptying Scheduling Form Options -->
     <string name="option_accessible">Accessible</string>
     <string name="option_not_accessible">Not Accessible</string>
+
+    <string name="label_step_1">Step 1</string>
+    <string name="label_step_2">Step 2</string>
+    <string name="label_step_3">Step 3</string>
+    <string name="label_step_4">Step 4</string>
+    <string name="nav_eto_license_status">ETO License Status</string>
+    <string name="date_format_dd_mm_yyyy">DD-MM-YYYY</string>
+    <string name="date_format_mm_dd_yyyy">MM-DD-YYYY</string>
+    <string name="date_format_yyyy_mm_dd">YYYY-MM-DD</string>
 </resources>

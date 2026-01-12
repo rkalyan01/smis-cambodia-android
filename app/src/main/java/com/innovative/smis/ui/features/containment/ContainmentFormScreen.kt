@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.containment
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,7 +21,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import com.innovative.smis.ui.components.*

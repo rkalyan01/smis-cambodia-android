@@ -2,7 +2,12 @@ package com.innovative.smis.util.helper
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.annotation.StringRes
+import com.innovative.smis.R
 import com.innovative.smis.util.constants.Languages
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class PreferenceHelper(context: Context) {
 
@@ -23,10 +28,16 @@ class PreferenceHelper(context: Context) {
         LIGHT, DARK, AUTO
     }
 
-    enum class DateFormat(val pattern: String, val displayName: String) {
-        DD_MM_YYYY("dd-MM-yyyy", "DD-MM-YYYY (22-01-2025)"),
-        MM_DD_YYYY("MM-dd-yyyy", "MM-DD-YYYY (01-22-2025)"),
-        YYYY_MM_DD("yyyy-MM-dd", "YYYY-MM-DD (2025-01-22)")
+    enum class DateFormat(val pattern: String, @StringRes val labelResId: Int) {
+        DD_MM_YYYY("dd-MM-yyyy", R.string.date_format_dd_mm_yyyy),
+        MM_DD_YYYY("MM-dd-yyyy", R.string.date_format_mm_dd_yyyy),
+        YYYY_MM_DD("yyyy-MM-dd", R.string.date_format_yyyy_mm_dd);
+
+        fun getDisplayName(context: Context): String {
+            val label = context.getString(labelResId)
+            val currentDate = SimpleDateFormat(pattern, Locale.US).format(Date())
+            return "$label ($currentDate)"
+        }
     }
 
     var selectedLanguage: String
@@ -58,7 +69,7 @@ class PreferenceHelper(context: Context) {
 
     var dateFormat: DateFormat
         get() {
-            val format = sharedPreferences.getString(KEY_DATE_FORMAT, DateFormat.YYYY_MM_DD.name) 
+            val format = sharedPreferences.getString(KEY_DATE_FORMAT, DateFormat.YYYY_MM_DD.name)
                 ?: DateFormat.YYYY_MM_DD.name
             return try {
                 DateFormat.valueOf(format)
@@ -87,26 +98,26 @@ class PreferenceHelper(context: Context) {
             .putBoolean("IS_LOGIN", true)
             .apply()
     }
-    
+
     fun saveEtoId(etoId: Int) {
         sharedPreferences.edit()
             .putInt("ETO_ID", etoId)
             .apply()
     }
-    
+
     fun getEtoId(): Int? {
         val etoId = sharedPreferences.getInt("ETO_ID", -1)
         return if (etoId == -1) null else etoId
     }
-    
+
     fun getUserName(): String? {
         return sharedPreferences.getString("USER_NAME", null)
     }
-    
+
     fun getUserEmail(): String? {
         return sharedPreferences.getString("USER_EMAIL", null)
     }
-    
+
     fun isUserLoggedIn(): Boolean {
         return sharedPreferences.getBoolean("IS_LOGIN", false)
     }

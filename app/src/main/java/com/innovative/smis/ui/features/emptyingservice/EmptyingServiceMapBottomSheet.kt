@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.emptyingservice
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -19,7 +21,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import androidx.compose.ui.res.stringResource
-import com.innovative.smis.R
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*

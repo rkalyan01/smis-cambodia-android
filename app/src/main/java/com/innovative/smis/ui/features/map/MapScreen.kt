@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.map
 
+import com.innovative.smis.R
+
 import android.Manifest
 import android.net.Uri
 import android.util.Log
@@ -27,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory

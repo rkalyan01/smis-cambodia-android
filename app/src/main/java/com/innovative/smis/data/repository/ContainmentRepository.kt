@@ -192,7 +192,7 @@ class ContainmentRepository(
                 // Get detailed error message from response body
                 val errorBody = response.errorBody()?.string()
                 val detailedError = if (errorBody != null) {
-                    "API Error (${response.code()}): $errorBody"
+                    "API Error (${response.code()})" // Keep UI message short
                 } else {
                     "API Error (${response.code()}): ${response.message()}"
                 }

@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.emptyingservice
 
+import com.innovative.smis.R
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -13,6 +15,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,9 +27,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 
-import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PhoneNumberFormatter
@@ -58,27 +61,27 @@ fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit
     val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        val message = navController.currentBackStackEntry
-            ?.savedStateHandle
-            ?.get<String>("snackbar_message")
+    // Observe snackbar messages from other screens
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    
+    val snackbarMessage by savedStateHandle?.getStateFlow<String?>("snackbar_message", null)
+        ?.collectAsStateWithLifecycle() ?: mutableStateOf(null)
 
-        val shouldRefresh = navController.currentBackStackEntry
-            ?.savedStateHandle
-            ?.get<Boolean>("should_refresh_list") ?: false
-
-        if (message != null) {
-            snackbarHostState.showSnackbar(message)
-            navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.set("snackbar_message", null)
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            savedStateHandle?.set("snackbar_message", null)
         }
+    }
 
+    // Observe refresh trigger from other screens
+    val shouldRefresh by savedStateHandle?.getStateFlow("should_refresh_list", false)
+        ?.collectAsStateWithLifecycle() ?: mutableStateOf(false)
+
+    LaunchedEffect(shouldRefresh) {
         if (shouldRefresh) {
             viewModel.refreshList()
-            navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.set("should_refresh_list", false)
+            savedStateHandle?.set("should_refresh_list", false)
         }
     }
 
@@ -114,7 +117,15 @@ fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_emptying_service), fontWeight = FontWeight.SemiBold) },
+                title = { 
+                    Text(
+                        text = stringResource(R.string.screen_emptying_service), 
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.basicMarquee()
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -133,15 +144,11 @@ fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .pullToRefresh(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = viewModel::refreshList,
-                    enabled = true
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            state = pullToRefreshState,
+            onRefresh = viewModel::refreshList,
+            modifier = Modifier.padding(paddingValues)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -171,10 +178,6 @@ fun EmptyingServiceScreen(navController: NavController, onMenuClick: (() -> Unit
                 }
             }
         }
-//        PullToRefreshContainer(
-//                modifier = Modifier.align(Alignment.TopCenter),
-//                state = pullToRefreshState
-//            )
     }
 }
 

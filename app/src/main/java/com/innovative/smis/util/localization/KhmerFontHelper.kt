@@ -1,10 +1,11 @@
 package com.innovative.smis.util.localization
 
+import com.innovative.smis.R
+
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import com.innovative.smis.R
 
 /**
  * Khmer font helper for proper Khmer text rendering

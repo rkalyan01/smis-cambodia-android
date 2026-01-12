@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.emptyingservice
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.innovative.smis.R
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
@@ -41,6 +42,7 @@ import com.innovative.smis.ui.components.PostponeDialog
 import com.innovative.smis.ui.components.PostponeData
 import com.innovative.smis.ui.components.ReadOnlyTextField
 import com.innovative.smis.ui.components.PhoneNumberField
+import com.innovative.smis.ui.components.DropdownMenuField
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PhoneNumberFormatter
 import com.innovative.smis.util.validation.InputValidators
@@ -304,26 +306,61 @@ fun EmptyingServiceFormScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedTextField(
-                        value = PhoneNumberFormatter.formatForDisplay(uiState.applicantContact),
+                        value = if (uiState.customerContactList.isNotEmpty()) uiState.customerContactList.joinToString(", ") else PhoneNumberFormatter.formatForDisplay(uiState.applicantContact),
                         onValueChange = { },
                         label = { Text(stringResource(R.string.label_applicant_contact)) },
                         readOnly = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(),
                         trailingIcon = {
-                            if (uiState.applicantContact.isNotEmpty()) {
-                                IconButton(
-                                    onClick = {
-                                        val formattedNumber = PhoneNumberFormatter.formatForDialing(uiState.applicantContact)
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
-                                        context.startActivity(intent)
+                            val contacts = uiState.customerContactList
+                            val hasContacts = contacts.isNotEmpty() || uiState.applicantContact.isNotEmpty()
+                            
+                            if (hasContacts) {
+                                if (contacts.size > 1) {
+                                    // Multiple contacts - Show Dropdown
+                                    var expanded by remember { mutableStateOf(false) }
+                                    Box {
+                                        IconButton(onClick = { expanded = true }) {
+                                            Icon(
+                                                Icons.Default.Phone,
+                                                contentDescription = stringResource(R.string.cd_call_applicant),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        DropdownMenu(
+                                            expanded = expanded,
+                                            onDismissRequest = { expanded = false }
+                                        ) {
+                                            contacts.forEach { contact ->
+                                                DropdownMenuItem(
+                                                    text = { Text(contact) },
+                                                    onClick = {
+                                                        expanded = false
+                                                        val formattedNumber = PhoneNumberFormatter.formatForDialing(contact)
+                                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
+                                                        context.startActivity(intent)
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
-                                ) {
-                                    Icon(
-                                        Icons.Default.Phone,
-                                        contentDescription = stringResource(R.string.cd_call_applicant),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
+                                } else {
+                                    // Single contact - Direct Dial
+                                    IconButton(
+                                        onClick = {
+                                            val numberToCall = if (contacts.isNotEmpty()) contacts.first() else uiState.applicantContact
+                                            val formattedNumber = PhoneNumberFormatter.formatForDialing(numberToCall)
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$formattedNumber"))
+                                            context.startActivity(intent)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Phone,
+                                            contentDescription = stringResource(R.string.cd_call_applicant),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -356,21 +393,42 @@ fun EmptyingServiceFormScreen(
                             .fillMaxWidth()
                             .bringIntoViewRequester(fieldRequesters["serviceReceiverContact"]!!)
                     ) {
-                        PhoneNumberField(
-                            value = uiState.serviceReceiverContact,
-                            onValueChange = viewModel::onServiceReceiverContactChange,
-                            label = stringResource(R.string.label_service_receiver_contact),
-                            modifier = Modifier,
-                            enabled = !uiState.isServiceReceiverSameAsApplicant,
-                            isRequired = true
-                        )
-                        uiState.serviceReceiverContactError?.let { error ->
-                            Text(
-                                text = error,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                        if (uiState.isServiceReceiverSameAsApplicant && uiState.customerContactList.size > 1) {
+                            val contactOptions = uiState.customerContactList.associateWith { it }
+                            DropdownMenuField(
+                                label = stringResource(R.string.label_service_receiver_contact),
+                                selectedValue = uiState.serviceReceiverContact,
+                                selectedKey = uiState.serviceReceiverContact,
+                                options = contactOptions,
+                                onOptionSelected = { _, value -> viewModel.onServiceReceiverContactChange(value) },
+                                modifier = Modifier.fillMaxWidth(),
+                                isRequired = true
                             )
+                            uiState.serviceReceiverContactError?.let { error ->
+                                Text(
+                                    text = error,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
+                        } else {
+                            PhoneNumberField(
+                                value = uiState.serviceReceiverContact,
+                                onValueChange = viewModel::onServiceReceiverContactChange,
+                                label = stringResource(R.string.label_service_receiver_contact),
+                                modifier = Modifier,
+                                enabled = !uiState.isServiceReceiverSameAsApplicant,
+                                isRequired = true
+                            )
+                            uiState.serviceReceiverContactError?.let { error ->
+                                Text(
+                                    text = error,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -559,19 +617,16 @@ fun EmptyingServiceFormScreen(
                             modifier = Modifier.fillMaxWidth(),
                             isRequired = true
                         )
-                        uiState.additionalRepairingError?.let { error ->
-                            Text(
-                                text = error,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-                            )
-                        }
                     }
                     
-                    // Show "Other Additional Repairing" field if "Others" (ID: 7) is selected
-                    // Note: API returns numeric IDs as keys, e.g., {"7": "Others, specify"} or {"7": "ផ្សេងៗ"}
-                    if (uiState.additionalRepairingKeys.contains("7")) {
+                    // Show "Other Additional Repairing" field if "Others" (ID: 7) is selected OR label contains "Other"/"ផ្សេង"
+                    val hasOtherRepairing = uiState.additionalRepairingKeys.any { key -> 
+                        key == "7" || 
+                        uiState.additionalRepairingOptions[key]?.contains("other", ignoreCase = true) == true ||
+                        uiState.additionalRepairingOptions[key]?.contains("ផ្សេង") == true
+                    }
+                    
+                    if (hasOtherRepairing) {
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = uiState.otherAdditionalRepairing,
@@ -805,8 +860,9 @@ fun EmptyingServiceFormScreen(
                 onPostpone = { postponeData ->
                     // postponeData contains dates already in API format (yyyy-MM-dd)
                     viewModel.postponeApplication(
+                        postponeType = postponeData.postponeType,
                         postponeFrom = postponeData.postponeFrom,
-                        postponeUntil = postponeData.postponeUntil,
+                        postponeTo = postponeData.postponeTo,
                         reason = postponeData.reason,
                         remark = postponeData.remark,
                         onSuccess = {

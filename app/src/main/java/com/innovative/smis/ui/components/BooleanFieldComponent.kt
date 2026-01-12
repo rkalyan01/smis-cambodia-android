@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.components
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
@@ -10,7 +12,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.innovative.smis.R
 
 @Composable
 fun BooleanField(

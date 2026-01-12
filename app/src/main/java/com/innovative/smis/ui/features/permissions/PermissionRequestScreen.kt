@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.permissions
 
+import com.innovative.smis.R
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -24,7 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.stringResource
-import com.innovative.smis.R
 import com.innovative.smis.util.constants.PrefConstant
 import com.innovative.smis.util.helper.PreferenceHelper
 

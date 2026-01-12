@@ -51,13 +51,14 @@ data class SitePreparationFormState(
     val containmentIssuesList: Map<String, String> = emptyMap(),
     val isSubmitting: Boolean = false,
     val draftLoaded: Boolean = false, // ✅ Track if draft has been loaded to prevent API overwrites
-    
+
     // Validation error fields
     val serviceReceiverNameError: String? = null,
     val serviceReceiverContactError: String? = null,
     val extraPaymentRequiredError: String? = null,
     val needRescheduleError: String? = null,
-    val firstErrorField: String? = null
+    val firstErrorField: String? = null,
+    val customerContactList: List<String> = emptyList()
 )
 
 class SitePreparationFormViewModel(
@@ -72,20 +73,20 @@ class SitePreparationFormViewModel(
 
     private var currentApplicationId: Int = 0
     private var currentFormId: String? = null
-    
+
     /**
      * Parse display date string to timestamp
      * Tries all supported date formats (dd-MM-yyyy, MM-dd-yyyy, yyyy-MM-dd)
      */
     private fun parseDisplayDateToTimestamp(dateString: String): Long? {
         if (dateString.isBlank()) return null
-        
+
         val formats = listOf(
             "dd-MM-yyyy",
             "MM-dd-yyyy",
             "yyyy-MM-dd"
         )
-        
+
         for (format in formats) {
             try {
                 val sdf = SimpleDateFormat(format, Locale.getDefault())
@@ -95,12 +96,29 @@ class SitePreparationFormViewModel(
                     return date.time
                 }
             } catch (e: Exception) {
-                // Try next format
                 continue
             }
         }
-        
         return null
+    }
+
+    private fun parseCustomerContacts(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        val contacts = mutableListOf<String>()
+        try {
+            val jsonArray = org.json.JSONArray(json)
+            for (i in 0 until jsonArray.length()) {
+                val item = jsonArray.optString(i)
+                if (!item.isNullOrBlank() && item != "null") {
+                    contacts.add(PhoneNumberFormatter.formatCambodianNumber(item))
+                }
+            }
+        } catch (e: Exception) {
+             if (json!!.isNotBlank()) {
+                contacts.add(PhoneNumberFormatter.formatCambodianNumber(json))
+            }
+        }
+        return contacts
     }
 
     fun loadApplicationDetails(applicationId: Int) {
@@ -114,7 +132,7 @@ class SitePreparationFormViewModel(
         )
 
         initializeForm(applicationId)
-        
+
         // Load dropdown data in parallel (non-blocking)
         loadDropdownData()
 
@@ -139,6 +157,7 @@ class SitePreparationFormViewModel(
                                         sanitationCustomerId = apiData.sanitationCustomerId,
                                         applicantName = apiData.applicantName ?: "",
                                         applicantContact = apiData.applicantContact ?: "",
+                                        customerContactList = parseCustomerContacts(apiData.sanitationCustomerContact),
                                         purposeOfEmptying = getEmptyingPurposeText(apiData.purposeOfEmptying),
                                         otherEmptyingPurpose = apiData.otherEmptyingPurpose ?: "",
                                         everEmptied = apiData.everEmptied,
@@ -201,14 +220,16 @@ class SitePreparationFormViewModel(
                                         ?.split(",")
                                         ?.map { it.trim() }
                                         ?.filter { it.isNotEmpty() }
+                                        ?.filter { it.isNotEmpty() }
                                         ?: emptyList(),
+                                    customerContactList = parseCustomerContacts(entity.sanitationCustomerContact),
                                     otherAdditionalRepairing = entity.otherAdditionalRepairing ?: "",
                                     extraPaymentRequired = entity.extraPaymentRequired,
                                     amountOfExtraPayment = entity.amountOfExtraPayment ?: "",
                                     proposedEmptyingDate = entity.proposedEmptyingDate ?: "",
                                     needReschedule = entity.needReschedule,
-                                    newProposedEmptyingDate = entity.newProposedEmptyingDate?.let { 
-                                        if (it == 0L) "" else it.toString() 
+                                    newProposedEmptyingDate = entity.newProposedEmptyingDate?.let {
+                                        if (it == 0L) "" else it.toString()
                                     } ?: ""
                                 )
                             }
@@ -233,7 +254,7 @@ class SitePreparationFormViewModel(
     }
 
     private fun getAdditionalRepairingText(repairingId: String?): String {
-        // Convert repairing ID to text based on dropdown mapping  
+        // Convert repairing ID to text based on dropdown mapping
         return uiState.value.containmentIssuesList[repairingId] ?: repairingId ?: ""
     }
 
@@ -276,7 +297,10 @@ class SitePreparationFormViewModel(
             state.copy(
                 isReceiverSameAsApplicant = isSame,
                 serviceReceiverName = if (isSame) state.applicantName else "",
-                serviceReceiverContact = if (isSame) PhoneNumberFormatter.formatCambodianNumber(state.applicantContact) else ""
+                serviceReceiverContact = if (isSame) {
+                    val contacts = parseCustomerContacts(state.loadingState.data?.sanitationCustomerContact) // Re-parse to be safe or use stored list
+                    if (state.customerContactList.isNotEmpty()) state.customerContactList[0] else ""
+                } else ""
             )
         }
         autoSaveDraft()
@@ -313,15 +337,34 @@ class SitePreparationFormViewModel(
     }
 
     fun onAdditionalRepairingChange(selectedKeys: List<String>) {
-        // Check if "Others" is in the selection by checking the API key (not the localized label)
-        // API key is always in English, so this works for both Khmer and English
-        val hasOthers = selectedKeys.any { key ->
-            key.contains("Others", ignoreCase = true)
+        val currentKeys = _uiState.value.additionalRepairingKeys
+        var newKeys = selectedKeys
+
+        // Find key for "No"
+        val noKey = _uiState.value.containmentIssuesList.entries.find { it.value.equals("No", ignoreCase = true) }?.key
+
+        if (noKey != null) {
+            val wasNoSelected = currentKeys.contains(noKey)
+            val isNoSelected = newKeys.contains(noKey)
+
+            if (isNoSelected && !wasNoSelected) {
+                // "No" was just selected -> clear everything else
+                newKeys = listOf(noKey)
+            } else if (wasNoSelected && isNoSelected && newKeys.size > 1) {
+                // "No" was selected, and user selected something else -> uncheck "No"
+                newKeys = newKeys.filter { it != noKey }
+            }
         }
         
+        // Find "Other" key dynamically
+        val otherKey = _uiState.value.containmentIssuesList.entries.find { 
+            it.value.contains("Other", ignoreCase = true) || it.value.contains("ផ្សេងៗ") // Khmer for Others
+        }?.key
+
+        val hasOthers = otherKey != null && newKeys.contains(otherKey)
+
         _uiState.update { it.copy(
-            additionalRepairingKeys = selectedKeys,
-            // Clear other field when "Others" is not selected
+            additionalRepairingKeys = newKeys,
             otherAdditionalRepairing = if (!hasOthers) "" else it.otherAdditionalRepairing
         ) }
         autoSaveDraft()
@@ -409,7 +452,7 @@ class SitePreparationFormViewModel(
         val state = _uiState.value
         var isValid = true
         var firstError: String? = null
-        
+
         // Clear all errors first
         _uiState.update { it.copy(
             serviceReceiverNameError = null,
@@ -418,7 +461,7 @@ class SitePreparationFormViewModel(
             needRescheduleError = null,
             firstErrorField = null
         ) }
-        
+
         // Validate Service Receiver Name (required)
         if (state.serviceReceiverName.isBlank()) {
             _uiState.update { it.copy(
@@ -428,7 +471,7 @@ class SitePreparationFormViewModel(
             if (firstError == null) firstError = "serviceReceiverName"
             isValid = false
         }
-        
+
         // Validate Service Receiver Contact (required)
         if (state.serviceReceiverContact.isBlank()) {
             _uiState.update { it.copy(
@@ -438,7 +481,7 @@ class SitePreparationFormViewModel(
             if (firstError == null) firstError = "serviceReceiverContact"
             isValid = false
         }
-        
+
         // Validate Extra Payment Required (required)
         if (state.extraPaymentRequired == null) {
             _uiState.update { it.copy(
@@ -448,7 +491,7 @@ class SitePreparationFormViewModel(
             if (firstError == null) firstError = "extraPaymentRequired"
             isValid = false
         }
-        
+
         // Validate Need Reschedule (required)
         if (state.needReschedule == null) {
             _uiState.update { it.copy(
@@ -458,10 +501,10 @@ class SitePreparationFormViewModel(
             if (firstError == null) firstError = "needReschedule"
             isValid = false
         }
-        
+
         return isValid
     }
-    
+
     fun submitForm() {
         if (validateForm()) {
             saveForm()
@@ -593,7 +636,7 @@ class SitePreparationFormViewModel(
 
     private fun loadDropdownData() {
         _uiState.update { it.copy(isLoadingDropdowns = true) }
-        
+
         // Load containment issues dropdown only
         viewModelScope.launch {
             repository.getContainmentIssues().collect { containmentResult ->
@@ -621,8 +664,9 @@ class SitePreparationFormViewModel(
     }
 
     fun postponeApplication(
+        postponeType: String,
         postponeFrom: String,
-        postponeUntil: String,
+        postponeTo: String,
         reason: String,
         remark: String,
         onSuccess: () -> Unit,
@@ -630,17 +674,18 @@ class SitePreparationFormViewModel(
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
-            
+
             val result = repository.postponeApplication(
                 applicationId = currentApplicationId,
+                postponeType = postponeType,
                 postponeFrom = postponeFrom,
-                postponeUntil = postponeUntil,
+                postponeTo = postponeTo,
                 reason = reason,
                 remark = remark
             )
-            
+
             _uiState.update { it.copy(isSubmitting = false) }
-            
+
             when (result) {
                 is Resource.Success -> {
                     onSuccess()

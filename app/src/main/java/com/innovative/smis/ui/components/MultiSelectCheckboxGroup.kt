@@ -1,10 +1,12 @@
 package com.innovative.smis.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -22,34 +24,40 @@ fun MultiSelectCheckboxGroup(
             text = if (isRequired) "$label *" else label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp)
+            // OPTIMIZATION 1: Reduced padding from 8.dp to 4.dp
+            modifier = Modifier.padding(bottom = 4.dp)
         )
-        
-        options.forEach { (key, label) ->
+
+        options.forEach { (key, optionLabel) ->
             val isChecked = selectedKeys.contains(key)
-            
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp),
+                    // OPTIMIZATION 2: Make the whole row clickable
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(enabled = enabled) {
+                        val updatedList = if (isChecked) {
+                            selectedKeys - key
+                        } else {
+                            selectedKeys + key
+                        }
+                        onSelectionChange(updatedList)
+                    }
+                    // OPTIMIZATION 3: Use minimal vertical padding instead of fixed height
+                    .padding(vertical = 0.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(
                     checked = isChecked,
-                    onCheckedChange = { checked ->
-                        val updatedList = if (checked) {
-                            selectedKeys + key
-                        } else {
-                            selectedKeys - key
-                        }
-                        onSelectionChange(updatedList)
-                    },
+                    onCheckedChange = null, // null because the parent Row handles the click
                     enabled = enabled,
-                    modifier = Modifier.size(40.dp)
+                    // OPTIMIZATION 4: Removed fixed size(40.dp) modifier
+                    modifier = Modifier.padding(end = 8.dp)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+
                 Text(
-                    text = label,
+                    text = optionLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (enabled) {
                         MaterialTheme.colorScheme.onSurface

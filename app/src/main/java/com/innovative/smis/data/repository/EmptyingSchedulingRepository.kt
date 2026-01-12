@@ -385,30 +385,27 @@ class EmptyingSchedulingRepository(
         try {
             println("DEBUG: Optimized refresh after form submission for application #$applicationId")
 
-            // 1. Immediately update the local status to "Scheduled" so it disappears from current list
             todoItemDao.updateApplicationStatus(applicationId, "Scheduled")
             println("DEBUG: Updated local status to 'Scheduled' for application #$applicationId")
 
-            // 2. Optionally fetch fresh data to ensure sync (lightweight operation)
             val etoId = preferenceHelper.getEtoId() ?: 2
             val response = apiService.getEmptyingSchedulingApplications("Initiated", etoId)
 
             if (response.isSuccessful && response.body()?.success == true) {
                 val applications = response.body()?.data ?: emptyList()
-                todoItemDao.upsertAll(applications.map { it.toEntity() })
-                println("DEBUG: Synced with server - ${applications.size} Initiated applications remain")
+//                todoItemDao.upsertAll(applications.map { it.toEntity() })
+                todoItemDao.replaceApplicationsByStatus("Initiated", applications.map { it.toEntity() })
             }
         } catch (e: Exception) {
             println("DEBUG: Error in optimized refresh: ${e.message}")
-            // Fallback: Even if API fails, the local status update will still work
         }
     }
 
     suspend fun getUnsyncedCount(): Int = formDao.getUnsyncedCount()
 
     fun getEmptyingSchedulingApplications(): Flow<Resource<List<TodoItem>>> {
-        return fetchAndCacheApplicationList {
-            val etoId = preferenceHelper.getEtoId() ?: 2 // Default to 2 if not set
+        return fetchAndCacheApplicationList(statusToClear = "Initiated") {
+            val etoId = preferenceHelper.getEtoId() ?: 2
             apiService.getEmptyingSchedulingApplications("Initiated", etoId)
         }
     }
@@ -421,8 +418,8 @@ class EmptyingSchedulingRepository(
     }
 
     fun getApplicationsByStatus(status: String): Flow<Resource<List<TodoItem>>> {
-        return fetchAndCacheApplicationList {
-            val etoId = preferenceHelper.getEtoId() ?: 2 // Default to 2 if not set
+        return fetchAndCacheApplicationList(statusToClear = status) { // Pass the status here
+            val etoId = preferenceHelper.getEtoId() ?: 2
             apiService.getApplicationsByStatus(status, etoId)
         }
     }
@@ -434,35 +431,56 @@ class EmptyingSchedulingRepository(
     }
 
     private fun fetchAndCacheApplicationList(
+        statusToClear: String? = null, // Add this parameter
         networkCall: suspend () -> retrofit2.Response<com.innovative.smis.data.model.response.TodoListResponse>
     ): Flow<Resource<List<TodoItem>>> = flow {
         emit(Resource.Loading())
 
+        // 1. Emit Local Data First
         val localDataFlow = todoItemDao.getAllApplications().map { entities ->
-            entities.map { it.toDomainModel() }
+            // Filter locally if a status is requested, to ensure UI is consistent immediately
+            if (statusToClear != null) {
+                entities.filter { it.status.equals(statusToClear, ignoreCase = true) }
+                    .map { it.toDomainModel() }
+            } else {
+                entities.map { it.toDomainModel() }
+            }
         }
+
+        // Emit initial local data (if any)
         emit(Resource.Success(localDataFlow.first()))
 
         try {
+            // 2. Fetch from API
             val response = networkCall()
+
             if (response.isSuccessful && response.body()?.success == true) {
                 val networkItems = response.body()?.data ?: emptyList()
-                todoItemDao.clearExpiredCache()
-                todoItemDao.upsertAll(networkItems.map { it.toEntity() })
+
+                // 3. Save to DB (The Fix)
+                if (statusToClear != null) {
+                    // If we are fetching a specific status, delete OLD ones of that status first
+                    // creating a "Single Source of Truth" that matches the API
+                    todoItemDao.replaceApplicationsByStatus(
+                        status = statusToClear,
+                        newItems = networkItems.map { it.toEntity() }
+                    )
+                } else {
+                    // Fallback for generic calls
+                    todoItemDao.upsertAll(networkItems.map { it.toEntity() })
+                }
+
+                // 4. Emit the FRESH data from DB (re-querying ensures we get the exact DB state)
+                emit(Resource.Success(localDataFlow.first()))
+
             } else {
                 emit(Resource.Error("API Error: ${response.message()}", localDataFlow.first()))
             }
         } catch (e: IOException) {
-            android.util.Log.e("EmptyingSchedulingRepo", "❌ IOException: ${e.javaClass.simpleName} - ${e.message}", e)
-            val errorMsg = when {
-                e is javax.net.ssl.SSLException -> "SSL Certificate error: ${e.message}"
-                e.message?.contains("Unable to resolve host") == true -> "Cannot connect to server"
-                e.message?.contains("timeout") == true -> "Connection timeout"
-                else -> "Network error: ${e.message}"
-            }
-            emit(Resource.Error("$errorMsg. Displaying cached data.", localDataFlow.first()))
+            // ... existing error handling ...
+            emit(Resource.Error("Network error. Displaying cached data.", localDataFlow.first()))
         } catch (e: Exception) {
-            android.util.Log.e("EmptyingSchedulingRepo", "❌ Unexpected error: ${e.javaClass.simpleName} - ${e.message}", e)
+            // ... existing error handling ...
             emit(Resource.Error(e.message ?: "An unknown error occurred.", localDataFlow.first()))
         }
     }

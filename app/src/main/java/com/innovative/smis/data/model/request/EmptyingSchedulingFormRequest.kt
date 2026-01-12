@@ -28,6 +28,8 @@ data class EmptyingSchedulingFormRequest(
     @Json(name = "size_of_storage_tank_m3") val sizeOfStorageTankM3: String?,
     @Json(name = "construction_year") val constructionYear: String?,
     @Json(name = "accessibility") val accessibility: String?,
+    @Json(name = "location_of_containment") val locationOfContainment: String?,
+    @Json(name = "presence_of_pumping_point") val presenceOfPumpingPoint: String?,
     @Json(name = "ever_emptied") val everEmptied: String?,
     @Json(name = "last_emptied_year") val lastEmptiedYear: String?,
     @Json(name = "issues_with_containment") val issuesWithContainment: String?,

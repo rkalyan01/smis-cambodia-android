@@ -61,7 +61,7 @@ import androidx.navigation.navArgument
 fun MyApp() {
     val context = LocalContext.current
     val preferenceHelper = remember { PreferenceHelper(context) }
-
+    
     // ⚡ PERFORMANCE FIX: Load these states asynchronously to avoid blocking main thread
     val isLoggedIn by produceState(initialValue = false) {
         value = preferenceHelper.getBoolean(PrefConstant.IS_LOGIN, false)
@@ -69,7 +69,7 @@ fun MyApp() {
     val permissionsRequested by produceState(initialValue = false) {
         value = preferenceHelper.getBoolean(PrefConstant.PERMISSIONS_REQUESTED, false)
     }
-
+    
     // ⚡ CRITICAL FIX: Heavy JSON parsing moved to background thread (was blocking 32+ frames!)
     val userPermissions by produceState(initialValue = emptyMap<String, Boolean>()) {
         withContext(Dispatchers.IO) {
@@ -90,7 +90,7 @@ fun MyApp() {
     ThemeProvider {
         val navController = rememberNavController()
         val context = LocalContext.current
-
+        
         NavHost(navController = navController, startDestination = startDestination) {
             // Permission Request Screen
             composable("permissions") {
@@ -130,51 +130,51 @@ private fun MainAppScreen(topLevelNavController: NavController) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val activity = context as? Activity
-
+    
     // 🔧 FIX: Use Mutex instead of AtomicBoolean for lifecycle-safe locking
     val drawerMutex = remember { Mutex() }
     val backMutex = remember { Mutex() }
-
+    
     // Track current destination to handle back button
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
-
+    
     // 🔧 FIX: Use LifecycleEventObserver to properly observe destination lifecycle changes
     // derivedStateOf doesn't observe lifecycle - it reads once and never updates!
     var isDestinationStable by remember { mutableStateOf(false) }
-
+    
     // Observe lifecycle events and update stability state
     DisposableEffect(currentBackStackEntry) {
         val entry = currentBackStackEntry
-
+        
         if (entry == null) {
             isDestinationStable = false
             android.util.Log.w("MainAppScreen", "📍 No destination entry - marking unstable")
             return@DisposableEffect onDispose { }
         }
-
+        
         val observer = LifecycleEventObserver { _, event ->
             val wasStable = isDestinationStable
             // Consider STARTED and above as stable (MIUI toggles between STARTED/RESUMED frequently)
             isDestinationStable = entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-
+            
             if (wasStable != isDestinationStable) {
                 android.util.Log.d("MainAppScreen", "📍 Lifecycle event: $event, state: ${entry.lifecycle.currentState}, stable: $isDestinationStable, route: $currentRoute")
             }
         }
-
+        
         entry.lifecycle.addObserver(observer)
-
+        
         // Set initial state
         isDestinationStable = entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
         android.util.Log.d("MainAppScreen", "📍 Initial state: ${entry.lifecycle.currentState}, stable: $isDestinationStable, route: $currentRoute")
-
+        
         onDispose {
             entry.lifecycle.removeObserver(observer)
             android.util.Log.d("MainAppScreen", "📍 Removed lifecycle observer for route: $currentRoute")
         }
     }
-
+    
     // 🔧 FIX: Automatically close drawer when destination becomes unstable
     LaunchedEffect(isDestinationStable) {
         if (!isDestinationStable && drawerState.isOpen) {
@@ -182,11 +182,11 @@ private fun MainAppScreen(topLevelNavController: NavController) {
             drawerState.close()
         }
     }
-
+    
     // Create a STABLE onMenuClick lambda that uses lifecycle-safe locking
     val stableOnMenuClick: () -> Unit = {
         android.util.Log.d("MainAppScreen", "🍔 Menu click - isDestinationStable=$isDestinationStable")
-
+        
         // Only execute if destination is stable (prevents black/white screen)
         if (isDestinationStable) {
             scope.launch {
@@ -210,7 +210,7 @@ private fun MainAppScreen(topLevelNavController: NavController) {
             android.util.Log.w("MainAppScreen", "⚠️ Menu click blocked - Destination not stable/resumed")
         }
     }
-
+    
     // Handle back button press with lifecycle-safe locking + MIUI protection
     BackHandler(enabled = true) {
         // 🔧 MIUI FIX: Enhanced protection using MiuiInputGuard (500ms throttle)
@@ -218,13 +218,13 @@ private fun MainAppScreen(topLevelNavController: NavController) {
             android.util.Log.d("MainAppScreen", "⚠️ Back button blocked by MiuiInputGuard throttle")
             return@BackHandler
         }
-
+        
         // Early return if destination is not stable (prevents issues during navigation)
         if (!isDestinationStable && currentRoute != ScreenName.Dashboard) {
             android.util.Log.w("MainAppScreen", "⚠️ Back button blocked - Destination not stable during transition")
             return@BackHandler
         }
-
+        
         scope.launch {
             // Use mutex to prevent concurrent back operations
             if (backMutex.tryLock()) {
@@ -266,7 +266,7 @@ private fun MainAppScreen(topLevelNavController: NavController) {
 
     // 🔧 FIX: Removed pointer input blocking that was causing black/white screens
     // Instead, rely on isScreenReady checks in individual click handlers
-
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -281,7 +281,7 @@ private fun MainAppScreen(topLevelNavController: NavController) {
         ) {
             // The NavHost is INSIDE the drawer's content
             NavHost(
-                navController = navController,
+                navController = navController, 
                 startDestination = ScreenName.Dashboard,
                 modifier = Modifier
                     .fillMaxSize()
@@ -293,118 +293,124 @@ private fun MainAppScreen(topLevelNavController: NavController) {
                 popExitTransition = { ExitTransition.None }
             ) {
 
-                // Define all your screens here
-                // ⚡ PERFORMANCE FIX: Wrap Dashboard in DeferredScreen to prevent frame skips
-                composable(ScreenName.Dashboard) {
-                    DeferredScreen {
-                        DashboardScreen(
-                            navController = navController,
-                            onMenuClick = stableOnMenuClick
-                        )
+            // Define all your screens here
+            // ⚡ PERFORMANCE FIX: Wrap Dashboard in DeferredScreen to prevent frame skips
+            composable(ScreenName.Dashboard) {
+                DeferredScreen {
+                    DashboardScreen(
+                        navController = navController,
+                        onMenuClick = stableOnMenuClick
+                    )
+                }
+            }
+            // ⚡ PERFORMANCE FIX: Wrap Map in DeferredScreen (heavy rendering)
+            composable(ScreenName.Map) {
+                DeferredScreen {
+                    MapScreen(navController = navController, onMenuClick = stableOnMenuClick)
+                }
+            }
+            composable("emptying_scheduling") {
+                EmptyingSchedulingScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable("site_preparation") {
+                SitePreparationScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable("emptying_service") {
+                EmptyingServiceScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable(ScreenName.TodoList) {
+                TodoListScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable(ScreenName.Settings) {
+                SettingsScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable("task_management") {
+                TaskManagementScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable(ScreenName.DesludgingVehicle) {
+                DesludgingVehicleScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+            composable("additional_repairing") {
+                AdditionalRepairingListScreen(navController = navController, onMenuClick = stableOnMenuClick)
+            }
+
+            composable(ScreenName.EtoLicenseStatus) {
+                com.innovative.smis.ui.features.etolicense.EtoLicenseStatusScreen(
+                    navController = navController
+                )
+            }
+
+            // Form Screens (Now they don't need the drawer wrapped around them)
+            composable(
+                "emptying_scheduling_form/{applicationId}",
+                arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val applicationId = backStackEntry.arguments?.getString("applicationId")?.toIntOrNull()
+                EmptyingSchedulingFormScreen(navController = navController, applicationId = applicationId)
+            }
+
+            composable(
+                "site_preparation_form/{applicationId}",
+                arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val applicationId = backStackEntry.arguments?.getString("applicationId")?.toIntOrNull() ?: 0
+                SitePreparationFormScreen(
+                    applicationId = applicationId,
+                    navController = navController,
+                    onNavigateToContainment = { id, sanitationCustomerId -> 
+                        navController.navigate("containment_form/$id/${sanitationCustomerId ?: ""}")
                     }
-                }
-                // ⚡ PERFORMANCE FIX: Wrap Map in DeferredScreen (heavy rendering)
-                composable(ScreenName.Map) {
-                    DeferredScreen {
-                        MapScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                    }
-                }
-                composable("emptying_scheduling") {
-                    EmptyingSchedulingScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable("site_preparation") {
-                    SitePreparationScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable("emptying_service") {
-                    EmptyingServiceScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable(ScreenName.TodoList) {
-                    TodoListScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable(ScreenName.Settings) {
-                    SettingsScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable("task_management") {
-                    TaskManagementScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable(ScreenName.DesludgingVehicle) {
-                    DesludgingVehicleScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
-                composable("additional_repairing") {
-                    AdditionalRepairingListScreen(navController = navController, onMenuClick = stableOnMenuClick)
-                }
+                )
+            }
 
-                // Form Screens (Now they don't need the drawer wrapped around them)
-                composable(
-                    "emptying_scheduling_form/{applicationId}",
-                    arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val applicationId = backStackEntry.arguments?.getString("applicationId")?.toIntOrNull()
-                    EmptyingSchedulingFormScreen(navController = navController, applicationId = applicationId)
-                }
+            composable(
+                "emptying_service_form/{applicationId}",
+                arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val applicationId = backStackEntry.arguments?.getString("applicationId")?.toIntOrNull() ?: 0
+                EmptyingServiceFormScreen(navController = navController, applicationId = applicationId)
+            }
 
-                composable(
-                    "site_preparation_form/{applicationId}",
-                    arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val applicationId = backStackEntry.arguments?.getString("applicationId")?.toIntOrNull() ?: 0
-                    SitePreparationFormScreen(
-                        applicationId = applicationId,
-                        navController = navController,
-                        onNavigateToContainment = { id, sanitationCustomerId ->
-                            navController.navigate("containment_form/$id/${sanitationCustomerId ?: ""}")
-                        }
-                    )
-                }
+            composable(
+                "containment_form/{applicationId}/{sanitationCustomerId}",
+                arguments = listOf(
+                    navArgument("applicationId") { type = NavType.StringType },
+                    navArgument("sanitationCustomerId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val applicationId = backStackEntry.arguments?.getString("applicationId") ?: "0"
+                val sanitationCustomerId = backStackEntry.arguments?.getString("sanitationCustomerId") ?: ""
+                ContainmentFormScreen(
+                    navController = navController,
+                    applicationId = applicationId,
+                    sanitationCustomerId = sanitationCustomerId
+                )
+            }
 
-                composable(
-                    "emptying_service_form/{applicationId}",
-                    arguments = listOf(navArgument("applicationId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val applicationId = backStackEntry.arguments?.getString("applicationId")?.toIntOrNull() ?: 0
-                    EmptyingServiceFormScreen(navController = navController, applicationId = applicationId)
-                }
+            composable(
+                "additional_repairing_form/{emptyingId}",
+                arguments = listOf(navArgument("emptyingId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val emptyingId = backStackEntry.arguments?.getInt("emptyingId") ?: 0
+                AdditionalRepairingFormScreen(
+                    navController = navController,
+                    emptyingId = emptyingId
+                )
+            }
+            composable("building_survey_new") {
+                BuildingSurveyScreen(navController = navController, bin = null)
+            }
 
-                composable(
-                    "containment_form/{applicationId}/{sanitationCustomerId}",
-                    arguments = listOf(
-                        navArgument("applicationId") { type = NavType.StringType },
-                        navArgument("sanitationCustomerId") { type = NavType.StringType }
-                    )
-                ) { backStackEntry ->
-                    val applicationId = backStackEntry.arguments?.getString("applicationId") ?: "0"
-                    val sanitationCustomerId = backStackEntry.arguments?.getString("sanitationCustomerId") ?: ""
-                    ContainmentFormScreen(
-                        navController = navController,
-                        applicationId = applicationId,
-                        sanitationCustomerId = sanitationCustomerId
-                    )
-                }
-
-                composable(
-                    "additional_repairing_form/{emptyingId}",
-                    arguments = listOf(navArgument("emptyingId") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    val emptyingId = backStackEntry.arguments?.getInt("emptyingId") ?: 0
-                    AdditionalRepairingFormScreen(
-                        navController = navController,
-                        emptyingId = emptyingId
-                    )
-                }
-                composable("building_survey_new") {
-                    BuildingSurveyScreen(navController = navController, bin = null)
-                }
-
-                composable(
-                    "building_survey_comprehensive/{bin}",
-                    arguments = listOf(navArgument("bin") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val bin = backStackEntry.arguments?.getString("bin")
-                    ComprehensiveSurveyScreen(
-                        navController = navController,
-                        bin = bin
-                    )
-                }
+            composable(
+                "building_survey_comprehensive/{bin}",
+                arguments = listOf(navArgument("bin") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val bin = backStackEntry.arguments?.getString("bin")
+                ComprehensiveSurveyScreen(
+                    navController = navController,
+                    bin = bin
+                )
+            }
             }
         }
     }
@@ -412,15 +418,15 @@ private fun MainAppScreen(topLevelNavController: NavController) {
 
 /**
  * ⚡ PERFORMANCE FIX: Deferred Screen Wrapper
- *
+ * 
  * Forces heavy screens to wait until navigation animation completes before rendering.
  * This prevents "Skipped frames" errors and black screen caused by main thread blocking.
- *
+ * 
  * How it works:
  * 1. Shows lightweight loading spinner for 300ms (navigation animation time)
  * 2. GPU gets a frame immediately (prevents QueueBuffer timeout)
  * 3. After delay, renders the actual heavy screen content
- *
+ * 
  * Use this for:
  * - Dashboard (11+ items with complex UI)
  * - Map (heavy rendering)

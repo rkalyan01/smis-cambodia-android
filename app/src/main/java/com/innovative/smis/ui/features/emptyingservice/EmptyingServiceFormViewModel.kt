@@ -36,28 +36,50 @@ class EmptyingServiceFormViewModel(
     }
 
     private fun normalizeTypeOfSludge(value: String): String = when (value) {
-        "Processing food", "ប្រែហ្គរប់អាហារ" -> "Processing food"
+        "Processing food", "ប្រែហ្គរប់អាហារ", "កែច្នៃអាហារ" -> "Processing food"
         "Oil and fat (restaurant)", "ប្រេង និងខ្លាញ់ (ភោជនីយដ្ឋាន)" -> "Oil and fat (restaurant)"
-        "Content of fuel", "មាតិកាឥន្ធនៈ" -> "Content of fuel"
+        "Content of fuel", "មាតិកាឥន្ធនៈ", "មានលាយប្រេងឥន្ទនៈ" -> "Content of fuel"
         else -> value // Return as-is if already in English or unknown
     }
 
     private fun normalizeYesNo(value: String): String = when (value) {
-        "Yes", "បាទ" -> "Yes"
+        "Yes", "បាទ", "ចាស/បាទ" -> "Yes"
         "No", "ទេ" -> "No"
         else -> value // Return as-is if already in English or unknown
     }
 
     private fun normalizePumpingPointType(value: String): String = when (value) {
-        "Cover", "គម្រប" -> "Cover"
-        "Tube", "បំពង់" -> "Tube"
-        "Pierce", "ចាក់" -> "Pierce"
+        "Cover", "គម្រប", "មានគម្រប" -> "Cover"
+        "Tube", "បំពង់", "មានបំពង់ទីប" -> "Tube"
+        "Pierce", "ចាក់", "ត្រូវចោះឬគម្រប" -> "Pierce"
         else -> value // Return as-is if already in English or unknown
     }
 
     private fun isMixed(value: String): Boolean = value == "Mixed" || value == "លាយ"
     
-    private fun isYes(value: String): Boolean = value == "Yes" || value == "បាទ"
+    private fun isYes(value: String): Boolean = value == "Yes" || value == "បាទ" || value == "ចាស/បាទ"
+
+    private fun parseCustomerContacts(jsonString: String?): List<String> {
+        if (jsonString.isNullOrBlank()) return emptyList()
+        val contacts = mutableListOf<String>()
+        try {
+            // Try parsing as JSON array
+            val jsonArray = org.json.JSONArray(jsonString)
+            for (i in 0 until jsonArray.length()) {
+                val contact = jsonArray.optString(i)
+                if (!contact.isNullOrBlank() && contact != "null") {
+                    contacts.add(PhoneNumberFormatter.formatCambodianNumber(contact))
+                }
+            }
+        } catch (e: Exception) {
+            // Fallback: treat as single string (e.g., CSV or plain text)
+            // Just use the string as-is if it's not a JSON array
+            if (jsonString.isNotBlank() && jsonString != "null") {
+                contacts.add(PhoneNumberFormatter.formatCambodianNumber(jsonString))
+            }
+        }
+        return contacts.distinct()
+    }
 
     fun loadApplicationDetails(applicationId: Int) {
         if (applicationId == 0) return
@@ -88,10 +110,12 @@ class EmptyingServiceFormViewModel(
                                 
                                 // Only update applicant fields if not loaded from draft
                                 if (currentState.applicantName.isBlank()) {
+                                    val contacts = parseCustomerContacts(customerData.sanitationCustomerContact)
                                     currentState.copy(
                                         sanitationCustomerId = customerData.sanitationCustomerId,
                                         applicantName = customerData.applicantName ?: "",
                                         applicantContact = customerData.applicantContact ?: "",
+                                        customerContactList = contacts,
                                         freeUnderPBC = customerData.freeServiceUnderPbc ?: false,
                                         regularCost = customerData.amountOfRegularPay ?: "",
                                         isRegularCostReadonly = true,
@@ -100,8 +124,11 @@ class EmptyingServiceFormViewModel(
                                     )
                                 } else {
                                     // Draft exists - keep applicant fields from draft, but ALWAYS update readonly fields from API
+                                    val contacts = parseCustomerContacts(customerData.sanitationCustomerContact)
                                     currentState.copy(
                                         sanitationCustomerId = customerData.sanitationCustomerId,
+                                        // Refresh contact list even if draft exists
+                                        customerContactList = contacts,
                                         freeUnderPBC = customerData.freeServiceUnderPbc ?: false, // ✅ ALWAYS from API
                                         regularCost = customerData.amountOfRegularPay ?: "", // ✅ ALWAYS from API
                                         isRegularCostReadonly = true,
@@ -181,11 +208,17 @@ class EmptyingServiceFormViewModel(
     }
 
     fun onServiceReceiverSameAsApplicantChange(same: Boolean) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { state ->
+            state.copy(
                 isServiceReceiverSameAsApplicant = same,
-                serviceReceiverName = if (same) it.applicantName else "",
-                serviceReceiverContact = if (same) PhoneNumberFormatter.formatCambodianNumber(it.applicantContact) else ""
+                serviceReceiverName = if (same) state.applicantName else "",
+                serviceReceiverContact = if (same) {
+                    val contacts = state.customerContactList
+                    // If only one contact, auto-fill it. If multiple, let user select (so default to empty or first? User request says Dropdown if > 1)
+                    // If we set it empty here, the dropdown will just wait for selection. 
+                    // If we set first, it's a good default.
+                    if (contacts.isNotEmpty()) contacts.first() else PhoneNumberFormatter.formatCambodianNumber(state.applicantContact)
+                } else ""
             )
         }
     }
@@ -283,15 +316,33 @@ class EmptyingServiceFormViewModel(
     }
 
     fun onAdditionalRepairingChange(selectedKeys: List<String>) {
-        // Check if "Others" (ID: 7) is in the selection
-        // Note: API returns numeric IDs as keys, e.g., {"7": "Others, specify"} or {"7": "ផ្សេងៗ"}
-        val hasOthers = selectedKeys.contains("7")
+        // Enforce exclusivity:
+        // If "No" (ID: 1) is selected, uncheck others.
+        // If others are selected, uncheck "No".
+        
+        val currentlyHasNo = _uiState.value.additionalRepairingKeys.contains("1")
+        val newHasNo = selectedKeys.contains("1")
+        
+        val finalKeys = if (newHasNo && !currentlyHasNo) {
+            // "No" was just selected -> clear others
+            listOf("1")
+        } else if (newHasNo && currentlyHasNo && selectedKeys.size > 1) {
+            // "No" was already selected, but user selected something else -> remove "No"
+            selectedKeys.filter { it != "1" }
+        } else {
+            selectedKeys
+        }
+        
+        // Check if "Others" (ID: 7) or custom key is in the selection
+        // Logic should match SitePreparation's robustness
+        // Check for ID "7" OR label specific checks if possible, but map keys are IDs.
+        val hasOthers = finalKeys.contains("7")
         
         _uiState.update { 
             it.copy(
                 additionalRepairingError = null,
                 firstErrorField = null,
-                additionalRepairingKeys = selectedKeys,
+                additionalRepairingKeys = finalKeys,
                 // Clear "other" field when "Others" is not selected
                 otherAdditionalRepairing = if (!hasOthers) "" else it.otherAdditionalRepairing
             ) 
@@ -518,7 +569,7 @@ class EmptyingServiceFormViewModel(
                     additional_trip_required = normalizeYesNo(currentState.additionalTripRequired),
                     sludge_type_a = normalizeSludgeType(currentState.sludgeType),
                     sludge_type_b = if (isMixed(currentState.sludgeType) && currentState.typeOfSludge.isNotEmpty()) normalizeTypeOfSludge(currentState.typeOfSludge) else "",
-                    location_of_containment = "Around the house", // Default location
+                    location_of_containment = null, // Not in form UI - send null
                     presence_of_pumping_point = if (currentState.pumpingPointPresence.isNotEmpty()) normalizeYesNo(currentState.pumpingPointPresence) else null,
                     pumping_point_type = if (isYes(currentState.pumpingPointPresence) && currentState.pumpingPointType.isNotEmpty()) normalizePumpingPointType(currentState.pumpingPointType) else null,
                     additional_repairing_id = postgresArrayLiteral,
@@ -840,8 +891,9 @@ class EmptyingServiceFormViewModel(
     }
 
     fun postponeApplication(
+        postponeType: String,
         postponeFrom: String,
-        postponeUntil: String,
+        postponeTo: String,
         reason: String,
         remark: String,
         onSuccess: () -> Unit,
@@ -852,8 +904,9 @@ class EmptyingServiceFormViewModel(
             
             val result = repository.postponeApplication(
                 applicationId = currentApplicationId,
+                postponeType = postponeType,
                 postponeFrom = postponeFrom,
-                postponeUntil = postponeUntil,
+                postponeTo = postponeTo,
                 reason = reason,
                 remark = remark
             )

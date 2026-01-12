@@ -87,7 +87,7 @@ fun EmptyingServiceFormEntity.toApiRequest(): EmptyingServiceRequest {
         additional_trip_required = additionalTripRequired,
         sludge_type_a = if (sludgeType == "Mixed") "Mixed" else if (sludgeType == "Not Mixed") "Not mixed" else "",
         sludge_type_b = if (sludgeType == "Mixed" && typeOfSludge.isNotEmpty()) typeOfSludge else "",
-        location_of_containment = "Around the house", // Default location - will be made configurable
+        location_of_containment = null, // Not in form UI - send null
         presence_of_pumping_point = pumpingPointPresence.ifEmpty { null },
         pumping_point_type = if (pumpingPointPresence == "Yes" && pumpingPointType.isNotEmpty()) pumpingPointType else null,
         additional_repairing_id = postgresArrayLiteral,

@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.examples
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.innovative.smis.R
 import com.innovative.smis.ui.components.*
 import com.innovative.smis.util.FormFieldMapper
 

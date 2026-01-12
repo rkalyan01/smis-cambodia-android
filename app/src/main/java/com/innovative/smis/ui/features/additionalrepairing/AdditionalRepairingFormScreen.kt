@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.additionalrepairing
 
+import com.innovative.smis.R
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,7 +27,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.data.model.request.TripEntryUiState
 import com.innovative.smis.ui.components.BilingualRadioButtonGroupField
 import com.innovative.smis.ui.components.ImagePickerComponent
@@ -77,6 +78,9 @@ fun AdditionalRepairingFormScreen(
                 
                 if (currentRoute != null && navController.previousBackStackEntry != null) {
                     snackbarHostState.showSnackbar("Form submitted successfully!")
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("should_refresh_list", true)
                     viewModel.clearSaveState()
                     android.util.Log.d("NavigationGuard", "AdditionalRepairing executing popBackStack")
                     navController.popBackStack()

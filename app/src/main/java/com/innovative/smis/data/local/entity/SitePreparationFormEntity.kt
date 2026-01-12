@@ -91,6 +91,9 @@ fun SanitationCustomerData.toSitePreparationEntity(applicationId: Int): SitePrep
 fun SitePreparationFormEntity.toApiRequest(applicationId: Int): SitePreparationFormRequest {
     val pgDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) // PostgreSQL format
 
+    val rawRepairingIds = this.additionalRepairing ?: ""
+    val formattedRepairingIds = if (rawRepairingIds.isNotBlank()) "{$rawRepairingIds}" else "{}"
+
     // Get the emptying purpose - if it's a text value, map it to the corresponding API code
     val emptyingPurposeValue = when {
         this.purposeOfEmptying?.contains("Bought house", ignoreCase = true) == true -> "1"
@@ -135,14 +138,10 @@ fun SitePreparationFormEntity.toApiRequest(applicationId: Int): SitePreparationF
     return SitePreparationFormRequest(
         applicationId = applicationId,
         sanitationCustomerId = this.sanitationCustomerId,
-        sitePrepDate = "", // Site prep date is usually current date, can be set by form
+        sitePrepDate = "",
         customerName = this.customerName ?: this.sanitationCustomerName ?: "",
         customerContact = this.customerContact ?: this.sanitationCustomerContact ?: "",
-        additionalRepairing = this@toApiRequest.additionalRepairing?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() && it != "Others" }
-            ?.joinToString(",")
-            ?.takeIf { it.isNotEmpty() } ?: "",
+        additionalRepairingId = formattedRepairingIds,
         otherAdditionalRepairing = this@toApiRequest.otherAdditionalRepairing?.takeIf { it.isNotEmpty() } ?: "",
         extraPaymentRequired = if (this.extraPaymentRequired == true) "yes" else if (this.extraPaymentRequired == false) "no" else "yes",
         amountOfExtraPayment = this.amountOfExtraPayment ?: "",

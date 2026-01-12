@@ -76,11 +76,12 @@ object FormValidation {
         // Remove spaces and dashes for validation
         val cleanedNumber = value.replace(Regex("[\\s-]"), "")
         
-        // Domestic format: 0 + (2-digit prefix) + (6-7 digits) = 9-10 digits
-        val domesticPattern = Pattern.compile("^0(1[0-8]|2[0-9]|3[0-9]|6[0-179]|7[0-18]|8[0-8]|9[0-38]|69|77|78)\\d{6,7}$")
+        // Regex for Cambodian phone numbers:
+        // Domestic: Starts with 0, followed by 7-9 digits (Total 8-10 digits)
+        val domesticPattern = Pattern.compile("^0\\d{7,9}$")
         
-        // International format: +855 or 855 + (2-digit prefix) + (6-7 digits)
-        val internationalPattern = Pattern.compile("^(\\+?855)(1[0-8]|2[0-9]|3[0-9]|6[0-179]|7[0-18]|8[0-8]|9[0-38]|69|77|78)\\d{6,7}$")
+        // International: Starts with +855 or 855, followed by 7-9 digits
+        val internationalPattern = Pattern.compile("^(\\+?855)\\d{7,9}$")
         
         val isDomesticValid = domesticPattern.matcher(cleanedNumber).matches()
         val isInternationalValid = internationalPattern.matcher(cleanedNumber).matches()

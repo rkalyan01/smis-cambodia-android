@@ -1,4 +1,6 @@
 package com.innovative.smis.ui.features.dashboard
+
+import com.innovative.smis.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -22,7 +24,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.navigation.navigateSafe
 import com.innovative.smis.ui.features.logout.LogoutBottomSheet
@@ -140,15 +141,11 @@ fun DashboardScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .pullToRefresh(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = viewModel::refreshApplications,
-                    enabled = true
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refreshApplications,
+            state = pullToRefreshState,
+            modifier = Modifier.padding(paddingValues)
         ) {
             // ✅ FIX: Removed isSettled delay - no longer needed after fixing nested lazy layout
             // TaskFilters now uses Row + horizontalScroll instead of LazyRow inside LazyColumn
@@ -157,13 +154,10 @@ fun DashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
             ) {
-
                 item {
-                    android.util.Log.d("DashboardScreen", "🎯 Rendering QuickActionsSection")
                     QuickActionsSection(navController = navController)
                 }
                 item {
-                    android.util.Log.d("DashboardScreen", "🎯 Rendering Applications header")
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -178,7 +172,6 @@ fun DashboardScreen(
                     }
                 }
                 item {
-                    android.util.Log.d("DashboardScreen", "🎯 Rendering TaskFilters")
                     TaskFilters(
                         selectedStatus = uiState.selectedStatus,
                         onStatusSelected = viewModel::setStatusFilter
@@ -186,23 +179,16 @@ fun DashboardScreen(
                 }
                 when (val state = uiState.applicationLoadingState) {
                     is Resource.Loading -> {
-                        android.util.Log.d("DashboardScreen", "🔄 Rendering Loading state - isRefreshing: $isRefreshing")
                         // Always show loading indicator to prevent black screen during rapid navigation
                         item {
-                            android.util.Log.d("DashboardScreen", "📱 Adding LoadingState item to LazyColumn")
                             LoadingState()
                         }
                     }
                     is Resource.Success -> {
-                        android.util.Log.d("DashboardScreen", "✅ Resource.Success - applications count: ${uiState.applications.size}")
                         if (uiState.applications.isEmpty()) {
-                            android.util.Log.d("DashboardScreen", "🟦 Adding EmptyApplicationsState item to LazyColumn")
                             item { EmptyApplicationsState(uiState.selectedStatus) }
                         } else {
-                            android.util.Log.d("DashboardScreen", "📋 Adding ${uiState.applications.size} application items to LazyColumn")
                             items(uiState.applications, key = { it.applicationId }) { todoItem ->
-                                android.util.Log.d("DashboardScreen", "🎯 Rendering item for application ${todoItem.applicationId}")
-                                
                                 // ✅ OPTIMIZATION: Remember the click handler to prevent recreation on every recomposition
                                 val onOpenFormClick = remember(todoItem.applicationId, todoItem.status) {
                                     {
@@ -229,15 +215,10 @@ fun DashboardScreen(
                         }
                     }
                     is Resource.Error -> {
-                        android.util.Log.d("DashboardScreen", "❌ Resource.Error - applications count: ${uiState.applications.size}")
                         if (uiState.applications.isEmpty()) {
-                            android.util.Log.d("DashboardScreen", "❌ Adding ErrorState item to LazyColumn")
                             item { ErrorState(state.message, viewModel::refreshApplications) }
                         } else {
-                            android.util.Log.d("DashboardScreen", "📋 Error state but showing cached ${uiState.applications.size} applications")
                             items(uiState.applications, key = { it.applicationId }) { todoItem ->
-                                
-                                // ✅ OPTIMIZATION: Remember the click handler to prevent recreation on every recomposition
                                 val onOpenFormClick = remember(todoItem.applicationId, todoItem.status) {
                                     {
                                         val route = when (todoItem.status?.lowercase()) {
@@ -272,7 +253,7 @@ fun DashboardScreen(
                     }
                 }
             } // End of LazyColumn
-        } // End of Box
+        } // End of PullToRefreshBox
         LogoutBottomSheet(
             isVisible = showLogoutSheet,
             pendingSyncCount = logoutState.pendingSyncCount,
@@ -360,7 +341,7 @@ fun QuickActionsSection(
                 title = stringResource(R.string.card_emptying_scheduling), 
                 icon = com.innovative.smis.util.constants.NavigationIcons.EmptyingScheduling, 
                 color = MaterialTheme.colorScheme.primary,
-                stepNumber = "Step 1",
+                stepNumber = stringResource(R.string.label_step_1),
                 modifier = Modifier.weight(1f), 
                 onClick = { navController.navigateSafe("emptying_scheduling") }
             )
@@ -368,7 +349,7 @@ fun QuickActionsSection(
                 title = stringResource(R.string.card_site_preparation), 
                 icon = com.innovative.smis.util.constants.NavigationIcons.SitePreparation, 
                 color = Color(0xFF7B1FA2),
-                stepNumber = "Step 2",
+                stepNumber = stringResource(R.string.label_step_2),
                 modifier = Modifier.weight(1f), 
                 onClick = { navController.navigateSafe("site_preparation") }
             )
@@ -381,7 +362,7 @@ fun QuickActionsSection(
                 title = stringResource(R.string.card_emptying_service), 
                 icon = com.innovative.smis.util.constants.NavigationIcons.EmptyingService, 
                 color = Color(0xFF1976D2),
-                stepNumber = "Step 3",
+                stepNumber = stringResource(R.string.label_step_3),
                 modifier = Modifier.weight(1f), 
                 onClick = { navController.navigateSafe("emptying_service") }
             )
@@ -389,7 +370,7 @@ fun QuickActionsSection(
                 title = stringResource(R.string.card_additional_trips), 
                 icon = com.innovative.smis.util.constants.NavigationIcons.AdditionalRepairing, 
                 color = Color(0xFFFF6F00),
-                stepNumber = "Step 4",
+                stepNumber = stringResource(R.string.label_step_4),
                 modifier = Modifier.weight(1f), 
                 onClick = { navController.navigateSafe("additional_repairing") }
             )

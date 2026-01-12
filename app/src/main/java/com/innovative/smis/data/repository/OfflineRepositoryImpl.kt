@@ -11,6 +11,8 @@ import com.innovative.smis.util.common.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 class OfflineTaskRepositoryImpl(
     private val offlineManager: OfflineManager,
@@ -22,7 +24,10 @@ class OfflineTaskRepositoryImpl(
     override suspend fun getTasks(userId: String): Flow<Resource<List<Task>>> = flow {
         emit(Resource.Loading())
         try {
-            val cachedTasks = getCachedTasks()
+            // ✅ OPTIMIZED: Switch to IO dispatcher for database read
+            val cachedTasks = withContext(Dispatchers.IO) {
+                getCachedTasks()
+            }
             emit(Resource.Success(cachedTasks))
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: "Failed to load tasks"))
@@ -32,8 +37,8 @@ class OfflineTaskRepositoryImpl(
     override suspend fun getTaskById(taskId: String): Flow<Resource<Task>> = flow {
         emit(Resource.Loading())
         try {
-            // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
-            val taskEntity = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // ✅ OPTIMIZED: Switch to IO dispatcher for database read
+            val taskEntity = withContext(Dispatchers.IO) {
                 taskDao.getTaskById(taskId)
             }
             if (taskEntity != null) {
@@ -49,8 +54,8 @@ class OfflineTaskRepositoryImpl(
     override suspend fun updateTaskStatus(taskId: String, status: String): Flow<Resource<Task>> = flow {
         emit(Resource.Loading())
         try {
-            // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
-            val updatedTask = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // ✅ OPTIMIZED: Switch to IO dispatcher for database write
+            val updatedTask = withContext(Dispatchers.IO) {
                 val taskEntity = taskDao.getTaskById(taskId)
                 if (taskEntity != null) {
                     val updated = taskEntity.copy(
@@ -78,8 +83,8 @@ class OfflineTaskRepositoryImpl(
     override suspend fun getWorkflowSteps(taskId: String): Flow<Resource<List<WorkflowStep>>> = flow {
         emit(Resource.Loading())
         try {
-            // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
-            val steps = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // ✅ OPTIMIZED: Switch to IO dispatcher for database read
+            val steps = withContext(Dispatchers.IO) {
                 workflowStepDao.getWorkflowStepsForTask(taskId)
             }
             emit(Resource.Success(steps.map { it.toWorkflowStep() }))
@@ -91,8 +96,8 @@ class OfflineTaskRepositoryImpl(
     override suspend fun createWorkflowStep(step: WorkflowStep): Flow<Resource<WorkflowStep>> = flow {
         emit(Resource.Loading())
         try {
-            // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // ✅ OPTIMIZED: Switch to IO dispatcher for database write
+            withContext(Dispatchers.IO) {
                 workflowStepDao.insertSteps(listOf(step.toEntity()))
             }
             emit(Resource.Success(step))
@@ -104,8 +109,8 @@ class OfflineTaskRepositoryImpl(
     override suspend fun updateWorkflowStep(stepId: String, formData: Map<String, Any>): Flow<Resource<WorkflowStep>> = flow {
         emit(Resource.Loading())
         try {
-            // ✅ CRITICAL FIX: Move database operations to IO thread to prevent main thread blocking
-            val updatedWorkflowStep = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            // ✅ OPTIMIZED: Switch to IO dispatcher for database write
+            val updatedWorkflowStep = withContext(Dispatchers.IO) {
                 val stepEntity = workflowStepDao.getStepById(stepId)
                 if (stepEntity != null) {
                     val updatedStep = stepEntity.copy(
@@ -134,7 +139,10 @@ class OfflineTaskRepositoryImpl(
     override suspend fun syncOfflineData(): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
         try {
-            val syncResult = offlineManager.syncAllData().first()
+            // ✅ OPTIMIZED: Sync logic is likely heavy, move to IO
+            val syncResult = withContext(Dispatchers.IO) {
+                offlineManager.syncAllData().first()
+            }
             when (syncResult) {
                 is Resource.Success -> emit(Resource.Success(Unit))
                 is Resource.Error -> emit(Resource.Error(syncResult.message ?: "Sync failed"))
@@ -148,16 +156,22 @@ class OfflineTaskRepositoryImpl(
 
     override suspend fun cacheTasksLocally(tasks: List<Task>) {
         try {
-            val taskEntities = tasks.map { it.toEntity() }
-            taskDao.insertTasks(taskEntities)
+            // ✅ OPTIMIZED: Ensure large batch inserts happen on IO
+            withContext(Dispatchers.IO) {
+                val taskEntities = tasks.map { it.toEntity() }
+                taskDao.insertTasks(taskEntities)
+            }
         } catch (e: Exception) {
-            //
+            // Consider logging the error here
         }
     }
 
     override suspend fun getCachedTasks(): List<Task> {
         return try {
-            taskDao.getAllTasks().first().map { it.toTask() }
+            // ✅ OPTIMIZED: Ensure database read happens on IO
+            withContext(Dispatchers.IO) {
+                taskDao.getAllTasks().first().map { it.toTask() }
+            }
         } catch (e: Exception) {
             emptyList()
         }
@@ -169,7 +183,9 @@ class OfflineTaskRepositoryImpl(
 
     suspend fun getPendingSyncCount(): Int {
         return try {
-            syncQueueDao.getPendingCount()
+            withContext(Dispatchers.IO) {
+                syncQueueDao.getPendingCount()
+            }
         } catch (e: Exception) {
             0
         }

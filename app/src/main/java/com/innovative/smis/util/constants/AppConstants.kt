@@ -11,6 +11,7 @@ object ScreenName {
     const val Settings = "settings"
     const val DesludgingVehicle = "desludging_vehicle"
     const val TaskManagement = "task_management"
+    const val EtoLicenseStatus = "eto_license_status"
 }
 
 object PrefConstant {
@@ -28,7 +29,7 @@ object PrefConstant {
 }
 
 object ApiConstants {
-    const val BASE_URL = "https://smis-beta.muninfosys.com/api/"
+    const val BASE_URL = "https://smis-11.innovativesolution.com.np/api/"
     const val TIMEOUT_SECONDS = 30L
 }
 

@@ -122,5 +122,5 @@ fun EmptyingServiceFormState.isLocationCaptured(): Boolean {
 }
 
 fun EmptyingServiceFormState.hasImagesUploaded(): Boolean {
-    return receiptImage.isNotBlank() && pictureOfEmptying.isNotBlank()
+    return receiptImage.isNotBlank()
 }

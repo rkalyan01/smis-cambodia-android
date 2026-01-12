@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.login
 
+import com.innovative.smis.R
+
 import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -37,7 +39,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.innovative.smis.BuildConfig
-import com.innovative.smis.R
 import com.innovative.smis.ui.theme.SMISTheme
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.domain.model.UserRole

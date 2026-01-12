@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.sitepreparation
 
+import com.innovative.smis.R
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -24,7 +26,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 
-import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,7 +43,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PhoneNumberFormatter
@@ -133,15 +134,11 @@ fun SitePreparationScreen(navController: NavController, onMenuClick: (() -> Unit
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .pullToRefresh(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = viewModel::refreshList,
-                    enabled = true
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            state = pullToRefreshState,
+            onRefresh = viewModel::refreshList,
+            modifier = Modifier.padding(paddingValues)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -170,10 +167,6 @@ fun SitePreparationScreen(navController: NavController, onMenuClick: (() -> Unit
                     is Resource.Idle -> item { IdleState() }
                 }
             }
-//            PullToRefreshContainer(
-//                modifier = Modifier.align(Alignment.TopCenter),
-//                state = pullToRefreshState
-//            )
         }
     }
 }

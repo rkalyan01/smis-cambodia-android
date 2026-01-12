@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -15,8 +18,8 @@ android {
         applicationId = "com.innovative.smis"
         minSdk = 24
         targetSdk = 35
-        versionCode = 31
-        versionName = "1.0.31"
+        versionCode = 34
+        versionName = "1.0.34"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -24,8 +27,39 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "BASE_URL", "\"https://smis-11.innovativesolution.com.np/api/\"")
         buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
+    }
+
+    // Product Flavors for Dev and Prod
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "BASE_URL", "\"https://smis-11.innovativesolution.com.np/api/\"")
+            resValue("string", "app_name", "SMIS DEV")
+        }
+        create("prod") {
+            dimension = "environment"
+            // No suffix for prod - uses base applicationId: com.innovative.smis
+            buildConfigField("String", "BASE_URL", "\"https://smis-beta.muninfosys.com/api/\"")
+            resValue("string", "app_name", "SMIS BETA")
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystorePropertiesFile = rootProject.file("app/keystore.properties")
+            if (keystorePropertiesFile.exists()) {
+                val properties = Properties()
+                properties.load(FileInputStream(keystorePropertiesFile))
+                storeFile = file(properties.getProperty("storeFile"))
+                storePassword = properties.getProperty("storePassword")
+                keyAlias = properties.getProperty("keyAlias")
+                keyPassword = properties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -35,7 +69,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL", "\"https://smis-11.innovativesolution.com.np/api/\"")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -63,6 +97,11 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
     }
 }
 

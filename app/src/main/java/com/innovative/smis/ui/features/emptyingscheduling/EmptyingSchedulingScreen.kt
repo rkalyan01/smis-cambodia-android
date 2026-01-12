@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.emptyingscheduling
 
+import com.innovative.smis.R
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -13,6 +15,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,7 +27,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 
-import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 import androidx.compose.runtime.*
@@ -42,7 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.data.model.response.TodoItem
 import com.innovative.smis.util.common.Resource
 import com.innovative.smis.util.helper.PhoneNumberFormatter
@@ -144,7 +146,15 @@ fun EmptyingSchedulingScreen(navController: NavController, onMenuClick: (() -> U
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_emptying_scheduling), fontWeight = FontWeight.SemiBold) },
+                title = { 
+                    Text(
+                        text = stringResource(R.string.screen_emptying_scheduling), 
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.basicMarquee()
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -163,15 +173,11 @@ fun EmptyingSchedulingScreen(navController: NavController, onMenuClick: (() -> U
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .pullToRefresh(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = viewModel::refreshList,
-                    enabled = true
-                )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            state = pullToRefreshState,
+            onRefresh = viewModel::refreshList,
+            modifier = Modifier.padding(paddingValues)
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -200,7 +206,6 @@ fun EmptyingSchedulingScreen(navController: NavController, onMenuClick: (() -> U
                     is Resource.Idle -> item { IdleState() }
                 }
             }
-
         }
     }
 }

@@ -22,7 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-
+import com.innovative.smis.R
 import com.innovative.smis.util.constants.PrefConstant
 import com.innovative.smis.util.constants.ScreenName
 import com.innovative.smis.util.helper.PreferenceHelper
@@ -215,6 +215,13 @@ fun AppNavigationDrawer(
             icon = Icons.Default.LocalShipping,
             route = ScreenName.DesludgingVehicle,
             requiredRole = "ETO Admin"
+        ),
+        DrawerItem(
+            id = "eto_license_status",
+            title = stringResource(R.string.nav_eto_license_status),
+            icon = Icons.Default.CardMembership,
+            route = ScreenName.EtoLicenseStatus
+            // requiredRole = "ETO Admin" // Uncomment if you want to restrict this to Admins only
         )
     )
 

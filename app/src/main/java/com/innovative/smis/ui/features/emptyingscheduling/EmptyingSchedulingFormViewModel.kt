@@ -47,7 +47,7 @@ data class EmptyingSchedulingFormState(
     val constructionYear: Int? = null,
     val accessibility: String? = null,
     val locationOfContainment: String? = null,
-    val pumpingPointPresence: Boolean? = null,
+    val pumpingPointPresence: String? = null,
     val pumpingPointDetails: String = "",
     val containmentIssues: String = "",
     val extraPaymentRequired: Boolean? = null,
@@ -73,7 +73,8 @@ data class EmptyingSchedulingFormState(
     val everEmptiedError: String? = null,
     val extraPaymentRequiredError: String? = null,
     val siteVisitRequiredError: String? = null,
-    val firstErrorField: String? = null
+    val firstErrorField: String? = null,
+    val customerContactList: List<String> = emptyList() // Parsed contact numbers
 )
 
 class EmptyingSchedulingFormViewModel(
@@ -107,6 +108,26 @@ class EmptyingSchedulingFormViewModel(
         }
     }
     private var currentFormId: String? = null
+
+    private fun parseCustomerContacts(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        val contacts = mutableListOf<String>()
+        try {
+            val jsonArray = org.json.JSONArray(json)
+            for (i in 0 until jsonArray.length()) {
+                val item = jsonArray.optString(i)
+                if (!item.isNullOrBlank() && item != "null") {
+                    contacts.add(PhoneNumberFormatter.formatCambodianNumber(item))
+                }
+            }
+        } catch (e: Exception) {
+            // Not a JSON array, treat as single string
+             if (json!!.isNotBlank()) {
+                contacts.add(PhoneNumberFormatter.formatCambodianNumber(json))
+            }
+        }
+        return contacts
+    }
 
     fun loadApplicationDetails(applicationId: Int) {
         if (applicationId == 0) return
@@ -191,29 +212,31 @@ class EmptyingSchedulingFormViewModel(
                 when (result) {
                     is Resource.Success -> {
                         result.data?.data?.let { apiData ->
-                            println("DEBUG: Reloading readonly fields from API:")
-                            println("  Application Type (from API): '${apiData.applicationType}'")
-                            println("  Purpose Of Emptying (from API): '${apiData.purposeOfEmptying}'")
-                            println("  Applicant Name (from API): '${apiData.applicantName}'")
-                            println("  Applicant Contact (from API): '${apiData.applicantContact}'")
-                            
-                            // ✅ Update ONLY readonly fields with fresh API data
                             _uiState.update { currentState ->
+                                val finalApplicantName = if (currentState.applicantName.isNotBlank()) {
+                                    currentState.applicantName
+                                } else {
+                                    apiData.applicantName ?: ""
+                                }
+                                val finalApplicantContact = if (currentState.applicantContact.isNotBlank()) {
+                                    currentState.applicantContact
+                                } else {
+                                    apiData.applicantContact ?: ""
+                                }
+                                val hasHistory = apiData.lastEmptiedYear != null
+                                val effectiveEverEmptied = if (hasHistory) true else apiData.everEmptied
                                 currentState.copy(
-                                    // Readonly fields - ALWAYS from API
                                     applicationType = apiData.applicationType,
-                                    purposeOfEmptying = apiData.purposeOfEmptying, // ✅ Preserve null
-                                    applicantName = apiData.applicantName ?: "",
-                                    applicantContact = apiData.applicantContact ?: "",
+                                    purposeOfEmptying = apiData.purposeOfEmptying,
+                                    applicantName = finalApplicantName,
+                                    applicantContact = finalApplicantContact,
                                     isPurposeOfEmptyingReadonly = !apiData.purposeOfEmptying.isNullOrBlank(),
-                                    // ✅ FIXED: Only readonly if there's a last emptied year (not just everEmptied value)
-                                    everEmptied = apiData.everEmptied,
+                                    everEmptied = effectiveEverEmptied,
                                     lastEmptiedYear = expandYear(apiData.lastEmptiedYear),
-                                    isEverEmptiedReadonly = apiData.lastEmptiedYear != null
+                                    isEverEmptiedReadonly = hasHistory,
+                                    customerContactList = parseCustomerContacts(apiData.sanitationCustomerContact)
                                 )
                             }
-                            
-                            println("DEBUG: Readonly fields updated. applicationType = ${apiData.applicationType}, isPurposeOfEmptyingReadonly = ${!apiData.purposeOfEmptying.isNullOrBlank()}")
                         }
                     }
                     is Resource.Error -> {
@@ -251,6 +274,7 @@ class EmptyingSchedulingFormViewModel(
                                     sanitationCustomerId = entity.sanitationCustomerId,
                                     sanitationCustomerName = entity.sanitationCustomerName,
                                     sanitationCustomerContact = entity.sanitationCustomerContact,
+                                    customerContactList = parseCustomerContacts(entity.sanitationCustomerContact),
                                     applicantName = entity.applicantName ?: "",
                                     applicantContact = entity.applicantContact ?: "",
                                     isApplicantSameAsCustomer = entity.isApplicantSameAsCustomer ?: false,
@@ -286,7 +310,6 @@ class EmptyingSchedulingFormViewModel(
                                 )
                             }
                             
-                            // ✅ READONLY FIELD PATTERN: Reload readonly fields from API to ensure authoritative data
                             loadReadonlyDataFromApi(applicationId)
                         }
                     }
@@ -411,7 +434,7 @@ class EmptyingSchedulingFormViewModel(
         _uiState.update { it.copy(accessibility = accessibility) }
         autoSaveDraft()
     }
-    fun onPumpingPointPresenceChange(isPresent: Boolean) { 
+    fun onPumpingPointPresenceChange(isPresent: String) {
         _uiState.update { it.copy(pumpingPointPresence = isPresent) }
         autoSaveDraft()
     }
@@ -443,10 +466,17 @@ class EmptyingSchedulingFormViewModel(
 
     fun onApplicantSameAsCustomerChange(isSame: Boolean) {
         _uiState.update { state ->
+            val customerContact = state.sanitationCustomerContact
             state.copy(
                 isApplicantSameAsCustomer = isSame,
                 applicantName = if (isSame) state.sanitationCustomerName ?: "" else "",
-                applicantContact = if (isSame) PhoneNumberFormatter.formatCambodianNumber(state.sanitationCustomerContact) else ""
+                applicantContact = if (isSame) {
+                    val contacts = parseCustomerContacts(customerContact)
+                    if (contacts.isNotEmpty()) contacts[0] else ""
+                } else "",
+                customerContactList = parseCustomerContacts(customerContact),
+
+                applicantContactError = if (isSame && customerContact.isNullOrBlank()) "Customer contact is missing. Please enter manually." else null
             )
         }
         autoSaveDraft()
@@ -517,10 +547,10 @@ class EmptyingSchedulingFormViewModel(
                     sizeOfContainment = currentState.sizeOfStorageTankM3,
                     yearOfInstallation = expandYear(currentState.constructionYear)?.toString(),
                     containmentAccessibility = when(currentState.accessibility) {
-                    "Accessible" -> "Yes"
-                    "Not Accessible" -> "No"
-                    else -> null
-                },
+                        "Accessible" -> "Yes"
+                        "Not Accessible" -> "No"
+                        else -> null
+                    },
                     locationOfContainment = currentState.locationOfContainment,
                     pumpingPointPresence = currentState.pumpingPointPresence,
                     containmentIssues = currentState.containmentIssues,
@@ -816,13 +846,17 @@ class EmptyingSchedulingFormViewModel(
             when (repoResult) {
                 is Resource.Success -> {
                     _uiState.update { it.copy(isSubmitting = false) }
-                    _saveResult.send(SaveResult.Success("Draft saved successfully"))
+                    if (isSubmit) {
+                        repository.refreshApplicationsAfterSubmission(currentApplicationId)
+                        _saveResult.send(SaveResult.Success("Application submitted successfully", shouldRefreshList = true))
+                    } else {
+                        _saveResult.send(SaveResult.Success("Draft saved successfully", shouldRefreshList = false))
+                    }
                 }
                 is Resource.Error -> {
                     _uiState.update { it.copy(isSubmitting = false) }
                     val message = repoResult.message ?: "Draft saved locally"
-                    _saveResult.send(SaveResult.Success(message))
-                }
+                    _saveResult.send(SaveResult.Success(message, shouldRefreshList = isSubmit))                }
                 else -> {
                     _uiState.update { it.copy(isSubmitting = false) }
                 }

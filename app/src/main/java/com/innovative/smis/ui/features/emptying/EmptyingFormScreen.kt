@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.features.emptying
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
@@ -17,7 +19,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.innovative.smis.R
 import com.innovative.smis.data.model.EmptyingFormState
 import com.innovative.smis.data.model.LocationOfContainment
 import com.innovative.smis.data.model.PumpingPointPresence

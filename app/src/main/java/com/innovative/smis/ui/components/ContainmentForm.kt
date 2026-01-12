@@ -1,5 +1,7 @@
 package com.innovative.smis.ui.components
 
+import com.innovative.smis.R
+
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,7 +15,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.innovative.smis.R
 
 @Composable
 fun ContainmentFormSheet(
