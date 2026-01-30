@@ -20,7 +20,7 @@ data class UserData(
     @Json(name = "name") val name: String,
     @Json(name = "email") val email: String,
     @Json(name = "id") val id: Int,
-    @Json(name = "eto_id") val etoId: Int,
+    @Json(name = "eto_id") val etoId: Int?,
     @Json(name = "role") val role: List<String>?,
     @Json(name = "permissions") val permissions: List<UserPermission>?
 )
@@ -195,7 +195,8 @@ data class SanitationCustomerData(
     @Json(name = "accessibility") val accessibility: Boolean?,
     @Json(name = "free_service_under_pbc") val freeServiceUnderPbc: Boolean?,
     @Json(name = "amount_of_regular_pay") val amountOfRegularPay: String?,
-    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?
+    @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?,
+    @Json(name = "proposed_emptying_date") val proposedEmptyingDate: String? // ✅ Added for Postpone functionality
 )
 
 // =====================================
@@ -219,50 +220,67 @@ data class Sangkat(
 data class WmsBuildingResponse(
     @Json(name = "success") val success: Boolean,
     @Json(name = "message") val message: String?,
+    @Json(name = "baseUrl") val baseUrl: String?,
     @Json(name = "data") val data: WmsBuildingData?
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsBuildingData(
-    @Json(name = "url") val url: String,
-    @Json(name = "layers") val layers: List<String>?,
-    @Json(name = "building_surveys") val building_surveys: String?
+    @Json(name = "buildings") val buildings: String?,
+    @Json(name = "url") val url: String? = null, // Keep for backward compatibility if needed
+    @Json(name = "layers") val layers: List<String>? = null,
+    @Json(name = "building_surveys") val building_surveys: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsRoadResponse(
     @Json(name = "success") val success: Boolean,
     @Json(name = "message") val message: String?,
+    @Json(name = "baseUrl") val baseUrl: String?,
     @Json(name = "data") val data: WmsRoadData?
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsRoadData(
-    @Json(name = "road_networks") val road_networks: String
+    @Json(name = "road_networks") val road_networks: String?
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsSewerResponse(
     @Json(name = "success") val success: Boolean,
     @Json(name = "message") val message: String?,
+    @Json(name = "baseUrl") val baseUrl: String?,
     @Json(name = "data") val data: WmsSewerData?
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsSewerData(
-    @Json(name = "sewer_networks") val sewer_networks: String
+    @Json(name = "sewer_networks") val sewer_networks: String?
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsSangkatResponse(
     @Json(name = "success") val success: Boolean,
     @Json(name = "message") val message: String?,
+    @Json(name = "baseUrl") val baseUrl: String?,
     @Json(name = "data") val data: WmsSangkatData?
 )
 
 @JsonClass(generateAdapter = true)
 data class WmsSangkatData(
-    @Json(name = "communes_sangkats") val communes_sangkats: String
+    @Json(name = "communes_sangkats") val communes_sangkats: String?
+)
+
+@JsonClass(generateAdapter = true)
+data class SharedSewerBuildingResponse(
+    @Json(name = "success") val success: Boolean,
+    @Json(name = "data") val data: List<SharedSewerBuildingData>
+)
+
+@JsonClass(generateAdapter = true)
+data class SharedSewerBuildingData(
+    @Json(name = "bin") val bin: String,
+    @Json(name = "shared_sewer") val shared_sewer: Boolean
 )
 
 @JsonClass(generateAdapter = true)
@@ -279,23 +297,30 @@ data class WfsBuildingLayerResponse(
 
 @JsonClass(generateAdapter = true)
 data class WfsBuildingFeature(
-    @Json(name = "type") val type: String,
-    @Json(name = "id") val id: String?,
-    @Json(name = "properties") val properties: WfsBuildingProperties?,
-    @Json(name = "geometry") val geometry: WfsGeometry?
+    @Json(name = "type") val type: String? = null,
+    @Json(name = "id") val id: String? = null,
+    // Handle both flat and nested structures
+    @Json(name = "properties") val properties: Map<String, Any?>? = null,
+    @Json(name = "geometry") val geometry: WfsGeometry? = null,
+    // Direct fields for flat JSON
+    @Json(name = "bin") val bin: String? = null,
+    @Json(name = "is_surveyed") val is_surveyed: Any? = null, // Use Any to handle Boolean/String/Number
+    @Json(name = "is_auxiliary") val is_auxiliary: Any? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class WfsBuildingProperties(
-    @Json(name = "bin") val bin: String,
-    @Json(name = "is_surveyed") val is_surveyed: Boolean,
-    @Json(name = "is_auxiliary") val is_auxiliary: Boolean
+    @Json(name = "bin") val bin: String? = null,
+    @Json(name = "is_surveyed") val is_surveyed: Boolean? = null,
+    @Json(name = "is_auxiliary") val is_auxiliary: Boolean? = null,
+    // Catch-all for debugging
+    val other: Map<String, Any?>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class WfsGeometry(
-    @Json(name = "type") val type: String,
-    @Json(name = "coordinates") val coordinates: List<List<List<Double>>>?
+    @Json(name = "type") val type: String? = null,
+    @Json(name = "coordinates") val coordinates: Any? = null
 )
 
 @JsonClass(generateAdapter = true)

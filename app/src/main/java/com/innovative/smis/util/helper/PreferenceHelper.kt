@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.annotation.StringRes
 import com.innovative.smis.R
 import com.innovative.smis.util.constants.Languages
+import com.innovative.smis.util.constants.PrefConstant
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -80,11 +81,11 @@ class PreferenceHelper(context: Context) {
         set(value) = sharedPreferences.edit().putString(KEY_DATE_FORMAT, value.name).apply()
 
     fun getAuthToken(): String? {
-        return sharedPreferences.getString("AUTH_TOKEN", null)
+        return sharedPreferences.getString(PrefConstant.AUTH_TOKEN, null)
     }
 
     fun setAuthToken(token: String) {
-        sharedPreferences.edit().putString("AUTH_TOKEN", token).apply()
+        sharedPreferences.edit().putString(PrefConstant.AUTH_TOKEN, token).apply()
     }
 
     fun saveAuthToken(token: String) {
@@ -93,33 +94,47 @@ class PreferenceHelper(context: Context) {
 
     fun saveUserData(name: String, email: String) {
         sharedPreferences.edit()
-            .putString("USER_NAME", name)
-            .putString("USER_EMAIL", email)
-            .putBoolean("IS_LOGIN", true)
+            .putString(PrefConstant.USER_NAME, name)
+            .putString(PrefConstant.USER_EMAIL, email)
+            .putBoolean(PrefConstant.IS_LOGIN, true)
             .apply()
     }
 
     fun saveEtoId(etoId: Int) {
         sharedPreferences.edit()
-            .putInt("ETO_ID", etoId)
+            .putInt("eto_id", etoId)
             .apply()
     }
 
     fun getEtoId(): Int? {
-        val etoId = sharedPreferences.getInt("ETO_ID", -1)
+        val etoId = sharedPreferences.getInt("eto_id", -1)
         return if (etoId == -1) null else etoId
     }
 
     fun getUserName(): String? {
-        return sharedPreferences.getString("USER_NAME", null)
+        return sharedPreferences.getString(PrefConstant.USER_NAME, null)
     }
 
     fun getUserEmail(): String? {
-        return sharedPreferences.getString("USER_EMAIL", null)
+        return sharedPreferences.getString(PrefConstant.USER_EMAIL, null)
+    }
+
+    fun saveUserRoles(roles: List<String>) {
+        val rolesString = roles.joinToString(",")
+        sharedPreferences.edit().putString(PrefConstant.USER_ROLE, rolesString).apply()
+    }
+
+    fun getUserRoles(): List<String> {
+        val rolesString = sharedPreferences.getString(PrefConstant.USER_ROLE, "") ?: ""
+        return if (rolesString.isNotEmpty()) {
+            rolesString.split(",").map { it.trim() }
+        } else {
+            emptyList()
+        }
     }
 
     fun isUserLoggedIn(): Boolean {
-        return sharedPreferences.getBoolean("IS_LOGIN", false)
+        return sharedPreferences.getBoolean(PrefConstant.IS_LOGIN, false)
     }
 
     fun getBoolean(key: String, defaultValue: Boolean = false): Boolean {
@@ -146,17 +161,54 @@ class PreferenceHelper(context: Context) {
         sharedPreferences.edit().putInt(key, value).apply()
     }
 
+    fun getUserPermissionsMap(): Map<String, Boolean> {
+        val permissionsJson = getString(com.innovative.smis.util.constants.PrefConstant.USER_PERMISSIONS, "") ?: ""
+        if (permissionsJson.isEmpty()) return emptyMap()
+
+        val permissions = mutableMapOf<String, Boolean>()
+        try {
+            val cleanStr = permissionsJson.trim()
+            if (cleanStr.contains("UserPermission(")) {
+                val start = cleanStr.indexOf("UserPermission(") + "UserPermission(".length
+                val end = cleanStr.lastIndexOf(")")
+                if (start < end) {
+                    val content = cleanStr.substring(start, end)
+                    content.split(",").forEach { pair ->
+                        val parts = pair.trim().split("=", limit = 2)
+                        if (parts.size == 2) {
+                            val fieldName = parts[0].trim()
+                            val value = parts[1].trim().toBooleanStrictOrNull() ?: false
+                            val permissionName = when (fieldName) {
+                                "viewMap" -> "View Map"
+                                "editBuildingSurvey" -> "Edit Building Survey"
+                                "emptyingScheduling" -> "Emtying Scheduling"
+                                "sitePreparation" -> "Site Preparation"
+                                "emptying" -> "Emptying Service"
+                                else -> null
+                            }
+                            if (permissionName != null) permissions[permissionName] = value
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("PreferenceHelper", "Permission parsing error: ${e.message}")
+        }
+        return permissions
+    }
+
     /**
      * Clear all session-specific data (auth token, user info)
      * Preserves device-level settings (language, theme, date format, etc.)
      */
     fun clearSessionOnly() {
         sharedPreferences.edit()
-            .remove("AUTH_TOKEN")
-            .remove("USER_NAME")
-            .remove("USER_EMAIL")
-            .remove("IS_LOGIN")
-            .remove("ETO_ID")
+            .remove(PrefConstant.AUTH_TOKEN)
+            .remove(PrefConstant.USER_NAME)
+            .remove(PrefConstant.USER_EMAIL)
+            .remove(PrefConstant.IS_LOGIN)
+            .remove("eto_id")
+            .remove(PrefConstant.USER_ROLE)
             .apply()
     }
 

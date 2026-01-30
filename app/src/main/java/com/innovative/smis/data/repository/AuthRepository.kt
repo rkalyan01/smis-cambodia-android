@@ -29,14 +29,8 @@ class AuthRepository(
                 val loginResponse = response.body()!!
                 if (loginResponse.status == true) {
                     // Clear all cached data BEFORE saving new credentials
-                    // This ensures a clean slate when switching users
-                    try {
-                        sessionResetManager.clearUserSessionData()
-                    } catch (e: SessionResetException) {
-                        android.util.Log.e("AuthRepository", "Failed to clear session data: ${e.message}", e)
-                        emit(Resource.Error("Login succeeded but failed to clear previous session data. Please try again."))
-                        return@flow
-                    }
+                    // This is now "Best Effort" and won't throw exceptions
+                    sessionResetManager.clearUserSessionData()
                     
                     // Now save the new user's credentials
                     loginResponse.token?.let { token ->
@@ -45,7 +39,11 @@ class AuthRepository(
                     loginResponse.data?.let { userData ->
                         preferenceHelper.saveUserData(userData.name, userData.email)
                         // Extract and save eto_id from data object directly
-                        preferenceHelper.saveEtoId(userData.etoId)
+                        preferenceHelper.saveEtoId(userData.etoId ?: -1)
+                        // Save user roles
+                        userData.role?.let { roles ->
+                            preferenceHelper.saveUserRoles(roles)
+                        }
                     }
                     emit(Resource.Success(loginResponse))
                 } else {

@@ -42,7 +42,8 @@ data class EmptyingReadonlyData(
     @Json(name = "amount_of_extra_payment") val amountOfExtraPayment: String?,
     @Json(name = "building_point_geom_exist") val buildingPointGeomExist: Boolean?,
     @Json(name = "latitude") val latitude: String?,
-    @Json(name = "longitude") val longitude: String?
+    @Json(name = "longitude") val longitude: String?,
+    @Json(name = "proposed_emptying_date") val proposedEmptyingDate: String?
 )
 
 @JsonClass(generateAdapter = true)

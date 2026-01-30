@@ -3,56 +3,7 @@ package com.innovative.smis.data.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "building_survey")
-data class BuildingSurveyEntity(
-    @PrimaryKey val bin: String,
-    val sangkat: String = "",
-    val village: String = "",
-    val roadCode: String = "",
-    val surveyDate: String = "",
-    val enumeratorName: String = "",
-    val respondentName: String = "",
-    val respondentGender: String = "",
-    val respondentContact: String = "",
-    val respondentIsOwner: String = "",
-    val ownerName: String = "",
-    val ownerNameKhmer: String = "",
-    val ownerGender: String = "",
-    val ownerContact: String = "",
-    val structureType: String = "",
-    val floorCount: String = "",
-    val householdServed: String = "",
-    val buildingPhoto: String = "",
-    val presenceOfToilet: String = "",
-    val placeOfDefecation: String = "",
-    val placeOfDefecationOther: String = "",
-    val sharedToiletBin: String = "",
-    val toiletConnection: String = "",
-    val toiletConnectionOther: String = "",
-    val sharedConnectionBin: String = "",
-    val sewerBill: String = "",
-    val sewerBillPhoto: String = "",
-    val storageTankType: String = "",
-    val storageTankTypeOther: String = "",
-    val storageTankOutlet: String = "",
-    val storageTankOutletOther: String = "",
-    val storageTankSize: String = "",
-    val storageTankYear: String = "",
-    val storageTankAccessible: String = "",
-    val storageTankEmptied: String = "",
-    val storageTankLastEmptied: String = "",
-    val waterConnection: String = "",
-    val waterCustomerId: String = "",
-    val waterMeterNumber: String = "",
-    val waterMeterPhoto: String = "",
-    val waterBillPhoto: String = "",
-    val waterShared: String = "",
-    val waterSharedBin: String = "",
-    val syncStatus: String = "pending", // pending, synced, error
-    val isOffline: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
-)
+// BuildingSurveyEntity moved to data/local/entity/BuildingSurveyEntity.kt
 
 data class SurveyFormState(
     val isLoading: Boolean = false,
@@ -67,6 +18,10 @@ data class SurveyFormState(
     val sangkat: String = "",
     val village: String = "",
     val roadCode: String = "",
+    val isMainBuilding: String = "yes", // React Native uses boolean but converted to yes/no string often
+    val buildingNo: String = "",
+    val taxCode: String = "",
+    val streetName: String = "",
     
     // B. Building Information  
     val respondentName: String = "",
@@ -80,27 +35,48 @@ data class SurveyFormState(
     val structureType: String = "",
     val floorCount: String = "",
     val householdServed: String = "",
+    val populationServed: String = "",
     val buildingPhoto: String = "",
+    val functionalUse: String = "",
+    val buildingUse: String = "",
+    val officeName: String = "",
+    val constructionDate: String = "",
+    val surveyDate: String = "",
     
     // C. Toilet and Containment Information
     val presenceOfToilet: String = "",
     val placeOfDefecation: String = "",
     val placeOfDefecationOther: String = "",
     val sharedToiletBin: String = "",
-    val toiletConnection: String = "",
+    val toiletConnection: String = "", // This is "technology" in RN
     val toiletConnectionOther: String = "",
     val sharedConnectionBin: String = "",
+    val drainCode: String = "",
+    val sewerCode: String = "",
     val sewerBill: String = "",
     val sewerBillPhoto: String = "",
+    
+    // Containment Details
+    val containmentLocation: String = "",
+    val containmentLength: String = "",
+    val containmentWidth: String = "",
+    val containmentDepth: String = "",
+    val containmentVolume: String = "",
+    val pitDiameter: String = "",
+    val pitDepth: String = "",
+    
     val storageTankType: String = "",
     val storageTankTypeOther: String = "",
     val storageTankOutlet: String = "",
     val storageTankOutletOther: String = "",
     val storageTankSize: String = "",
-    val storageTankYear: String = "",
-    val storageTankAccessible: String = "",
+    val storageTankYear: String = "", // Construction date of tank
+    val compliance: String = "", // Septic tank compliance
+    val storageTankAccessible: String = "", // Vacutug accessible
     val storageTankEmptied: String = "",
     val storageTankLastEmptied: String = "",
+    
+    // D. Water Source Information
     
     // D. Water Source Information
     val waterConnection: String = "",
@@ -115,9 +91,30 @@ data class SurveyFormState(
     val sangkatOptions: List<String> = emptyList(),
     val genderOptions: List<String> = listOf("male", "female", "other"),
     val yesNoOptions: List<String> = listOf("yes", "no"),
+    val dontKnowOptions: List<String> = listOf("yes", "no", "dont_know"),
     val structureTypeOptions: List<String> = listOf("permanent", "semi-permanent", "temporary"),
+    val functionalUseOptions: List<String> = listOf("health", "business", "residental"),
+    val buildingUseOptions: List<String> = listOf("Option 1", "Option 2", "Option 3", "Option 4"), // Placeholder from RN
     val placeOfDefecationOptions: List<String> = listOf("community_toilet", "shared_toilet", "open_defecation", "other"),
-    val toiletConnectionOptions: List<String> = listOf("sewer", "shared_sewer", "storage_tank", "shared_storage_tank", "open_ground", "other"),
+    val toiletConnectionOptions: List<String> = listOf(
+        "0", // Select sanitation system technology
+        "1", // Anaerobic Digestor
+        "2", // Cesspool/Holding tank
+        "3", // Communal Septic Tank (from PT CT)
+        "4", // Dehydration Toilet System
+        "5", // DEWATS Online
+        "6", // Directly to natural water body
+        "7", // Directly to sewage network
+        "8", // Directly to stormwater draim
+        "9", // Directly to surrounding environment
+        "10", // Double pit with soak away pit
+        "11", // Septic tank connected to sewerage network
+        "12", // Septic tank without soak away pit
+        "13", // Septic tank with soak away pit
+        "14", // Shared Septic tank
+        "15"  // Single pit
+    ),
+    val containmentLocationOptions: List<String> = listOf("outside", "inside", "outside_2"),
     val storageTankTypeOptions: List<String> = listOf("ring_close_bottom", "ring_open_bottom", "plastic_septic", "concrete_open_bottom", "concrete_close_bottom", "concrete_with_filter", "dont_know", "other"),
     val storageTankOutletOptions: List<String> = listOf("underground_infiltration", "discharge_ground", "discharge_channel", "connect_sewer", "connect_shared_sewer", "no_outlet", "dont_know", "other")
 ) {
@@ -168,6 +165,7 @@ data class SurveyFormState(
             0 -> { // Building Location
                 if (sangkat.isEmpty()) errors["sangkat"] = "Sangkat is required"
                 if (roadCode.isEmpty()) errors["roadCode"] = "Road Code is required"
+                if (isMainBuilding == "no" && buildingNo.isEmpty()) errors["buildingNo"] = "Building No is required"
             }
             1 -> { // Building Information
                 if (respondentName.isEmpty()) errors["respondentName"] = "Respondent name is required"
@@ -186,30 +184,57 @@ data class SurveyFormState(
                 if (structureType.isEmpty()) errors["structureType"] = "Structure type is required"
                 if (floorCount.isEmpty()) errors["floorCount"] = "Floor count is required"
                 if (householdServed.isEmpty()) errors["householdServed"] = "Household count is required"
-                if (buildingPhoto.isEmpty()) errors["buildingPhoto"] = "Building photo is required"
+                // functionalUse logic
+                if (functionalUse.isNotEmpty() && functionalUse != "residental" && officeName.isEmpty()) {
+                    errors["officeName"] = "Office/Business name is required"
+                }
             }
             2 -> { // Toilet Information
                 if (presenceOfToilet.isEmpty()) errors["presenceOfToilet"] = "Toilet presence is required"
+                
                 if (presenceOfToilet == "yes") {
-                    if (toiletConnection.isEmpty()) errors["toiletConnection"] = "Toilet connection is required"
-                    if (toiletConnection == "other" && toiletConnectionOther.isEmpty()) {
-                        errors["toiletConnectionOther"] = "Please specify other connection type"
+                     // Toilet Connection is the Technology ID now (0-15)
+                    if (toiletConnection.isEmpty() || toiletConnection == "0") errors["toiletConnection"] = "Technology selection is required"
+                    
+                    // Specific Tech Validations
+                    if (toiletConnection == "13" && sharedConnectionBin.isEmpty()) {
+                         errors["sharedConnectionBin"] = "Pre-connected BIN is required"
                     }
-                    if (toiletConnection in listOf("storage_tank", "shared_storage_tank")) {
-                        if (storageTankType.isEmpty()) errors["storageTankType"] = "Storage tank type is required"
-                        if (storageTankOutlet.isEmpty()) errors["storageTankOutlet"] = "Storage tank outlet is required"
+                    if (toiletConnection == "8" && drainCode.isEmpty()) {
+                        errors["drainCode"] = "Drain Code is required"
                     }
+                    if (toiletConnection == "11" && sewerCode.isEmpty()) {
+                        errors["sewerCode"] = "Sewer Code is required"
+                    }
+                    
+                    // Containment Logic (Tech 2, 11, 12 -> Tank Details)
+                    if (toiletConnection in listOf("2", "11", "12")) {
+                        if (containmentLength.isEmpty()) errors["containmentLength"] = "Length is required"
+                        if (containmentWidth.isEmpty()) errors["containmentWidth"] = "Width is required"
+                        if (containmentDepth.isEmpty()) errors["containmentDepth"] = "Depth is required"
+                         // Construction date is handled by separate field or simplified
+                    }
+                    
+                    // Pit Logic (Tech 10, 15 -> Pit Details)
+                    if (toiletConnection in listOf("10", "15")) {
+                         if (pitDiameter.isEmpty()) errors["pitDiameter"] = "Pit Diameter is required"
+                         if (pitDepth.isEmpty()) errors["pitDepth"] = "Pit Depth is required"
+                         if (containmentLocation.isEmpty()) errors["containmentLocation"] = "Containment Location is required"
+                    }
+                    
                 } else if (presenceOfToilet == "no") {
                     if (placeOfDefecation.isEmpty()) errors["placeOfDefecation"] = "Place of defecation is required"
                     if (placeOfDefecation == "other" && placeOfDefecationOther.isEmpty()) {
                         errors["placeOfDefecationOther"] = "Please specify other place"
+                    }
+                    if (placeOfDefecation == "shared_toilet" && sharedToiletBin.isEmpty()) {
+                        errors["sharedToiletBin"] = "Shared Toilet BIN is required"
                     }
                 }
             }
             3 -> { // Water Information
                 if (waterConnection.isEmpty()) errors["waterConnection"] = "Water connection status is required"
                 if (waterConnection == "yes") {
-                    if (waterCustomerId.isEmpty()) errors["waterCustomerId"] = "Water customer ID is required"
                     if (waterMeterNumber.isEmpty()) errors["waterMeterNumber"] = "Water meter number is required"
                 }
             }

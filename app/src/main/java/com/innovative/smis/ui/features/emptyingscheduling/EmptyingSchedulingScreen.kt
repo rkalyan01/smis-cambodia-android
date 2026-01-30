@@ -292,6 +292,8 @@ private fun ApplicationTaskCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Phone icon commented out - uncomment if needed in future
+                    /*
                     IconButton(
                         onClick = {
                             val contact = todoItem.applicantContact ?: todoItem.phoneNo
@@ -319,6 +321,7 @@ private fun ApplicationTaskCard(
                                 MaterialTheme.colorScheme.primary
                         ) 
                     }
+                    */
                     IconButton(
                         onClick = {
                             val lat = todoItem.latitude

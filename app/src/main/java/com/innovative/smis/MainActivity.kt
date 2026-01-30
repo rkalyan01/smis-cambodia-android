@@ -71,92 +71,9 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun PermissionAwareApp() {
-        val context = LocalContext.current
-        
-        // ✅ FIX: Add specific Loading state to prevent FOUC (Flash of Unverified Content)
-        // This prevents MyApp from rendering before permission check completes
-        var isCheckingPermissions by remember { mutableStateOf(true) }
-        var permissionsGranted by remember { mutableStateOf(false) }
-        var showPermissionDialog by remember { mutableStateOf(false) }
-        var missingPermissions by remember { mutableStateOf<List<String>>(emptyList()) }
-
-        val permissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            Log.d("MainActivity", "Permission result received: $permissions")
-            val deniedPermissions = permissions.filter { !it.value }.keys
-            if (deniedPermissions.isEmpty()) {
-                Log.d("MainActivity", "All permissions granted")
-                permissionsGranted = true
-                showPermissionDialog = false
-            } else {
-                Log.d("MainActivity", "Some permissions denied: $deniedPermissions")
-                permissionsGranted = false
-                showPermissionDialog = false // Or keep true to force them
-            }
-        }
-
-        // ✅ PERFORMANCE: Check permissions on IO thread to avoid main thread blocking
-        LaunchedEffect(Unit) {
-            withContext(Dispatchers.IO) {
-                val hasAllPermissions = PermissionManager.hasAllPermissions(context)
-                val missing = if (!hasAllPermissions) {
-                    PermissionManager.getMissingPermissions(context)
-                } else {
-                    emptyList()
-                }
-
-                withContext(Dispatchers.Main) {
-                    Log.d("MainActivity", "Initial permission check - hasAllPermissions: $hasAllPermissions")
-                    if (!hasAllPermissions) {
-                        Log.d("MainActivity", "Missing permissions: $missing")
-                        missingPermissions = missing
-                        showPermissionDialog = true
-                        permissionsGranted = false
-                    } else {
-                        showPermissionDialog = false
-                        permissionsGranted = true
-                    }
-                    // ✅ Only now do we allow UI to render (prevents FOUC and frame skips)
-                    isCheckingPermissions = false
-                    Log.d("MainActivity", "🚀 Permission check complete - isCheckingPermissions set to false")
-                }
-            }
-        }
-
-        // 1. Render LOADING first (prevents MyApp from initializing too early)
-        if (isCheckingPermissions) {
-            Log.d("MainActivity", "⏳ Showing loading screen during permission check")
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-            )
-            return
-        }
-
-        // 2. Render Dialog if needed
-        if (showPermissionDialog && missingPermissions.isNotEmpty() && !permissionsGranted) {
-            Log.d("MainActivity", "📋 Showing permission dialog")
-            PermissionDialog(
-                missingPermissions = missingPermissions,
-                onGrantPermissions = {
-                    Log.d("MainActivity", "Grant permissions clicked - launching permission request")
-                    permissionLauncher.launch(missingPermissions.toTypedArray())
-                },
-                onDismiss = {
-                    Log.d("MainActivity", "Permission dialog dismissed")
-                    // If dismissed without granting, user proceeds (logic based on your previous code)
-                    showPermissionDialog = false
-                }
-            )
-        }
-
-        // 3. Render Main App ONLY if checking is done AND dialog is not blocking
-        if (!showPermissionDialog) {
-            Log.d("MainActivity", "✅ Rendering MyApp - permission check complete and dialog not showing")
-            MyApp()
-        }
+        // Global permission check disabled to allow LoginScreen to handle it
+        // with language support and better UI flow.
+        MyApp()
     }
 }
 

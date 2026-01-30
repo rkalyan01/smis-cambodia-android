@@ -2,12 +2,19 @@ package com.innovative.smis.ui.features.buildingsurvey
 
 import com.innovative.smis.R
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import android.net.Uri
@@ -20,18 +27,28 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.innovative.smis.data.model.SurveyFormState
 import com.innovative.smis.ui.components.*
 import org.koin.androidx.compose.koinViewModel
+
+// Color palette - dynamic theme support
+private val PrimaryGradient = listOf(Color(0xFF0077B6), Color(0xFF00B4D8)) // RN-like teal/blue
+private val AccentColor = Color(0xFF00D4AA)
+// Remove hardcoded CardBackground/CardContentColor/SurfaceLight to use MaterialTheme instead
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,21 +93,22 @@ fun ComprehensiveSurveyScreen(
         },
         modifier = Modifier
             .fillMaxSize()
-            .systemBarsPadding() // Fix status bar overlap
-            .imePadding() // Handle keyboard padding
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
                 .verticalScroll(scrollState)
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
                         focusManager.clearFocus() // Dismiss keyboard on tap
                     })
                 }
+                .padding(horizontal = 16.dp)
         ) {
+            // Top margin to separate from header
+            Spacer(modifier = Modifier.height(12.dp))
+            
             // Progress indicator
             SurveyProgressIndicator(state)
             
@@ -159,45 +177,108 @@ fun ComprehensiveSurveyScreen(
 
 @Composable
 private fun SurveyProgressIndicator(state: SurveyFormState) {
+    val stepIcons = listOf(
+        Icons.Default.LocationOn,
+        Icons.Default.Home,
+        Icons.Default.WaterDrop,
+        Icons.Default.Water
+    )
+    val stepLabels = listOf("Location", "Building", "Toilet", "Water")
+    
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
+            // Step circles row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Progress",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = "Section ${state.currentSection + 1} of ${state.totalSections}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                for (i in 0 until state.totalSections) {
+                    val isCompleted = i < state.currentSection
+                    val isCurrent = i == state.currentSection
+                    
+                    // Step circle
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .then(
+                                if (isCurrent || isCompleted) {
+                                    Modifier.background(
+                                        brush = Brush.linearGradient(PrimaryGradient),
+                                        shape = CircleShape
+                                    )
+                                } else {
+                                    Modifier
+                                        .background(if(isSystemInDarkTheme()) Color.DarkGray else Color(0xFFE0E0E0), CircleShape)
+                                        .border(2.dp, Color.Gray.copy(alpha = 0.3f), CircleShape)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isCompleted) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Completed",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = stepIcons[i],
+                                contentDescription = stepLabels[i],
+                                tint = if (isCurrent) Color.White else Color.Gray,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    
+                    // Connecting line (except after last)
+                    if (i < state.totalSections - 1) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(3.dp)
+                                .padding(horizontal = 4.dp)
+                                .background(
+                                    if (i < state.currentSection) 
+                                        Brush.linearGradient(PrimaryGradient)
+                                    else 
+                                        Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.3f), Color.Gray.copy(alpha = 0.3f))),
+                                    RoundedCornerShape(2.dp)
+                                )
+                        )
+                    }
+                }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            LinearProgressIndicator(
-                progress = { (state.currentSection + 1).toFloat() / state.totalSections },
-                modifier = Modifier.fillMaxWidth(),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
+            // Current step label
             Text(
                 text = getSectionTitle(state.currentSection),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            
+            Text(
+                text = "Step ${state.currentSection + 1} of ${state.totalSections}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF0077B6),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -212,6 +293,37 @@ private fun BuildingLocationSection(
         title = "A. Building Location Information",
         icon = Icons.Default.LocationOn
     ) {
+        RadioButtonGroupField(
+            label = "Is Main Building?",
+            options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
+            selectedValue = state.isMainBuilding.replaceFirstChar { it.uppercase() },
+            onValueSelected = { onStateChange(state.copy(isMainBuilding = it.lowercase())) },
+            error = null
+        )
+        
+        if (state.isMainBuilding == "no") {
+            Spacer(modifier = Modifier.height(12.dp))
+            SurveyTextFieldWithError(
+                value = state.buildingNo,
+                onValueChange = { onStateChange(state.copy(buildingNo = it)) },
+                label = "Building No *",
+                error = state.validationErrors["buildingNo"],
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        SurveyTextFieldWithError(
+            value = state.taxCode,
+            onValueChange = { onStateChange(state.copy(taxCode = it)) },
+            label = "Tax Code",
+            error = null,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+    
         SurveyDropdownField(
             label = "Sangkat *",
             options = state.sangkatOptions,
@@ -382,6 +494,50 @@ private fun BuildingInformationSection(
         
         Spacer(modifier = Modifier.height(12.dp))
         
+        SurveyTextFieldWithError(
+            value = state.populationServed,
+            onValueChange = { onStateChange(state.copy(populationServed = it)) },
+            label = "Population Served",
+            error = null,
+            keyboardType = KeyboardType.Number,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        SurveyDropdownField(
+            label = "Functional Use",
+            options = state.functionalUseOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
+            selectedValue = state.functionalUse.replaceFirstChar { it.uppercase() },
+            onValueSelected = { onStateChange(state.copy(functionalUse = it.lowercase())) },
+            error = null,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        if (state.functionalUse.isNotEmpty() && state.functionalUse != "residental") {
+             Spacer(modifier = Modifier.height(12.dp))
+             SurveyTextFieldWithError(
+                value = state.officeName,
+                onValueChange = { onStateChange(state.copy(officeName = it)) },
+                label = "Office/Business Name *",
+                error = state.validationErrors["officeName"],
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        SurveyTextFieldWithError(
+            value = state.constructionDate,
+            onValueChange = { onStateChange(state.copy(constructionDate = it)) },
+            label = "Construction Year",
+            error = null,
+            keyboardType = KeyboardType.Number,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
         var buildingPhotoUri by remember { mutableStateOf<Uri?>(null) }
         ImagePickerComponent(
             label = "Building Photo *",
@@ -415,184 +571,172 @@ private fun ToiletInformationSection(
             Spacer(modifier = Modifier.height(16.dp))
             
             SurveyDropdownField(
-                label = "Toilet Connection *",
-                options = state.toiletConnectionOptions.map { 
-                    it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } 
-                },
-                selectedValue = state.toiletConnection.replace("_", " ").replaceFirstChar { it.uppercase() },
+                label = "Sanitation System Technology *",
+                options = state.toiletConnectionOptions,
+                selectedValue = state.toiletConnection,
                 onValueSelected = { 
-                    val formatted = it.lowercase().replace(" ", "_")
-                    onStateChange(state.copy(toiletConnection = formatted)) 
+                    onStateChange(state.copy(toiletConnection = it)) 
                 },
                 error = state.validationErrors["toiletConnection"],
                 modifier = Modifier.fillMaxWidth()
             )
             
-            if (state.toiletConnection == "other") {
-                Spacer(modifier = Modifier.height(12.dp))
-                SurveyTextFieldWithError(
-                    value = state.toiletConnectionOther,
-                    onValueChange = { onStateChange(state.copy(toiletConnectionOther = it)) },
-                    label = "Specify Other Connection *",
-                    error = state.validationErrors["toiletConnectionOther"],
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            if (state.toiletConnection in listOf("shared_sewer", "shared_storage_tank")) {
+            // Tech 13: Septic tank with soak away pit -> Pre-connected BIN
+            if (state.toiletConnection == "13") {
                 Spacer(modifier = Modifier.height(12.dp))
                 SurveyTextFieldWithError(
                     value = state.sharedConnectionBin,
                     onValueChange = { onStateChange(state.copy(sharedConnectionBin = it)) },
-                    label = "BIN No (If shared latrine/building,if shared)",
-                    error = null,
+                    label = "BIN of pre-connected buildings",
+                    error = state.validationErrors["sharedConnectionBin"],
                     modifier = Modifier.fillMaxWidth()
                 )
             }
             
-            // Storage tank specific fields
-            if (state.toiletConnection in listOf("storage_tank", "shared_storage_tank")) {
+            // Tech 8: Directly to stormwater drain -> Drain Code
+            if (state.toiletConnection == "8") {
+                 Spacer(modifier = Modifier.height(12.dp))
+                 SurveyTextFieldWithError(
+                    value = state.drainCode,
+                    onValueChange = { onStateChange(state.copy(drainCode = it)) },
+                    label = "Drain Code",
+                    error = state.validationErrors["drainCode"],
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            
+            // Tech 11: Septic tank connected to sewerage network -> Sewer Code
+            if (state.toiletConnection == "11") {
+                 Spacer(modifier = Modifier.height(12.dp))
+                 SurveyTextFieldWithError(
+                    value = state.sewerCode,
+                    onValueChange = { onStateChange(state.copy(sewerCode = it)) },
+                    label = "Sewer Code",
+                    error = state.validationErrors["sewerCode"],
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Tech 2, 11, 12 -> Containment Info (Tank Style)
+            if (state.toiletConnection in listOf("2", "11", "12")) {
                 Spacer(modifier = Modifier.height(16.dp))
-                
                 Text(
-                    text = "Storage Tank Details",
+                    text = "Containment Information",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                SurveyDropdownField(
-                    label = "Storage Tank Type *",
-                    options = state.storageTankTypeOptions.map { 
-                        it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } 
-                    },
-                    selectedValue = state.storageTankType.replace("_", " ").replaceFirstChar { it.uppercase() },
-                    onValueSelected = { 
-                        val formatted = it.lowercase().replace(" ", "_")
-                        onStateChange(state.copy(storageTankType = formatted)) 
-                    },
-                    error = state.validationErrors["storageTankType"],
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                if (state.storageTankType == "other") {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SurveyTextFieldWithError(
-                        value = state.storageTankTypeOther,
-                        onValueChange = { onStateChange(state.copy(storageTankTypeOther = it)) },
-                        label = "Other Tank Type *",
-                        error = state.validationErrors["storageTankTypeOther"],
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                SurveyDropdownField(
-                    label = "Outlet of Storage Tank *",
-                    options = state.storageTankOutletOptions.map { 
-                        it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } 
-                    },
-                    selectedValue = state.storageTankOutlet.replace("_", " ").replaceFirstChar { it.uppercase() },
-                    onValueSelected = { 
-                        val formatted = it.lowercase().replace(" ", "_")
-                        onStateChange(state.copy(storageTankOutlet = formatted)) 
-                    },
-                    error = state.validationErrors["storageTankOutlet"],
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                if (state.storageTankOutlet == "other") {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SurveyTextFieldWithError(
-                        value = state.storageTankOutletOther,
-                        onValueChange = { onStateChange(state.copy(storageTankOutletOther = it)) },
-                        label = "Other Connection *",
-                        error = state.validationErrors["storageTankOutletOther"],
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 SurveyTextFieldWithError(
-                    value = state.storageTankSize,
-                    onValueChange = { onStateChange(state.copy(storageTankSize = it)) },
-                    label = "Storage Tank Size (m³)",
-                    error = null,
+                    value = state.containmentLength,
+                    onValueChange = { onStateChange(state.copy(containmentLength = it)) },
+                    label = "Length",
+                    error = state.validationErrors["containmentLength"],
+                    keyboardType = KeyboardType.Number,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                 Spacer(modifier = Modifier.height(12.dp))
+                 SurveyTextFieldWithError(
+                    value = state.containmentWidth,
+                    onValueChange = { onStateChange(state.copy(containmentWidth = it)) },
+                    label = "Width",
+                    error = state.validationErrors["containmentWidth"],
+                    keyboardType = KeyboardType.Number,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                 Spacer(modifier = Modifier.height(12.dp))
+                 SurveyTextFieldWithError(
+                    value = state.containmentDepth,
+                    onValueChange = { onStateChange(state.copy(containmentDepth = it)) },
+                    label = "Depth",
+                    error = state.validationErrors["containmentDepth"],
                     keyboardType = KeyboardType.Number,
                     modifier = Modifier.fillMaxWidth()
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
-                
-                SurveyTextFieldWithError(
-                    value = state.storageTankYear,
-                    onValueChange = { onStateChange(state.copy(storageTankYear = it)) },
-                    label = "Construction Year of Storage Tank",
-                    error = null,
-                    keyboardType = KeyboardType.Number,
+                SurveyDropdownField(
+                    label = "Containment Location",
+                    options = state.containmentLocationOptions.map { it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } },
+                    selectedValue = state.containmentLocation.replace("_", " ").replaceFirstChar { it.uppercase() },
+                    onValueSelected = { onStateChange(state.copy(containmentLocation = it.lowercase().replace(" ", "_"))) },
+                    error = state.validationErrors["containmentLocation"],
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
+                // Septic Tank Compliance (Using yes/no options for boolean logic)
                 RadioButtonGroupField(
-                    label = "Accessible to Desludging Vehicle (Yes/No)",
+                    label = "Septic Tank Compliance",
                     options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
-                    selectedValue = state.storageTankAccessible.replaceFirstChar { it.uppercase() },
-                    onValueSelected = { onStateChange(state.copy(storageTankAccessible = it.lowercase())) },
+                    selectedValue = state.compliance.replaceFirstChar { it.uppercase() },
+                    onValueSelected = { onStateChange(state.copy(compliance = it.lowercase())) },
                     error = null
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                RadioButtonGroupField(
-                    label = "Ever Emptied the Storage Tank (Yes/No)",
-                    options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
-                    selectedValue = state.storageTankEmptied.replaceFirstChar { it.uppercase() },
-                    onValueSelected = { onStateChange(state.copy(storageTankEmptied = it.lowercase())) },
-                    error = null
-                )
-                
-                if (state.storageTankEmptied == "yes") {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SurveyTextFieldWithError(
-                        value = state.storageTankLastEmptied,
-                        onValueChange = { onStateChange(state.copy(storageTankLastEmptied = it)) },
-                        label = "Last Emptied Year",
-                        error = null,
-                        keyboardType = KeyboardType.Number,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             }
             
-            if (state.toiletConnection == "sewer" || state.toiletConnection == "shared_sewer") {
+            // Tech 10, 15 -> Pit Info
+             if (state.toiletConnection in listOf("10", "15")) {
                 Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Containment Information (Pit)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 
-                RadioButtonGroupField(
-                    label = "Sewer Bill Available",
-                    options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
-                    selectedValue = state.sewerBill.replaceFirstChar { it.uppercase() },
-                    onValueSelected = { onStateChange(state.copy(sewerBill = it.lowercase())) },
-                    error = null
+                SurveyTextFieldWithError(
+                    value = state.pitDiameter,
+                    onValueChange = { onStateChange(state.copy(pitDiameter = it)) },
+                    label = "Pit Diameter",
+                    error = state.validationErrors["pitDiameter"],
+                    keyboardType = KeyboardType.Number,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                 Spacer(modifier = Modifier.height(12.dp))
+                 SurveyTextFieldWithError(
+                    value = state.pitDepth,
+                    onValueChange = { onStateChange(state.copy(pitDepth = it)) },
+                    label = "Pit Depth",
+                    error = state.validationErrors["pitDepth"],
+                    keyboardType = KeyboardType.Number,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 
-                if (state.sewerBill == "yes") {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    var sewerBillPhotoUri by remember { mutableStateOf<Uri?>(null) }
-                    ImagePickerComponent(
-                        label = "Sewer Bill Photo",
-                        selectedImageUri = sewerBillPhotoUri,
-                        onImageSelected = { uri ->
-                            sewerBillPhotoUri = uri
-                            onStateChange(state.copy(sewerBillPhoto = uri?.toString() ?: ""))
-                        }
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                SurveyDropdownField(
+                    label = "Containment Location",
+                    options = state.containmentLocationOptions.map { it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } },
+                    selectedValue = state.containmentLocation.replace("_", " ").replaceFirstChar { it.uppercase() },
+                    onValueSelected = { onStateChange(state.copy(containmentLocation = it.lowercase().replace(" ", "_"))) },
+                    error = state.validationErrors["containmentLocation"],
+                    modifier = Modifier.fillMaxWidth()
+                )
+                 
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                RadioButtonGroupField(
+                    label = "Septic Tank Compliance",
+                    options = state.yesNoOptions.map { it.replaceFirstChar { char -> char.uppercase() } },
+                    selectedValue = state.compliance.replaceFirstChar { it.uppercase() },
+                    onValueSelected = { onStateChange(state.copy(compliance = it.lowercase())) },
+                    error = null
+                )
             }
+            
+            // Vacutug Accessible logic (Tech 2, 10-15) - simplified range check
+            if (state.toiletConnection in listOf("2", "10", "11", "12", "13", "14", "15")) {
+                 Spacer(modifier = Modifier.height(12.dp))
+                 RadioButtonGroupField(
+                    label = "Is Building Vacutug accessible",
+                    options = state.dontKnowOptions.map { it.replace("_", " ").replaceFirstChar { char -> char.uppercase() } },
+                    selectedValue = state.storageTankAccessible.replace("_", " ").replaceFirstChar { it.uppercase() },
+                    onValueSelected = { onStateChange(state.copy(storageTankAccessible = it.lowercase().replace(" ", "_"))) },
+                    error = null
+                )
+            }
+
         } else if (state.presenceOfToilet == "no") {
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -728,34 +872,57 @@ private fun SectionCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
+        Column {
+            // Gradient header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.linearGradient(PrimaryGradient),
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
-            content()
+            
+            // Content area
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+                content()
+            }
         }
     }
 }
@@ -768,29 +935,57 @@ private fun SurveyNavigationButtons(
     onSubmit: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Previous button
         if (state.currentSection > 0) {
             OutlinedButton(
                 onClick = onPrevious,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(
+                    brush = Brush.linearGradient(PrimaryGradient)
+                )
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack, 
+                    contentDescription = null,
+                    tint = Color(0xFF00B4DB)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.button_previous))
+                Text(
+                    stringResource(R.string.button_previous),
+                    color = Color(0xFF00B4DB),
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         } else {
             Spacer(modifier = Modifier.weight(1f))
         }
         
+        // Next / Submit button
         if (state.currentSection < state.totalSections - 1) {
             Button(
                 onClick = onNext,
                 enabled = state.isCurrentSectionValid(),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF00B4DB),
+                    disabledContainerColor = Color.Gray.copy(alpha = 0.3f)
+                )
             ) {
-                Text(stringResource(R.string.button_next))
+                Text(
+                    stringResource(R.string.button_next),
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
             }
@@ -798,15 +993,28 @@ private fun SurveyNavigationButtons(
             Button(
                 onClick = onSubmit,
                 enabled = state.canSubmit() && !state.isSubmitting,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentColor,
+                    disabledContainerColor = Color.Gray.copy(alpha = 0.3f)
+                )
             ) {
                 if (state.isSubmitting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
                     )
                 } else {
-                    Text(stringResource(R.string.button_submit_survey))
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.button_submit_survey),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -855,9 +1063,9 @@ private fun PhotoField(
 }
 
 private fun getSectionTitle(section: Int): String = when (section) {
-    0 -> "Building Location Information"
-    1 -> "Building Information"
-    2 -> "Toilet and Containment Information"
-    3 -> "Water Source Information"
+    0 -> "Building Location (1/4)"
+    1 -> "Building Information (2/4)"
+    2 -> "Toilet & Containment (3/4)"
+    3 -> "Water Source (4/4)"
     else -> "Unknown Section"
 }

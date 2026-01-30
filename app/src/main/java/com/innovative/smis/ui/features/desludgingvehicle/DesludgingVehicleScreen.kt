@@ -394,6 +394,24 @@ fun VehicleCard(
                 }
             }
 
+            vehicle.vehicleColor?.let { color ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = color,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
             vehicle.currentLocation?.let { location ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

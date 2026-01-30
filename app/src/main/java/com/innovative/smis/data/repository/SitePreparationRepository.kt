@@ -17,6 +17,8 @@ import com.innovative.smis.data.model.response.SitePreparationCustomerDetailsRes
 import com.innovative.smis.data.model.response.ContainmentData
 import com.innovative.smis.data.model.request.SitePreparationFormRequest
 import com.innovative.smis.data.model.request.PostponeRequest
+import com.innovative.smis.data.model.response.SimpleApiResponse
+import retrofit2.Response
 
 import com.innovative.smis.util.common.Resource
 import kotlinx.coroutines.flow.Flow
@@ -509,9 +511,9 @@ class SitePreparationRepository(
                 PostponeRequest(
                     type = postponeType,
                     preponeFrom = postponeFrom,
-                    preponeTo = postponeTo,
+                    preponeTo = null,
                     postponeFrom = null,
-                    postponeTo = null,
+                    postponeTo = postponeTo, // Use postpone_to for target date in Prepone as per Postman
                     reason = reason,
                     remark = remark
                 )
@@ -526,10 +528,16 @@ class SitePreparationRepository(
                     remark = remark
                 )
             }
-            val response = postponeApiService.postponeApplication(
+            val response: Response<SimpleApiResponse> = postponeApiService.postponeApplication(
                 applicationId = applicationId,
                 postponeAt = "Site-Preparation",
-                request = request
+                type = request.type,
+                reason = request.reason,
+                remark = request.remark,
+                postponeFrom = request.postponeFrom,
+                postponeTo = request.postponeTo,
+                preponeFrom = request.preponeFrom,
+                preponeTo = request.preponeTo
             )
             
             if (response.isSuccessful && response.body()?.success == true) {

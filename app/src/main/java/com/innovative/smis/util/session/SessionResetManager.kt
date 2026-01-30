@@ -19,24 +19,29 @@ class SessionResetManager(
      * Clears: Auth data, cached applications, drafts, sync queues, surveys
      */
     suspend fun clearUserSessionData() {
+        Log.d(TAG, "Starting session data clearance...")
+        
+        // 1. Clear Database (Best Effort)
         try {
-            Log.d(TAG, "Starting session data clearance...")
-            
-            // Clear all Room database tables (application cache, drafts, surveys, sync queue, etc.)
             database.clearAllTables()
             Log.d(TAG, "✓ Cleared all Room database tables")
-            
+        } catch (e: Exception) {
+            // Log error but proceed - do NOT block login because of DB clear failure
+            // This can happen on some devices due to file locking or foreign key issues
+            Log.e(TAG, "⚠️ Failed to clear database tables (proceeding anyway): ${e.message}", e)
+        }
+        
+        // 2. Clear Preferences (Critical)
+        try {
             // Clear session-specific preferences (token, user data)
-            // This preserves language, date format, and other device settings
             preferenceHelper.clearSessionOnly()
             Log.d(TAG, "✓ Cleared session preferences")
-            
-            Log.d(TAG, "Session data clearance completed successfully")
-            
         } catch (e: Exception) {
-            Log.e(TAG, "Error clearing session data: ${e.message}", e)
-            throw SessionResetException("Failed to clear session data: ${e.message}", e)
+            Log.e(TAG, "⚠️ Failed to clear preferences: ${e.message}", e)
+            // Still don't throw - AuthRepository will overwrite critical prefs (token/user) anyway
         }
+        
+        Log.d(TAG, "Session data clearance completed (Best Effort)")
     }
     
     /**

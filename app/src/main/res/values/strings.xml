@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Name -->
-    <string name="app_name">SMIS BETA</string>
+    <string name="app_name">SMIS</string>
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_map">Map</string>
@@ -117,7 +117,7 @@
     <string name="label_longitude">Longitude</string>
     <!-- Workflow Progress -->
     <string name="label_progress">Progress:</string>
-    <string name="workflow_progress_format">%d/%d</string>
+    <string name="workflow_progress_format">%1$d/%2$d</string>
     <string name="workflow_stage_scheduling">Scheduling</string>
     <string name="workflow_stage_site_preparation">Site Preparation</string>
     <string name="workflow_stage_emptying_service">Emptying Service</string>
@@ -615,12 +615,20 @@
     <string name="section_application_information">Application Information</string>
     <string name="label_application_date">Application Date</string>
     <string name="title_emptying_request_form">Emptying Request Form</string>
-    <string name="permission_camera_access">Camera Access</string>
-    <string name="permission_camera_description">Take photos for building surveys and documentation</string>
+    <string name="permission_camera_access">Camera</string>
+    <string name="permission_camera_description">Required to capture photos for service documentation</string>
     <string name="permission_photo_gallery">Photo Gallery Access</string>
     <string name="permission_photo_gallery_description">Select photos from your device</string>
     <string name="permission_location">Location Access</string>
     <string name="permission_location_description">Show your current location on the map</string>
+    <string name="permission_location_precise">Location (Precise)</string>
+    <string name="permission_location_precise_description">Required to record precise location data for services</string>
+    <string name="permission_location_approximate">Location (Approximate)</string>
+    <string name="permission_location_approximate_description">Required to record approximate location data</string>
+    <string name="permission_selected_photos">Selected Photos</string>
+    <string name="permission_selected_photos_description">Allows access to only the photos you select</string>
+    <string name="permission_photos_media">Photos &amp; Media</string>
+    <string name="permission_photos_media_description">Required to access photos from your gallery</string>
     <string name="action_grant_permissions">Grant Permissions</string>
     <string name="section_quick_actions">Quick Actions</string>
     <string name="action_view_all">View All</string>
@@ -715,4 +723,27 @@
     <string name="date_format_dd_mm_yyyy">DD-MM-YYYY</string>
     <string name="date_format_mm_dd_yyyy">MM-DD-YYYY</string>
     <string name="date_format_yyyy_mm_dd">YYYY-MM-DD</string>
+    <string name="label_configuration">Configuration</string>
+    <string name="action_grant_permission">Grant Permission</string>
+    <string name="action_later">Later</string>
+    <string name="lbl_language_switcher_text">English</string>
+    
+    <!-- ETO License Status -->
+    <string name="title_eto_license_status">ETO License Status</string>
+    <string name="message_no_records_found">No Records Found</string>
+    <string name="message_no_contracts_found_eto">No contracts found for this ETO</string>
+    <string name="label_unknown_eto">Unknown ETO</string>
+    <string name="label_license_number_format">License: %s</string>
+    <string name="label_contract_start">Contract Start</string>
+    <string name="label_pbc_contract_id">PBC Contract ID</string>
+    <string name="label_expiration_date">Expiration Date</string>
+    <string name="label_renewal_termination_details">Renewal and Termination Details</string>
+    <string name="label_renewal_details">Renewal Details</string>
+    <string name="label_prev_exp">Prev Exp</string>
+    <string name="label_renew_date">Renew Date</string>
+    <string name="label_new_exp">New Exp</string>
+    <string name="label_termination_details">Termination Details</string>
+    <string name="label_date">Date</string>
+    <string name="label_by">By</string>
+    <string name="message_no_history">No renewal or termination history.</string>
 </resources>

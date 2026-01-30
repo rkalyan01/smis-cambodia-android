@@ -3,16 +3,20 @@ package com.innovative.smis.data.repository
 import com.innovative.smis.data.api.BuildingSurveyApiService
 import com.innovative.smis.data.model.response.*
 import com.innovative.smis.util.common.Resource
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import retrofit2.HttpException
 import java.io.IOException
+import android.util.Log
 
 interface BuildingSurveyRepository {
     suspend fun getBuildingSurvey(bin: String): Flow<Resource<BuildingSurveyResponse>>
     suspend fun submitBuildingSurvey(bin: String, request: BuildingSurveyRequest): Flow<Resource<BuildingSurveyResponse>>
+    suspend fun saveSurveyOffline(survey: com.innovative.smis.data.local.entity.BuildingSurveyEntity): Resource<Boolean>
     suspend fun getStructureTypes(): Flow<Resource<SurveyDropdownResponse>>
     suspend fun getFunctionalUses(): Flow<Resource<SurveyDropdownResponse>>
     suspend fun getBuildingUses(): Flow<Resource<SurveyDropdownResponse>>
@@ -23,16 +27,27 @@ interface BuildingSurveyRepository {
     suspend fun getRoadCodes(): Flow<Resource<RoadCodeResponse>>
     suspend fun getSangkats(): Flow<Resource<SangkatResponse>>
     suspend fun getBuildingWms(bin: String? = null, sangkat: String? = null): Flow<Resource<WmsBuildingResponse>>
-    suspend fun getRoadWms(): Flow<Resource<com.innovative.smis.data.api.WmsRoadResponse>>
-    suspend fun getSewerWms(): Flow<Resource<com.innovative.smis.data.api.WmsSewerResponse>>
-    suspend fun getSangkatWms(): Flow<Resource<com.innovative.smis.data.api.WmsSangkatResponse>>
+    suspend fun getRoadWms(): Flow<Resource<WmsRoadResponse>>
+    suspend fun getSewerWms(): Flow<Resource<WmsSewerResponse>>
+    suspend fun getSangkatWms(): Flow<Resource<WmsSangkatResponse>>
     suspend fun getWFSLayerBuildings(): Flow<Resource<com.innovative.smis.data.model.response.WfsBuildingLayerResponse>>
     suspend fun getWFSLayerBuildingSurveys(): Flow<Resource<com.innovative.smis.data.model.response.WfsBuildingSurveyLayerResponse>>
 }
 
 class BuildingSurveyRepositoryImpl(
-    private val apiService: BuildingSurveyApiService
+    private val apiService: BuildingSurveyApiService,
+    private val buildingSurveyDao: com.innovative.smis.data.local.dao.BuildingSurveyDao,
+    private val moshi: Moshi
 ) : BuildingSurveyRepository {
+    
+    override suspend fun saveSurveyOffline(survey: com.innovative.smis.data.local.entity.BuildingSurveyEntity): Resource<Boolean> {
+        return try {
+            buildingSurveyDao.insertSurvey(survey)
+            Resource.Success(true)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to save survey locally")
+        }
+    }
 
     override suspend fun getBuildingSurvey(bin: String): Flow<Resource<BuildingSurveyResponse>> = flow {
         emit(Resource.Loading())
@@ -313,12 +328,38 @@ class BuildingSurveyRepositoryImpl(
     override suspend fun getWFSLayerBuildings(): Flow<Resource<com.innovative.smis.data.model.response.WfsBuildingLayerResponse>> = flow {
         emit(Resource.Loading())
         try {
-            val response = apiService.getWFSLayerBuildings()
+            val response = apiService.getWFSLayerBuildingsRaw()
             if (response.isSuccessful) {
-                val wfsResponse = response.body()
-                if (wfsResponse != null) {
+                val body = response.body()?.string()
+                if (body != null) {
+                    Log.d("BuildingRepo", "WFS Body size: ${body.length}")
+                    Log.d("BuildingRepo", "WFS Body start: ${body.take(1000)}")
+                    val trimmed = body.trimStart()
+                    val wfsResponse = try {
+                            if (trimmed.startsWith("[")) {
+                                Log.d("BuildingRepo", "Parsing as List<WfsBuildingFeature> (Array)")
+                                // API returns a root-level array of features
+                                val type = Types.newParameterizedType(List::class.java, WfsBuildingFeature::class.java)
+                                val adapter = moshi.adapter<List<WfsBuildingFeature>>(type)
+                                val features = adapter.fromJson(body) ?: emptyList()
+                                Log.d("BuildingRepo", "Parsed ${features.size} features from Array")
+                                WfsBuildingLayerResponse(type = "FeatureCollection", features = features)
+                            } else {
+                                Log.d("BuildingRepo", "Parsing as FeatureCollection (Object)")
+                                // Standard GeoJSON FeatureCollection
+                                val adapter = moshi.adapter(WfsBuildingLayerResponse::class.java)
+                                val response = adapter.fromJson(body)
+                                Log.d("BuildingRepo", "Parsed response: ${response != null}")
+                                response ?: throw IOException("Empty WFS response")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("BuildingRepo", "Moshi Parsing FAILED: ${e.message}", e)
+                            throw e // Re-throw to be caught by outer block
+                        }
+                    Log.d("BuildingRepo", "Parsing complete. Features: ${wfsResponse.features?.size}")
                     emit(Resource.Success(wfsResponse))
                 } else {
+                    Log.e("BuildingRepo", "WFS Body is null")
                     emit(Resource.Error("Failed to get WFS building layer"))
                 }
             } else {
@@ -356,7 +397,7 @@ class BuildingSurveyRepositoryImpl(
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun getRoadWms(): Flow<Resource<com.innovative.smis.data.api.WmsRoadResponse>> = flow {
+    override suspend fun getRoadWms(): Flow<Resource<WmsRoadResponse>> = flow {
         emit(Resource.Loading())
         try {
             val response = apiService.getRoadWms()
@@ -379,7 +420,7 @@ class BuildingSurveyRepositoryImpl(
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun getSewerWms(): Flow<Resource<com.innovative.smis.data.api.WmsSewerResponse>> = flow {
+    override suspend fun getSewerWms(): Flow<Resource<WmsSewerResponse>> = flow {
         emit(Resource.Loading())
         try {
             val response = apiService.getSewerWms()
@@ -402,7 +443,7 @@ class BuildingSurveyRepositoryImpl(
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun getSangkatWms(): Flow<Resource<com.innovative.smis.data.api.WmsSangkatResponse>> = flow {
+    override suspend fun getSangkatWms(): Flow<Resource<WmsSangkatResponse>> = flow {
         emit(Resource.Loading())
         try {
             val response = apiService.getSangkatWms()

@@ -23,6 +23,7 @@ data class EmptyingServiceFormUiState(
     val startTimeError: String? = null,
     val endTimeError: String? = null,
     val additionalTripRequiredError: String? = null,
+    val proposedEmptyingDate: String? = null,
     
     // Personnel Information
     val applicantName: String = "",

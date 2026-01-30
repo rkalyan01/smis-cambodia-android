@@ -12,6 +12,8 @@ object ScreenName {
     const val DesludgingVehicle = "desludging_vehicle"
     const val TaskManagement = "task_management"
     const val EtoLicenseStatus = "eto_license_status"
+    const val BuildingMap = "building_map"
+    const val BuildingSurvey = "building_survey"
 }
 
 object PrefConstant {
@@ -26,10 +28,11 @@ object PrefConstant {
     const val CURRENT_LANGUAGE = "current_language"
     const val PERMISSIONS_REQUESTED = "permissions_requested"
     const val FIRST_LAUNCH = "first_launch"
+    const val IS_LANGUAGE_SELECTED = "is_language_selected"
 }
 
 object ApiConstants {
-    const val BASE_URL = "https://smis-11.innovativesolution.com.np/api/"
+    const val BASE_URL = "https://smis.muninfosys.com/api/"
     const val TIMEOUT_SECONDS = 30L
 }
 

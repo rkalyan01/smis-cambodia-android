@@ -112,11 +112,8 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
     val cameraPositionState = rememberCameraPositionState { position = defaultCameraPosition }
 
     LaunchedEffect(Unit) {
-        viewModel.locationState.collectLatest { latLng ->
-            cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(latLng, 20f),
-                durationMs = 1500
-            )
+        viewModel.locationState.collectLatest { event ->
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(event.location, event.zoomLevel), 1000)
         }
     }
 
@@ -321,11 +318,12 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
                                     val latLngs = coordinates.map { LatLng(it[1], it[0]) }
                                     val isHighlighted = uiState.highlightedBin == item.bin
 
+                                    // Same colors as DashboardScreen.js (RN)
                                     val (strokeColor, fillColor) = when {
-                                        isHighlighted -> Color(0xFFFFD700) to Color(0x66FFFF00)
-                                        item.is_auxiliary == true -> Color.Gray to Color(0x33000000)
-                                        item.is_surveyed == true -> Color(0xFF198754) to Color(0x0D198754)
-                                        else -> Color(0xFF007BFF) to Color(0x0D007BFF)
+                                        isHighlighted -> MapLayerColors.highlightStroke() to MapLayerColors.highlightFill()
+                                        item.is_auxiliary == true -> MapLayerColors.auxiliaryStroke() to MapLayerColors.auxiliaryFill()
+                                        item.is_surveyed == true -> MapLayerColors.surveyedStroke() to MapLayerColors.surveyedFill()
+                                        else -> MapLayerColors.unsurveyedStroke() to MapLayerColors.unsurveyedFill()
                                     }
 
                                     Polygon(
@@ -340,7 +338,7 @@ fun MapScreen(navController: NavController, onMenuClick: (() -> Unit)? = null) {
                                             
                                             if (hasEditPermission && item.is_surveyed != true) {
                                                 item.bin?.let { bin ->
-                                                    navController.navigate("comprehensive_survey/$bin")
+                                                    navController.navigate("building_survey_comprehensive/$bin")
                                                 }
                                             } else if (hasEditPermission && item.is_surveyed == true) {
                                                 // Show alert for already surveyed building
@@ -509,17 +507,5 @@ fun LayerSelectionDialog(
 }
 
 private fun createTileProvider(urlTemplate: String): TileProvider {
-    return object : UrlTileProvider(256, 256) {
-        override fun getTileUrl(x: Int, y: Int, zoom: Int): URL? {
-            val s = urlTemplate
-                .replace("{x}", x.toString(), true)
-                .replace("{y}", y.toString(), true)
-                .replace("{z}", zoom.toString(), true)
-            return try {
-                URL(s)
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
+    return WmsTileProvider(urlTemplate)
 }

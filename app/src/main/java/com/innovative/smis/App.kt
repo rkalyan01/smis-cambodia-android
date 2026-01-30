@@ -2,6 +2,9 @@ package com.innovative.smis
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
+import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.OnMapsSdkInitializedCallback
 import com.innovative.smis.BuildConfig
 import com.innovative.smis.di.appModule
 import com.innovative.smis.di.apiModule
@@ -11,15 +14,23 @@ import com.innovative.smis.di.offlineModule
 import com.innovative.smis.di.repositoryModule
 import com.innovative.smis.util.helper.LocalizationHelper
 import com.innovative.smis.util.helper.PreferenceHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 
-class SmisApplication : Application() {
+class SmisApplication : Application(), OnMapsSdkInitializedCallback {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Asynchronously initialize the Maps SDK to prevent blocking the main thread
+        CoroutineScope(Dispatchers.Main).launch {
+            MapsInitializer.initialize(applicationContext, MapsInitializer.Renderer.LATEST, this@SmisApplication)
+        }
 
         // ✅ PERFORMANCE FIX: Setup Koin with optimizations to prevent main thread blocking
         setupKoinOptimized()
@@ -64,6 +75,13 @@ class SmisApplication : Application() {
             LocalizationHelper.setLocale(this, savedLanguage)
         } catch (e: Exception) {
             //
+        }
+    }
+
+    override fun onMapsSdkInitialized(renderer: MapsInitializer.Renderer) {
+        when (renderer) {
+            MapsInitializer.Renderer.LATEST -> Log.d("MapsSDK", "The latest version of the renderer is used.")
+            MapsInitializer.Renderer.LEGACY -> Log.d("MapsSDK", "The legacy version of the renderer is used.")
         }
     }
 }

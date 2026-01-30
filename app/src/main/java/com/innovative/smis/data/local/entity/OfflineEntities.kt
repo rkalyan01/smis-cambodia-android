@@ -40,57 +40,7 @@ data class WorkflowStepEntity(
     val isDeleted: Boolean = false
 )
 
-@Entity(tableName = "building_surveys")
-data class BuildingSurveyEntity(
-    @PrimaryKey val id: String,
-    val bin: String,
-    val sangkat: String,
-    val village: String?,
-    val roadCode: String?,
-    val respondentName: String,
-    val respondentGender: String,
-    val respondentContact: String?,
-    val ownerName: String?,
-    val ownerContact: String?,
-    val structureTypeId: String?,
-    val functionalUseId: String?,
-    val buildingUseId: String?,
-    val numberOfFloors: Int?,
-    val householdServed: Int?,
-    val populationServed: Int?,
-    val isMainBuilding: Boolean?,
-    val floorArea: Double?,
-    val constructionYear: Int?,
-    val waterSupply: String?,
-    val defecationPlaceId: String?,
-    val numberOfToilets: Int?,
-    val toiletConnectionId: String?,
-    val toiletCount: Int?,
-    val containmentPresentOnsite: Boolean?,
-    val typeOfStorageTank: String?,
-    val storageTankConnection: String?,
-    val numberOfTanks: Int?,
-    val sizeOfTank: Double?,
-    val distanceFromWell: String?,
-    val constructionDate: String?,
-    val lastEmptiedDate: String?,
-    val vacutugAccessible: Boolean?,
-    val containmentLocation: String?,
-    val accessToContainment: String?,
-    val distanceHouseToContainment: String?,
-    val waterCustomerId: String?,
-    val meterSerialNumber: String?,
-    val sanitationSystem: String?,
-    val technology: String?,
-    val compliance: String?,
-    val comments: String?,
-    val surveyedBy: String?,
-    val surveyDate: String?,
-    val createdAt: Long,
-    val updatedAt: Long,
-    val syncStatus: String = "SYNCED",
-    val isDeleted: Boolean = false
-)
+// BuildingSurveyEntity moved to separate file in this package
 
 @Entity(tableName = "users")
 data class UserEntity(

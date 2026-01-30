@@ -855,7 +855,7 @@ fun EmptyingServiceFormScreen(
         if (showPostponeDialog) {
             PostponeDialog(
                 applicationId = applicationId,
-                currentDate = uiState.emptiedDate, // Already in API format (yyyy-MM-dd)
+                currentDate = uiState.proposedEmptyingDate ?: uiState.emptiedDate, // Use proposed date if available, else fallback
                 onDismiss = { showPostponeDialog = false },
                 onPostpone = { postponeData ->
                     // postponeData contains dates already in API format (yyyy-MM-dd)
@@ -870,6 +870,9 @@ fun EmptyingServiceFormScreen(
                             navController.previousBackStackEntry
                                 ?.savedStateHandle
                                 ?.set("snackbar_message", "Application postponed successfully")
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("should_refresh_list", true)
                             navController.popBackStack()
                         },
                         onError = { errorMessage ->

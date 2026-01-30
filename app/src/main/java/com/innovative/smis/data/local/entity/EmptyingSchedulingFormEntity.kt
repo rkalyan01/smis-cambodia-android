@@ -144,7 +144,10 @@ fun EmptyingSchedulingFormEntity.toDomainModel(): SanitationCustomerData {
             else -> null
         },
         amountOfRegularPay = this.amountOfRegularPayment,
-        buildingPointGeomExist = null
+        buildingPointGeomExist = null,
+        proposedEmptyingDate = this.proposedEmptyingDate?.let {
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(it))
+        }
     )
 }
 

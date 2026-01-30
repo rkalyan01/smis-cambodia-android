@@ -88,7 +88,7 @@ val appModule = module {
     viewModel { com.innovative.smis.ui.features.sitepreparation.SitePreparationFormViewModel(get<SitePreparationRepository>()) }
     viewModel { com.innovative.smis.ui.features.emptyingservice.EmptyingServiceViewModel(get<WorkflowRepository>()) }
     viewModel { com.innovative.smis.ui.features.emptyingservice.EmptyingServiceFormViewModel(get(), get()) }
-    viewModel { com.innovative.smis.ui.features.buildingsurvey.ComprehensiveSurveyViewModel() }
+    viewModel { com.innovative.smis.ui.features.buildingsurvey.ComprehensiveSurveyViewModel(get()) }
     viewModel { com.innovative.smis.ui.features.desludgingvehicle.DesludgingVehicleViewModel(get(), get()) }
     viewModel { com.innovative.smis.ui.features.additionalrepairing.AdditionalRepairingListViewModel(get(), get()) }
     viewModel { AdditionalRepairingFormViewModel(get()) }
@@ -169,7 +169,7 @@ val repositoryModule = module {
     single<TaskRepository> { OfflineTaskRepositoryImpl(get<OfflineManager>(), get<TaskDao>(), get<WorkflowStepDao>(), get<SyncQueueDao>()) }
     single<com.innovative.smis.data.local.TaskDao> { MemoryTaskDao() }
     single<EmptyingRepository> { EmptyingRepositoryImpl(get()) }
-    single<BuildingSurveyRepository> { BuildingSurveyRepositoryImpl(get()) }
+    single<BuildingSurveyRepository> { BuildingSurveyRepositoryImpl(get(), get(), get()) }
 
     single {
         TodoListRepository(
@@ -221,7 +221,7 @@ val networkModule = module {
     single { AuthInterceptor(get()) }
     single {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.HEADERS else HttpLoggingInterceptor.Level.NONE
         }
         OkHttpClient.Builder()
             // ✅ Add LanguageInterceptor FIRST - rewrites URLs for Khmer endpoints

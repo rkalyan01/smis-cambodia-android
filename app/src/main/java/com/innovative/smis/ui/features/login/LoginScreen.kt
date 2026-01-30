@@ -71,8 +71,38 @@ fun LoginScreen(navController: NavController) {
     
     var currentLanguage by remember { mutableStateOf(prefs.selectedLanguage) }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var showPermissionDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.all { it.value }
+        if (allGranted) {
+            showPermissionDialog = false
+        }
+    }
+
+    // Check permissions when screen resumes/starts
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                if (!com.innovative.smis.util.permission.PermissionManager.hasAllPermissions(context)) {
+                    showPermissionDialog = true
+                } else {
+                    showPermissionDialog = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(loginState) {
         Log.d("LoginScreen", "Login State Changed: $loginState")
+
 
         when (val state = loginState) {
             is Resource.Success -> {
@@ -83,24 +113,11 @@ fun LoginScreen(navController: NavController) {
                     prefs.setString(PrefConstant.AUTH_TOKEN, state.data.token ?: "")
                     prefs.setBoolean(PrefConstant.IS_LOGIN, true)
                     prefs.setBoolean(PrefConstant.AUTO_LOGIN, rememberMe)
+                    
+                    // Mark permissions as requested implicitly if we are logging in (or handled by dialog)
+                    prefs.setBoolean(PrefConstant.PERMISSIONS_REQUESTED, true)
 
-                    state.data.data?.let { userData ->
-                        prefs.setString(PrefConstant.USER_NAME, userData.name)
-                        prefs.setString(PrefConstant.USER_EMAIL, userData.email)
-
-                        // Store user role for role-based menu visibility
-                        userData.role?.let { roleList ->
-                            val roleJson = roleList.toString()
-                            prefs.setString(PrefConstant.USER_ROLE, roleJson)
-                            Log.d("LoginScreen", "Saved user role: $roleJson")
-                        }
-
-                        // Store permissions for drawer navigation
-                        userData.permissions?.let { permissionsList ->
-                            val permissionsJson = permissionsList.toString()
-                            prefs.setString(PrefConstant.USER_PERMISSIONS, permissionsJson)
-                        }
-                    }
+                    // Navigate to main app - the start destination inside main_app will be handled there
 
                     // Navigate to main app - the start destination inside main_app will be handled there
                     navController.navigate("main_app") {
@@ -372,6 +389,20 @@ fun LoginScreen(navController: NavController) {
                 TextButton(onClick = { showLanguageDialog = false }) {
                     Text(if (currentLanguage == Languages.KHMER) "បិទ" else "Close")
                 }
+            }
+        )
+    }
+
+    if (showPermissionDialog) {
+        com.innovative.smis.ui.features.permissions.NewPermissionDialog(
+            onConfirm = {
+                permissionLauncher.launch(com.innovative.smis.util.permission.PermissionManager.REQUIRED_PERMISSIONS)
+            },
+            onDismiss = {
+                showPermissionDialog = false
+            },
+            onLanguageClick = {
+                showLanguageDialog = true
             }
         )
     }

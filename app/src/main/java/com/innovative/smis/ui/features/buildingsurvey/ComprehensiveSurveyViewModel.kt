@@ -3,7 +3,7 @@ package com.innovative.smis.ui.features.buildingsurvey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.innovative.smis.data.model.SurveyFormState
-import com.innovative.smis.data.model.BuildingSurveyEntity
+import com.innovative.smis.data.local.entity.BuildingSurveyEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -11,7 +11,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class ComprehensiveSurveyViewModel : ViewModel() {
+class ComprehensiveSurveyViewModel(
+    private val repository: com.innovative.smis.data.repository.BuildingSurveyRepository
+) : ViewModel() {
     
     private val _formState = MutableStateFlow(SurveyFormState())
     val formState = _formState.asStateFlow()
@@ -117,11 +119,25 @@ class ComprehensiveSurveyViewModel : ViewModel() {
             
             try {
                 val surveyEntity = BuildingSurveyEntity(
+                    id = java.util.UUID.randomUUID().toString(),
                     bin = bin ?: currentState.roadCode,
                     sangkat = currentState.sangkat,
                     village = currentState.village,
                     roadCode = currentState.roadCode,
+                    isMainBuilding = currentState.isMainBuilding,
+                    buildingNo = currentState.buildingNo,
+                    taxCode = currentState.taxCode,
+                    streetName = currentState.streetName,
                     surveyDate = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    containmentLocation = currentState.containmentLocation,
+                    containmentLength = currentState.containmentLength,
+                    containmentWidth = currentState.containmentWidth,
+                    containmentDepth = currentState.containmentDepth,
+                    containmentVolume = currentState.containmentVolume,
+                    pitDiameter = currentState.pitDiameter,
+                    pitDepth = currentState.pitDepth,
+                    drainCode = currentState.drainCode,
+                    sewerCode = currentState.sewerCode,
                     respondentName = currentState.respondentName,
                     respondentGender = currentState.respondentGender,
                     respondentContact = currentState.respondentContact,
@@ -133,7 +149,12 @@ class ComprehensiveSurveyViewModel : ViewModel() {
                     structureType = currentState.structureType,
                     floorCount = currentState.floorCount,
                     householdServed = currentState.householdServed,
+                    populationServed = currentState.populationServed,
                     buildingPhoto = currentState.buildingPhoto,
+                    functionalUse = currentState.functionalUse,
+                    buildingUse = currentState.buildingUse,
+                    officeName = currentState.officeName,
+                    constructionDate = currentState.constructionDate,
                     presenceOfToilet = currentState.presenceOfToilet,
                     placeOfDefecation = currentState.placeOfDefecation,
                     placeOfDefecationOther = currentState.placeOfDefecationOther,
@@ -163,15 +184,22 @@ class ComprehensiveSurveyViewModel : ViewModel() {
                     isOffline = true
                 )
                 
-                // In real app, save to database and sync with API
-                // For now, just simulate successful submission
-                kotlinx.coroutines.delay(1000)
+                val result = repository.saveSurveyOffline(surveyEntity)
                 
-                _formState.update { 
-                    it.copy(
-                        isSubmitting = false,
-                        successMessage = "Survey submitted successfully and saved offline. It will sync when internet is available."
-                    )
+                if (result is com.innovative.smis.util.common.Resource.Success) {
+                    _formState.update { 
+                        it.copy(
+                            isSubmitting = false,
+                            successMessage = "Survey submitted successfully and saved offline. It will sync when internet is available."
+                        )
+                    }
+                } else {
+                     _formState.update { 
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = result.message ?: "Failed to save survey offline"
+                        )
+                    }
                 }
                 
             } catch (e: Exception) {

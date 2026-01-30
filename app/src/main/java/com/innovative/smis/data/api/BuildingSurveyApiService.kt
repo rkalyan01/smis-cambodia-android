@@ -2,6 +2,7 @@ package com.innovative.smis.data.api
 
 import com.innovative.smis.data.model.response.*
 import com.innovative.smis.data.model.response.WmsBuildingResponse
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -121,11 +122,11 @@ interface BuildingSurveyApiService {
     suspend fun getSewerWms(): Response<WmsSewerResponse>
     
     /**
-     * Get WFS building layer data
+     * Get WFS building layer data (raw body for flexible parsing: API may return either a GeoJSON FeatureCollection or a raw array of features).
      * GET /api/wfs-building-layer
      */
     @GET("wfs-building-layer")
-    suspend fun getWFSLayerBuildings(): Response<com.innovative.smis.data.model.response.WfsBuildingLayerResponse>
+    suspend fun getWFSLayerBuildingsRaw(): Response<ResponseBody>
     
     /**
      * Get WFS building survey layer data
@@ -142,50 +143,4 @@ interface BuildingSurveyApiService {
     suspend fun getBuildingsWithSharedSewer(): Response<SharedSewerBuildingResponse>
 }
 
-@kotlinx.serialization.Serializable
-data class WmsSangkatResponse(
-    val success: Boolean,
-    val data: List<WmsSangkatData>
-)
-
-@kotlinx.serialization.Serializable
-data class WmsSangkatData(
-    val sangkat_name: String,
-    val geometry: String?
-)
-
-@kotlinx.serialization.Serializable
-data class WmsRoadResponse(
-    val success: Boolean,
-    val data: List<WmsRoadData>
-)
-
-@kotlinx.serialization.Serializable
-data class WmsRoadData(
-    val road_code: String,
-    val geometry: String?
-)
-
-@kotlinx.serialization.Serializable
-data class WmsSewerResponse(
-    val success: Boolean,
-    val data: List<WmsSewerData>
-)
-
-@kotlinx.serialization.Serializable
-data class WmsSewerData(
-    val sewer_code: String,
-    val geometry: String?
-)
-
-@kotlinx.serialization.Serializable
-data class SharedSewerBuildingResponse(
-    val success: Boolean,
-    val data: List<SharedSewerBuildingData>
-)
-
-@kotlinx.serialization.Serializable
-data class SharedSewerBuildingData(
-    val bin: String,
-    val shared_sewer: Boolean
-)
+// WMS Response classes are imported from com.innovative.smis.data.model.response.*

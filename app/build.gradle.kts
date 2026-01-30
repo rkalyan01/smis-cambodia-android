@@ -18,8 +18,8 @@ android {
         applicationId = "com.innovative.smis"
         minSdk = 24
         targetSdk = 35
-        versionCode = 34
-        versionName = "1.0.34"
+        versionCode = 39
+        versionName = "1.0.39"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -43,8 +43,8 @@ android {
         create("prod") {
             dimension = "environment"
             // No suffix for prod - uses base applicationId: com.innovative.smis
-            buildConfigField("String", "BASE_URL", "\"https://smis-beta.muninfosys.com/api/\"")
-            resValue("string", "app_name", "SMIS BETA")
+            buildConfigField("String", "BASE_URL", "\"https://smis.muninfosys.com/api/\"")
+            resValue("string", "app_name", "SMIS")
         }
     }
 
@@ -78,15 +78,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-            "-opt-in=com.google.maps.android.compose.ExperimentalGoogleMapsCompose",
-            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
-        )
-    }
+
 
     buildFeatures {
         compose = true
@@ -102,6 +94,13 @@ android {
     lint {
         abortOnError = false
         checkReleaseBuilds = false
+    }
+
+    bundle {
+        language {
+            // Disable language split to ensure Khmer translations are always included
+            enableSplit = false
+        }
     }
 }
 
@@ -189,6 +188,17 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+            "-opt-in=com.google.maps.android.compose.ExperimentalGoogleMapsCompose",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
+    }
 }

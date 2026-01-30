@@ -1,5 +1,8 @@
 package com.innovative.smis.ui.features.etolicense
 
+
+import com.innovative.smis.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -45,15 +48,15 @@ fun EtoLicenseStatusScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ETO License Status", style = MaterialTheme.typography.titleMedium) },
+                title = { Text(stringResource(R.string.title_eto_license_status), style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.loadData() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
                     }
                 }
             )
@@ -82,7 +85,7 @@ fun EtoLicenseStatusScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(text = uiState.error!!, color = MaterialTheme.colorScheme.error)
                         Button(onClick = { viewModel.loadData() }, modifier = Modifier.padding(top = 16.dp)) {
-                            Text("Retry")
+                            Text(stringResource(R.string.action_retry))
                         }
                     }
                 } else if (uiState.etoList.isEmpty() && !uiState.isLoading) {
@@ -98,19 +101,19 @@ fun EtoLicenseStatusScreen(
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = "No Records Found",
+                            text = stringResource(R.string.message_no_records_found),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = uiState.message ?: "No contracts found for this ETO",
+                            text = uiState.message ?: stringResource(R.string.message_no_contracts_found_eto),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Button(onClick = { viewModel.loadData() }, modifier = Modifier.padding(top = 16.dp)) {
-                            Text("Refresh")
+                            Text(stringResource(R.string.action_refresh))
                         }
                     }
                 } else if (!uiState.etoList.isEmpty()) {
@@ -158,12 +161,12 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = eto.companyName ?: "Unknown ETO",
+                            text = eto.companyName ?: stringResource(R.string.label_unknown_eto),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "License: ${eto.licenseNumber ?: "N/A"}",
+                            text = stringResource(R.string.label_license_number_format, eto.licenseNumber ?: "N/A"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -172,7 +175,7 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
 
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
-                    contentDescription = "Expand",
+                    contentDescription = stringResource(R.string.action_expand),
                     modifier = Modifier.rotate(rotationAngle)
                 )
             }
@@ -184,14 +187,14 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
             // Basic Info Grid
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    LabelValueItem("Contract Start", eto.contractStartDate)
+                    LabelValueItem(stringResource(R.string.label_contract_start), eto.contractStartDate)
                     Spacer(modifier = Modifier.height(8.dp))
-                    LabelValueItem("PBC Contract ID", eto.pbcContractId)
+                    LabelValueItem(stringResource(R.string.label_pbc_contract_id), eto.pbcContractId)
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     // Highlight Expiration Date
                     Text(
-                        text = "Expiration Date",
+                        text = stringResource(R.string.label_expiration_date),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -244,7 +247,7 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
 
                     if (hasRenewals || hasTerminations) {
                         Text(
-                            text = "Renewal and Termination Details",
+                            text = stringResource(R.string.label_renewal_termination_details),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -260,7 +263,7 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
                         ) {
                             Column {
                                 Text(
-                                    text = "Renewal Details",
+                                    text = stringResource(R.string.label_renewal_details),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(8.dp)
@@ -268,9 +271,9 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
                                 HorizontalDivider()
                                 // Table Header
                                 Row(Modifier.background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
-                                    Text("Prev Exp", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                    Text("Renew Date", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                    Text("New Exp", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(stringResource(R.string.label_prev_exp), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(stringResource(R.string.label_renew_date), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    Text(stringResource(R.string.label_new_exp), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                 }
                                 // Table Rows
                                 eto.renewalHistory.forEach { history ->
@@ -293,7 +296,7 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
                         ) {
                             Column {
                                 Text(
-                                    text = "Termination Details",
+                                    text = stringResource(R.string.label_termination_details),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.padding(8.dp)
@@ -301,9 +304,9 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
                                 HorizontalDivider()
                                 // Table Header
                                 Row(Modifier.background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)).padding(8.dp)) {
-                                    Text("Date", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
-                                    Text("By", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
-                                    Text("Reason", fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.4f))
+                                    Text(stringResource(R.string.label_date), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
+                                    Text(stringResource(R.string.label_by), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.8f))
+                                    Text(stringResource(R.string.label_reason), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.4f))
                                 }
                                 // Table Rows
                                 eto.terminationHistory.forEach { history ->
@@ -320,7 +323,7 @@ fun EtoLicenseCard(eto: EtoLicenseData, message: String? = null) {
 
                     if (!hasRenewals && !hasTerminations) {
                         Text(
-                            text = "No renewal or termination history.",
+                            text = stringResource(R.string.message_no_history),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 4.dp)

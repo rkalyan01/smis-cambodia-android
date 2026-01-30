@@ -29,14 +29,16 @@ data class VehicleResponse(
     val status: String = "active",
     @Json(name = "driver_name")
     val driverName: String? = null,
-    @Json(name = "capacity")
+    @Json(name = "capacity_m3")
     val capacity: String? = null,
     @Json(name = "current_location")
     val currentLocation: String? = null,
     @Json(name = "last_maintenance")
     val lastMaintenance: String? = null,
     @Json(name = "assigned_operator")
-    val assignedOperator: String? = null
+    val assignedOperator: String? = null,
+    @Json(name = "vehicle_color")
+    val vehicleColor: String? = null
 )
 
 @JsonClass(generateAdapter = true)

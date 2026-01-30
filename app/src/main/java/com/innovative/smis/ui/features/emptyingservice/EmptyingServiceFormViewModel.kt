@@ -119,6 +119,7 @@ class EmptyingServiceFormViewModel(
                                         freeUnderPBC = customerData.freeServiceUnderPbc ?: false,
                                         regularCost = customerData.amountOfRegularPay ?: "",
                                         isRegularCostReadonly = true,
+                                        proposedEmptyingDate = customerData.proposedEmptyingDate, // ✅ LOAD from Customer Details
                                         // ✅ buildingPointGeomExist - ONLY loaded from loadReadonlyData(), not here
                                         isLoading = false
                                     )
@@ -132,6 +133,7 @@ class EmptyingServiceFormViewModel(
                                         freeUnderPBC = customerData.freeServiceUnderPbc ?: false, // ✅ ALWAYS from API
                                         regularCost = customerData.amountOfRegularPay ?: "", // ✅ ALWAYS from API
                                         isRegularCostReadonly = true,
+                                        proposedEmptyingDate = customerData.proposedEmptyingDate, // ✅ LOAD from Customer Details
                                         // ✅ buildingPointGeomExist - ONLY loaded from loadReadonlyData(), not here
                                         isLoading = false
                                     )
@@ -877,6 +879,7 @@ class EmptyingServiceFormViewModel(
                     buildingPointGeomExist = data.buildingPointGeomExist ?: false, // ✅ Set from readonly data
                     latitude = data.latitude?.toDoubleOrNull(), // ✅ Load GPS coordinates from API (convert string to double)
                     longitude = data.longitude?.toDoubleOrNull(), // ✅ Load GPS coordinates from API (convert string to double)
+                    proposedEmptyingDate = data.proposedEmptyingDate, // ✅ Load proposed emptying date
                     // Set readonly flags
                     isApplicantNameReadonly = true,
                     isApplicantContactReadonly = true,

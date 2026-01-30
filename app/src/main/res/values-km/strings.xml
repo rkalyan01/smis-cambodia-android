@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SMIS DEV</string>
+    <string name="app_name">SMIS</string>
     <string name="nav_dashboard">ផ្ទាំងពត៌មានទូទៅ</string>
     <string name="nav_map">ផែនទី</string>
     <string name="nav_tasks">កិច្ចការ</string>
@@ -16,6 +16,7 @@
     <string name="dashboard_welcome">សូមស្វាគមន៍</string>
     <string name="tasks_title">កិច្ចការ</string>
     <string name="tasks_emptying_scheduling">បញ្ជាក់ពេលវេលាផ្ដល់សេវាកម្មជាមួយអតិថិជន</string>
+    <string name="tasks_site_preparation">ពិនិត្យទីតាំង</string>
     <string name="tasks_emptying_service">ទៅផ្តល់សេវាកម្មបូមអោយអតិថិជនតាមការណាត់ពេល</string>
     <string name="tasks_additional_repairing">ត្រូវការជួសជុលបន្ថែម?</string>
     <string name="task_status_pending">រង់ចាំ</string>
@@ -551,7 +552,7 @@
     <string name="card_site_preparation">ពិនិត្យទីតាំង</string>
     <string name="card_emptying_service">ទៅផ្តល់សេវាកម្មបូមអោយអតិថិជនតាមការណាត់ពេល</string>
     <string name="card_additional_trips">ចំនួនជើងបូមបន្ថែម</string>
-    <string name="language_english">អង់គ្លេស</string>
+    <string name="language_english">English</string>
     <string name="language_khmer">ខ្មែរ</string>
     <string name="settings_database_size">ទំហំទិន្នន័យផ្ទុកក្នុងប្រព័ន្ធ</string>
     <string name="status_syncing">កំពុងធ្វើដំណើរការ</string>
@@ -572,12 +573,20 @@
     <string name="section_application_information">ព័ត៌មានពាក្យស្នើសុំ</string>
     <string name="label_application_date">កាលបរិច្ឆេទដាក់ពាក្យ</string>
     <string name="title_emptying_request_form">ទម្រង់ស្នើសុំបូម</string>
-    <string name="permission_camera_access">ការប្រើប្រាស់កាមេរ៉ា</string>
-    <string name="permission_camera_description">ថតរូបសម្រាប់ការស្ទង់មតិអាគារ និងឯកសារ</string>
-    <string name="permission_photo_gallery">ការប្រើប្រាស់ថតរូប</string>
+    <string name="permission_camera_access">កាមេរ៉ា</string>
+    <string name="permission_camera_description">ត្រូវការចាប់យករូបថតសម្រាប់ឯកសារសេវាកម្ម</string>
+    <string name="permission_photo_gallery">ការចូលប្រើកម្រងរូបភាព</string>
     <string name="permission_photo_gallery_description">ជ្រើសរើសរូបភាពពីឧបករណ៍របស់អ្នក</string>
-    <string name="permission_location">ការប្រើប្រាស់ទីតាំង</string>
+    <string name="permission_location">ការចូលប្រើទីតាំង</string>
     <string name="permission_location_description">បង្ហាញទីតាំងបច្ចុប្បន្នរបស់អ្នកលើផែនទី</string>
+    <string name="permission_location_precise">ទីតាំង (ជាក់លាក់)</string>
+    <string name="permission_location_precise_description">ត្រូវការកត់ត្រាទិន្នន័យទីតាំងជាក់លាក់សម្រាប់សេវាកម្ម</string>
+    <string name="permission_location_approximate">ទីតាំង (ប្រហាក់ប្រហែល)</string>
+    <string name="permission_location_approximate_description">ត្រូវការកត់ត្រាទិន្នន័យទីតាំងប្រហាក់ប្រហែល</string>
+    <string name="permission_selected_photos">រូបភាពដែលបានជ្រើសរើស</string>
+    <string name="permission_selected_photos_description">អនុញ្ញាតឱ្យចូលប្រើតែរូបភាពដែលអ្នកជ្រើសរើស</string>
+    <string name="permission_photos_media">រូបថត និងមេឌៀ</string>
+    <string name="permission_photos_media_description">ត្រូវការចូលប្រើរូបភាពពីកម្រងរូបភាពរបស់អ្នក</string>
     <string name="action_grant_permissions">ផ្តល់សិទ្ធិ</string>
     <string name="section_quick_actions">សកម្មភាពរហ័ស</string>
     <string name="action_view_all">មើលទាំងអស់</string>
@@ -651,4 +660,27 @@
     <string name="date_format_dd_mm_yyyy">ថ្ងៃ-ខែ-ឆ្នាំ</string>
     <string name="date_format_mm_dd_yyyy">ខែ-ថ្ងៃ-ឆ្នាំ</string>
     <string name="date_format_yyyy_mm_dd">ឆ្នាំ-ខែ-ថ្ងៃ</string>
+    <string name="label_configuration">ការកំណត់</string>
+    <string name="action_grant_permission">បានអនុញ្ញាត</string>
+    <string name="action_later">ពេលក្រោយ</string>
+    <string name="lbl_language_switcher_text">ខ្មែរ</string>
+
+    <!-- ETO License Status -->
+    <string name="title_eto_license_status">ស្ថានភាពអាជ្ញាប័ណ្ណ ETO</string>
+    <string name="message_no_records_found">រកមិនឃើញទិន្នន័យ</string>
+    <string name="message_no_contracts_found_eto">រកមិនឃើញកិច្ចសន្យាសម្រាប់ ETO នេះទេ</string>
+    <string name="label_unknown_eto">ETO មិនស្គាល់</string>
+    <string name="label_license_number_format">អាជ្ញាប័ណ្ណ៖ %s</string>
+    <string name="label_contract_start">កាលបរិច្ឆេទចាប់ផ្តើមកិច្ចសន្យា</string>
+    <string name="label_pbc_contract_id">លេខសម្គាល់កិច្ចសន្យា PBC</string>
+    <string name="label_expiration_date">កាលបរិច្ឆេទផុតកំណត់</string>
+    <string name="label_renewal_termination_details">ព័ត៌មានលម្អិតអំពីការបន្ត និងការបញ្ចប់</string>
+    <string name="label_renewal_details">ព័ត៌មានលម្អិតអំពីការបន្ត</string>
+    <string name="label_prev_exp">កាលបរិច្ឆេទផុតកំណត់មុន</string>
+    <string name="label_renew_date">កាលបរិច្ឆេទបន្ត</string>
+    <string name="label_new_exp">កាលបរិច្ឆេទផុតកំណត់ថ្មី</string>
+    <string name="label_termination_details">ព័ត៌មានលម្អិតអំពីការបញ្ចប់</string>
+    <string name="label_date">កាលបរិច្ឆេទ</string>
+    <string name="label_by">ដោយ</string>
+    <string name="message_no_history">មិនមានប្រវត្តិការបន្ត ឬការបញ្ចប់ទេ។</string>
 </resources>

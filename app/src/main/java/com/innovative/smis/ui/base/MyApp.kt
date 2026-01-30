@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import com.innovative.smis.ui.components.AppNavigationDrawer
 import kotlinx.coroutines.launch
+import com.innovative.smis.ui.features.map.BuildingMapScreen
 import com.innovative.smis.ui.features.buildingsurvey.BuildingSurveyScreen
 import com.innovative.smis.ui.features.buildingsurvey.ComprehensiveSurveyScreen
 import com.innovative.smis.ui.features.containment.ContainmentFormScreen
@@ -41,7 +42,6 @@ import com.innovative.smis.ui.features.emptyingservice.EmptyingServiceFormScreen
 import com.innovative.smis.ui.features.emptyingservice.EmptyingServiceScreen
 import com.innovative.smis.ui.features.login.LoginScreen
 import com.innovative.smis.ui.features.map.MapScreen
-import com.innovative.smis.ui.features.permissions.PermissionRequestScreen
 import com.innovative.smis.ui.features.settings.SettingsScreen
 import com.innovative.smis.ui.features.sitepreparation.SitePreparationFormScreen
 import com.innovative.smis.ui.features.sitepreparation.SitePreparationScreen
@@ -62,53 +62,34 @@ fun MyApp() {
     val context = LocalContext.current
     val preferenceHelper = remember { PreferenceHelper(context) }
     
-    // ⚡ PERFORMANCE FIX: Load these states asynchronously to avoid blocking main thread
-    val isLoggedIn by produceState(initialValue = false) {
-        value = preferenceHelper.getBoolean(PrefConstant.IS_LOGIN, false)
-    }
-    val permissionsRequested by produceState(initialValue = false) {
-        value = preferenceHelper.getBoolean(PrefConstant.PERMISSIONS_REQUESTED, false)
-    }
+    // Load states synchronously on first composition to avoid race conditions
+    val isLanguageSelected = remember { preferenceHelper.getBoolean(PrefConstant.IS_LANGUAGE_SELECTED, false) }
+    val isLoggedIn = remember { preferenceHelper.getBoolean(PrefConstant.IS_LOGIN, false) }
+    val permissionsRequested = remember { preferenceHelper.getBoolean(PrefConstant.PERMISSIONS_REQUESTED, false) }
     
-    // ⚡ CRITICAL FIX: Heavy JSON parsing moved to background thread (was blocking 32+ frames!)
-    val userPermissions by produceState(initialValue = emptyMap<String, Boolean>()) {
-        withContext(Dispatchers.IO) {
-            value = getUserPermissions(preferenceHelper)
-        }
-    }
+
+    
 
     // Calculate start destination based on loaded state
-    val startDestination = remember(isLoggedIn, permissionsRequested, userPermissions) {
-        val hasMapPermission = userPermissions["View Map"] == true
+    // Calculate start destination based on loaded state
+    val startDestination = remember {
         when {
-            !permissionsRequested -> "permissions"
+            // !isLanguageSelected -> "language_selection" // Skipped for new flow
+            // !permissionsRequested -> "permissions" // Skipped for new flow
             !isLoggedIn -> ScreenName.Login
             else -> "main_app"
         }
     }
+    
+    // Store isEnumerator in a CompositionLocal or pass it down? 
+    // For now, we'll handle the start destination of "main_app" inside MainAppScreen or pass a parameter.
+    // Actually, MainAppScreen handles the internal navigation. We might need to pass the start route to it.
 
     ThemeProvider {
         val navController = rememberNavController()
         val context = LocalContext.current
         
         NavHost(navController = navController, startDestination = startDestination) {
-            // Permission Request Screen
-            composable("permissions") {
-                PermissionRequestScreen(
-                    onPermissionsGranted = {
-                        navController.navigate(
-                            if (isLoggedIn) {
-                                "main_app"
-                            } else {
-                                ScreenName.Login
-                            }
-                        ) {
-                            popUpTo("permissions") { inclusive = true }
-                        }
-                    }
-                )
-            }
-
             composable(ScreenName.Login) {
                 LoginScreen(navController = navController)
             }
@@ -116,7 +97,13 @@ fun MyApp() {
             // This is the main destination for the logged-in user.
             // It contains the Drawer and the rest of the app's screens.
             composable("main_app") {
-                MainAppScreen(topLevelNavController = navController)
+                // Check for Enumerator role dynamically on navigation
+                val userRoles = preferenceHelper.getUserRoles()
+                val isEnumerator = userRoles.any { it.equals("Enumerator", ignoreCase = true) }
+                
+                 // Pass start route based on role
+                val appStartRoute = if (isEnumerator) ScreenName.BuildingMap else ScreenName.Dashboard
+                MainAppScreen(topLevelNavController = navController, startRoute = appStartRoute)
             }
         }
     }
@@ -124,7 +111,7 @@ fun MyApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainAppScreen(topLevelNavController: NavController) {
+private fun MainAppScreen(topLevelNavController: NavController, startRoute: String = ScreenName.Dashboard) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -276,13 +263,13 @@ private fun MainAppScreen(topLevelNavController: NavController) {
             navController = navController,
             topLevelNavController = topLevelNavController,
             drawerState = drawerState,
-            gesturesEnabled = isDestinationStable, // Only allow swipe when destination is stable
+            gesturesEnabled = isDestinationStable && currentRoute != ScreenName.BuildingMap, // Disable swipe on map
             onMenuClick = stableOnMenuClick
         ) {
             // The NavHost is INSIDE the drawer's content
             NavHost(
                 navController = navController, 
-                startDestination = ScreenName.Dashboard,
+                startDestination = startRoute,
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
@@ -292,6 +279,15 @@ private fun MainAppScreen(topLevelNavController: NavController) {
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
             ) {
+            
+            composable(ScreenName.BuildingMap) {
+                DeferredScreen {
+                    BuildingMapScreen(
+                        navController = navController,
+                        onMenuClick = stableOnMenuClick
+                    )
+                }
+            }
 
             // Define all your screens here
             // ⚡ PERFORMANCE FIX: Wrap Dashboard in DeferredScreen to prevent frame skips
@@ -398,7 +394,7 @@ private fun MainAppScreen(topLevelNavController: NavController) {
                 )
             }
             composable("building_survey_new") {
-                BuildingSurveyScreen(navController = navController, bin = null)
+                ComprehensiveSurveyScreen(navController = navController, bin = null)
             }
 
             composable(
@@ -458,23 +454,4 @@ fun DeferredScreen(
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
     }
-}
-
-// Cached permissions to avoid repeated parsing
-private var cachedPermissions: Map<String, Boolean>? = null
-private var lastPermissionsString: String? = null
-
-// Optimized helper function to parse permissions from SharedPreferences
-private fun getUserPermissions(preferenceHelper: PreferenceHelper): Map<String, Boolean> {
-    // Basic permission set for SMIS app
-    val defaultPermissions = mapOf(
-        "View Map" to true,
-        "Emtying Scheduling" to true,
-        "Site Preparation" to true,
-        "Emtying Service" to true,
-        "Task Management" to true,
-        "Edit Building Survey" to true,
-        "Desludging Vehicle" to true
-    )
-    return defaultPermissions
 }

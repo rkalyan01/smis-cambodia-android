@@ -87,15 +87,6 @@ fun DashboardScreen(
     // Debug: Log UI state changes
     LaunchedEffect(uiState) {
         android.util.Log.d("DashboardScreen", "📊 UI State Update: applicationLoadingState=${uiState.applicationLoadingState}, applications.size=${uiState.applications.size}, selectedStatus=${uiState.selectedStatus}, isRefreshing=${uiState.isRefreshing}")
-
-        // Only trigger manual refresh once for empty Success state
-        if (uiState.applicationLoadingState is com.innovative.smis.util.common.Resource.Success &&
-            uiState.applications.isEmpty() &&
-            uiState.selectedStatus == "All" &&
-            !uiState.isRefreshing) {
-            android.util.Log.w("DashboardScreen", "🔄 Manual data refresh - Success state with 0 items")
-            viewModel.refreshApplications()
-        }
     }
 
     var showLogoutSheet by remember { mutableStateOf(false) }

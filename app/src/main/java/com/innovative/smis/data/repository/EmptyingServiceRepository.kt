@@ -27,7 +27,9 @@ import com.innovative.smis.data.local.entity.EmptyingServiceFormEntity
 import com.innovative.smis.data.local.entity.toApiRequest
 import com.innovative.smis.ui.features.emptyingservice.EmptyingServiceFormUiState
 import com.innovative.smis.util.common.Resource
+import com.innovative.smis.data.model.response.SimpleApiResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import retrofit2.Response
 
 class EmptyingServiceRepository(
     private val apiService: LaravelApiService,
@@ -471,9 +473,9 @@ class EmptyingServiceRepository(
                 PostponeRequest(
                     type = postponeType,
                     preponeFrom = postponeFrom,
-                    preponeTo = postponeTo,
+                    preponeTo = null,
                     postponeFrom = null,
-                    postponeTo = null,
+                    postponeTo = postponeTo, // Use postpone_to for target date in Prepone as per Postman
                     reason = reason,
                     remark = remark
                 )
@@ -488,10 +490,16 @@ class EmptyingServiceRepository(
                     remark = remark
                 )
             }
-            val response = postponeApiService.postponeApplication(
+            val response: Response<SimpleApiResponse> = postponeApiService.postponeApplication(
                 applicationId = applicationId,
                 postponeAt = "Emptying-Service",
-                request = request
+                type = request.type,
+                reason = request.reason,
+                remark = request.remark,
+                postponeFrom = request.postponeFrom,
+                postponeTo = request.postponeTo,
+                preponeFrom = request.preponeFrom,
+                preponeTo = request.preponeTo
             )
             
             if (response.isSuccessful && response.body()?.success == true) {

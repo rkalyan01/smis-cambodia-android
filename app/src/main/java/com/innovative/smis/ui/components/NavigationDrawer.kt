@@ -107,7 +107,7 @@ fun AppNavigationDrawer(
     }
     val initialPermissions = remember { 
         try {
-            getUserPermissions(preferenceHelper)
+            preferenceHelper.getUserPermissionsMap()
         } catch (e: Exception) {
             android.util.Log.e("NavigationDrawer", "Error loading permissions: ${e.message}", e)
             emptyMap()
@@ -115,7 +115,7 @@ fun AppNavigationDrawer(
     }
     val initialUserRole = remember { 
         try {
-            getUserRole(preferenceHelper)
+            preferenceHelper.getUserRoles()
         } catch (e: Exception) {
             android.util.Log.e("NavigationDrawer", "Error loading user role: ${e.message}", e)
             emptyList()
@@ -155,8 +155,8 @@ fun AppNavigationDrawer(
             try {
                 val loadedUserName = preferenceHelper.getString(PrefConstant.USER_NAME, "User") ?: "User"
                 val loadedUserEmail = preferenceHelper.getString(PrefConstant.USER_EMAIL, "") ?: ""
-                val loadedPermissions = getUserPermissions(preferenceHelper)
-                val loadedRole = getUserRole(preferenceHelper)
+                val loadedPermissions = preferenceHelper.getUserPermissionsMap()
+                val loadedRole = preferenceHelper.getUserRoles()
                 val loadedLanguage = preferenceHelper.getString(PrefConstant.CURRENT_LANGUAGE, "English") ?: "English"
                 val loadedCode = LocalizationManager.getLanguageCode(loadedLanguage)
 
@@ -222,16 +222,37 @@ fun AppNavigationDrawer(
             icon = Icons.Default.CardMembership,
             route = ScreenName.EtoLicenseStatus
             // requiredRole = "ETO Admin" // Uncomment if you want to restrict this to Admins only
+        ),
+        DrawerItem(
+            id = "building_map",
+            title = "Building Map", // TODO: Add string resource
+            icon = Icons.Default.Map,
+            route = ScreenName.BuildingMap
+            // Visible to everyone (filtered below for Enumerator exclusivity)
         )
     )
 
     // Filter items based on permissions and roles - use derivedStateOf for better performance
     val visibleItems by remember(drawerItems, userPermissions, userRole) {
         derivedStateOf {
+            // Check if user is an Enumerator (case-insensitive check)
+            val isEnumerator = userRole.any { it.equals("Enumerator", ignoreCase = true) }
+            
             drawerItems.filter { item ->
-                val hasPermission = item.requiredPermission == null || userPermissions[item.requiredPermission] == true
-                val hasRole = item.requiredRole == null || userRole.contains(item.requiredRole)
-                hasPermission && hasRole
+                // Building Map is ONLY visible to Enumerator
+                if (item.route == ScreenName.BuildingMap) {
+                    isEnumerator
+                } else {
+                    // IF user is Enumerator, they should NOT see anything else
+                    if (isEnumerator) {
+                        false
+                    } else {
+                        // Normal checks for other items for non-Enumerators
+                        val hasPermission = item.requiredPermission == null || userPermissions[item.requiredPermission] == true
+                        val hasRole = item.requiredRole == null || userRole.contains(item.requiredRole)
+                        hasPermission && hasRole
+                    }
+                }
             }
         }
     }
@@ -527,140 +548,4 @@ private fun LanguageSelector(
     }
 }
 
-// Cached permissions to avoid repeated parsing
-private var cachedPermissions: Map<String, Boolean>? = null
-private var lastPermissionsString: String? = null
 
-// Optimized helper function to parse permissions from SharedPreferences
-private fun getUserPermissions(preferenceHelper: PreferenceHelper): Map<String, Boolean> {
-    try {
-        val permissionsJson = preferenceHelper.getString(PrefConstant.USER_PERMISSIONS, "") ?: ""
-
-        // Return cached result if the permissions string hasn't changed
-        if (permissionsJson == lastPermissionsString && cachedPermissions != null) {
-            return cachedPermissions!!
-        }
-
-        if (permissionsJson.isEmpty()) {
-            cachedPermissions = emptyMap()
-            lastPermissionsString = permissionsJson
-            return emptyMap()
-        }
-
-        // Parse permissions from Kotlin List toString format
-        // Format: [UserPermission(viewMap=true, editBuildingSurvey=false, ...)]
-        val permissions = mutableMapOf<String, Boolean>()
-
-        try {
-            val cleanStr = permissionsJson.trim()
-            
-            // Extract content between UserPermission( and )
-            if (cleanStr.contains("UserPermission(")) {
-                val start = cleanStr.indexOf("UserPermission(") + "UserPermission(".length
-                val end = cleanStr.lastIndexOf(")")
-                
-                if (start < end) {
-                    val content = cleanStr.substring(start, end)
-                    
-                    // Parse field=value pairs and map to permission names
-                    content.split(",").forEach { pair ->
-                        val parts = pair.trim().split("=", limit = 2)
-                        if (parts.size == 2) {
-                            val fieldName = parts[0].trim()
-                            val value = parts[1].trim().toBooleanStrictOrNull() ?: false
-                            
-                            // Map field names to permission names as they appear in API
-                            val permissionName = when (fieldName) {
-                                "viewMap" -> "View Map"
-                                "editBuildingSurvey" -> "Edit Building Survey"
-                                "emptyingScheduling" -> "Emtying Scheduling" // Note: API has typo "Emtying" instead of "Emptying"
-                                "sitePreparation" -> "Site Preparation"
-                                "emptying" -> "Emptying Service"
-                                else -> null
-                            }
-                            
-                            if (permissionName != null) {
-                                permissions[permissionName] = value
-                            }
-                        }
-                    }
-                }
-            }
-            
-            android.util.Log.d("NavigationDrawer", "Parsed ${permissions.size} permissions from stored format")
-            
-            cachedPermissions = permissions.toMap()
-            lastPermissionsString = permissionsJson
-            return permissions
-
-        } catch (e: Exception) {
-            android.util.Log.w("NavigationDrawer", "Permission parsing failed: ${e.message}")
-            // Return cached permissions if available, otherwise empty map (safe default)
-            val result = cachedPermissions ?: emptyMap()
-            return result
-        }
-
-    } catch (e: Exception) {
-        android.util.Log.e("NavigationDrawer", "getUserPermissions error: ${e.message}")
-        // Return cached permissions if available, otherwise empty map
-        return cachedPermissions ?: emptyMap()
-    }
-}
-
-// Cached role to avoid repeated parsing
-private var cachedRole: List<String>? = null
-private var lastRoleString: String? = null
-
-// Helper function to parse user role from SharedPreferences
-private fun getUserRole(preferenceHelper: PreferenceHelper): List<String> {
-    try {
-        val roleJson = preferenceHelper.getString(PrefConstant.USER_ROLE, "") ?: ""
-
-        // Return cached result if the role string hasn't changed
-        if (roleJson == lastRoleString && cachedRole != null) {
-            return cachedRole!!
-        }
-
-        if (roleJson.isEmpty()) {
-            cachedRole = emptyList()
-            lastRoleString = roleJson
-            return emptyList()
-        }
-
-        // Parse role from Kotlin List toString format
-        // Format: [ETO Admin] or [Field Worker, Supervisor]
-        try {
-            val cleanStr = roleJson.trim()
-            
-            // Remove brackets and split by comma
-            if (cleanStr.startsWith("[") && cleanStr.endsWith("]")) {
-                val content = cleanStr.substring(1, cleanStr.length - 1)
-                val roles = if (content.isNotEmpty()) {
-                    content.split(",").map { it.trim() }
-                } else {
-                    emptyList()
-                }
-                
-                android.util.Log.d("NavigationDrawer", "Parsed user roles: $roles")
-                
-                cachedRole = roles
-                lastRoleString = roleJson
-                return roles
-            }
-            
-            android.util.Log.w("NavigationDrawer", "Role format not recognized: $roleJson")
-            cachedRole = emptyList()
-            lastRoleString = roleJson
-            return emptyList()
-
-        } catch (e: Exception) {
-            android.util.Log.w("NavigationDrawer", "Role parsing failed: ${e.message}")
-            val result = cachedRole ?: emptyList()
-            return result
-        }
-
-    } catch (e: Exception) {
-        android.util.Log.e("NavigationDrawer", "getUserRole error: ${e.message}")
-        return cachedRole ?: emptyList()
-    }
-}
